@@ -1,0 +1,92 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-05-10 21:46+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\exceptions.py:15
+msgid "Email server did not respond."
+msgstr "Sähköpostipalvelin ei vastaa."
+
+#: .\exceptions.py:21
+msgid "A login code for this email is still valid."
+msgstr "Kirjautumiskoodi tälle sähköpostille on vielä voimassa."
+
+#: .\serializers.py:56
+msgid "Invalid login information."
+msgstr "Virheelliset kirjautumistiedot."
+
+#: .\tokens.py:54
+msgid "Signature has expired."
+msgstr "Allekirjoitus on vahnentunut"
+
+#: .\tokens.py:56
+msgid "Error decoding signature."
+msgstr "Virhe allekirjoituksen tulkitsemisessa."
+
+#: .\tokens.py:58
+msgid "Invalid token."
+msgstr "Virheellinen tokeni."
+
+#: .\tokens.py:85
+msgid "Invalid Authorization header."
+msgstr "Virheellinen Authorization headeri."
+
+#: .\tokens.py:88
+msgid "Invalid prefix."
+msgstr "Virheellinen etuliite."
+
+#: .\tokens.py:121
+msgid "Missing claims."
+msgstr "Puuttuvia tietoja."
+
+#: .\tokens.py:125
+msgid "Invalid token type."
+msgstr "Virheellinen tokenin tyyppi."
+
+#: .\utils.py:57
+#, python-brace-format
+msgid ""
+"\n"
+"                    Your login code:\n"
+"                    \n"
+"                    {code}\n"
+"                    \n"
+"                    This code is valid for the next {valid} minutes.\n"
+"                "
+msgstr ""
+"\n"
+"                    Kirjatumiskoodisi:\n"
+"                    \n"
+"                    {code}\n"
+"                    \n"
+"                    Tämä koodi on voimassa seuraavat {valid} minuuttia.\n"
+"                "
+
+#: .\utils.py:73
+msgid "Login to Django"
+msgstr "Kirjaudu Djangoon"
+
+#: .\utils.py:80
+msgid "Unable to send login codes. Please try again later."
+msgstr "Ei voitu lähettää kirjautumiskoodia. Yritä uudelleen myöhemmin."
+
+#: .\views.py:88
+#, python-brace-format
+msgid "Maximum number of attempts reached. Try again in {x} minutes."
+msgstr ""
+"Enimmäismäärä yrityksiä saavutettu. Yritä uudelleen {x} minuutin kuluttua."
