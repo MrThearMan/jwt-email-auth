@@ -73,14 +73,14 @@ class SendLoginCode(BaseAPIView):
 
 
 class Login(BaseAPIView):
-    """Get new refresh and access token pair from a login code and email in query params."""
+    """Get new refresh and access token pair from a login code and email."""
 
     serializer_classes = {
-        "GET": ObtainTokenSerializer,
+        "POST": ObtainTokenSerializer,
     }
     status_ok = status.HTTP_202_ACCEPTED
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request: Request, *args, **kwargs) -> Response:
 
         if user_login_blocked(request):
             x = auth_settings.LOGIN_COOLDOWN // 60
@@ -89,9 +89,7 @@ class Login(BaseAPIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # [sic] QueryDicts are immutable, and token might need to be added.
-        data = {key: value for key, value in request.query_params.items()}
-        return self.run_serializer(request, data, *args, **kwargs)
+        return self.run_serializer(request, request.data, *args, **kwargs)
 
 
 class RefreshToken(BaseAPIView):
