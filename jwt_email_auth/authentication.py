@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class JWTAuthentication(BaseAuthentication):
     def authenticate(self, request):
         try:
-            token = AccessToken.from_request(request)
+            token = AccessToken.from_request(request, expected_claims=auth_settings.EXPECTED_CLAIMS)
             return StatelessUser(token), None
         except AuthenticationFailed as f:
             logger.debug(f)

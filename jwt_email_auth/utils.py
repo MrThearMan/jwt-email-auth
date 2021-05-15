@@ -5,9 +5,9 @@ from inspect import cleandoc
 from hashlib import md5
 from ipware import get_client_ip
 
-from django.conf import settings
 from django.core.mail import send_mail
 from django.core.cache import cache
+from django.template.loader import render_to_string
 from django.utils.translation import override, gettext_lazy as _
 
 from rest_framework.request import Request
@@ -25,6 +25,10 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+def default_login_data() -> dict:
+    return {}
+
+
 def user_login_blocked(request: Request):
 
     ip, is_routable = get_client_ip(
@@ -37,7 +41,7 @@ def user_login_blocked(request: Request):
 
     cache_key = f"{auth_settings.CACHE_PREFIX}-{md5(ip.encode()).hexdigest()}"
     attempts = cache.get(cache_key, 0) + 1
-    cache.set(cache_key, attempts, auth_settings.LOGIN_COOLDOWN)
+    cache.set(cache_key, attempts, auth_settings.LOGIN_COOLDOWN.total_seconds())
 
     block = attempts >= auth_settings.LOGIN_ATTEMPTS
     wasnt_blocked = attempts - 1 < auth_settings.LOGIN_ATTEMPTS
@@ -48,33 +52,35 @@ def user_login_blocked(request: Request):
     return block
 
 
-def send_login_email(language: str, code: str, email: str):
+def send_login_email(request: Request, code: str, email: str):
 
-    with override(language):
-        valid = auth_settings.LOGIN_CODE_LIFETIME // 60
+    with override(request.LANGUAGE_CODE):
         plain_message = cleandoc(
-            _(
-                f"""
-                    Your login code:
-                    
-                    {code}
-                    
-                    This code is valid for the next {valid} minutes.
-                """
+            auth_settings.LOGIN_EMAIL_MESSAGE.format(
+                code=code,
+                valid=auth_settings.LOGIN_CODE_LIFETIME.total_seconds() // 60
             )
         )
 
-    if settings.DEBUG:
-        print(plain_message)
+    html_message = None
+    if auth_settings.LOGIN_EMAIL_HTML_TEMPLATE is not None:
+        html_message = render_to_string(
+            auth_settings.LOGIN_EMAIL_HTML_TEMPLATE,
+            context={"code": code, "valid": auth_settings.LOGIN_CODE_LIFETIME.total_seconds() // 60},
+            request=request,
+        )
 
-    if auth_settings.SEND_BY_EMAIL:
+    if auth_settings.SEND_EMAILS:
         try:
             send_mail(
-                subject=_("Login to Django"),
+                subject=auth_settings.LOGIN_SUBJECT_LINE,
                 message=plain_message,
-                from_email=None,  # Use default from email
+                from_email=auth_settings.LOGIN_SENDING_EMAIL,
                 recipient_list=[email],
+                html_message=html_message,
             )
         except Exception as e:  # noqa
             logger.error(f"Failed to send login code: {e}")
             raise EmailServerException(_("Unable to send login codes. Please try again later."))
+    else:
+        logger.info(plain_message)

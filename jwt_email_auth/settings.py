@@ -46,33 +46,50 @@ def load_signing_key() -> "Ed25519PrivateKey":
 USER_SETTINGS = getattr(settings, "JWT", None)
 
 DEFAULTS = {
-    "SEND_BY_EMAIL": True,
-    "SIGNING_KEY": load_signing_key(),
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
-    "LOGIN_CODE_LIFETIME": 5 * 60,  # int: seconds
-    #
+    "SEND_EMAILS": False,                           # bool: Send email, off by default
+    "SKIP_CODE_CHECKS": False,                      # bool: When on, any code will work in login (for debugging)
+    "SIGNING_KEY": load_signing_key(),              # str: JWT signing key
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # timedelta: How long a access token is valid for
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),   # timedelta: How long a refresh token is valid for
+    "LOGIN_CODE_LIFETIME": timedelta(minutes=5),    # timedelta: How long a login code is stored in cache
+    "LOGIN_DATA": "jwt_email_auth.utils.default_login_data",  # callable -> dict: Function to run to gather login data
+    "LOGIN_SENDING_EMAIL": None,                    # str: Email sender. Default is settings.DEFAULT_FROM_EMAIL
+    "LOGIN_SUBJECT_LINE": "Login to Django",        # str: Email subject line
+    "LOGIN_EMAIL_MESSAGE": (                        # str: Message to send in email. Must have {code} and {valid}!
+        """
+            Your login code:
+            
+            {code}
+            
+            This code is valid for the next {valid} minutes.
+        """
+    ),
+    "LOGIN_EMAIL_HTML_TEMPLATE": None,              # str: Path to html_message template
+    #                                               # Context must have {{ code }} and {{ valid }}!
     # Encoding and decoding options:
-    "ISSUER": None,                 # str: Issuer of the JWT.
-    "AUDIENCE": None,               # str: Intended recipient of the JWT.
-    "LEEWAY": 0,                    # int: A time margin in seconds for the expiration check
-    "ALGORITHM": "EdDSA",           # str: Algorithm to sign and decrypt the token with
-    "HEADER_PREFIX": "Bearer",      # str: Authorization: <HEADER_PREFIX> <token>
-    "EXTRA_HEADERS": None,          # dict: Additional JWT header fields
+    "ISSUER": None,                                 # str: Issuer of the JWT
+    "AUDIENCE": None,                               # str: Intended recipient of the JWT
+    "LEEWAY": 0,                                    # int: A time margin in seconds for the expiration check
+    "ALGORITHM": "EdDSA",                           # str: Algorithm to sign and decrypt the token with
+    "HEADER_PREFIX": "Bearer",                      # str: Authorization: <HEADER_PREFIX> <token>
+    "EXTRA_HEADERS": None,                          # dict: Additional JWT header fields
+    "EXPECTED_CLAIMS": None,                        # list[str]: List of expected JWT content
     #
     # IP address spoofing prevention settings:
     # https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users
-    "PROXY_ORDER": "left-most",     # str: "left-most" or "right-most"
-    "PROXY_COUNT": None,            # int:
-    "PROXY_TRUSTED_IPS": None,      # list[str]:
-    "REQUEST_HEADER_ORDER": None,   # list[str]:
-    "CACHE_PREFIX": "Django",       # str:
-    "LOGIN_ATTEMPTS": 10,           # int: attempts
-    "LOGIN_COOLDOWN": 5 * 60,       # int: seconds
+    "PROXY_ORDER": "left-most",                     # str: "left-most" or "right-most"
+    "PROXY_COUNT": None,                            # int: Number of proxies between the server and internet
+    "PROXY_TRUSTED_IPS": None,                      # list[str]: Only these proxy IPs are allowed connections
+    "REQUEST_HEADER_ORDER": None,                   # list[str]: Meta precedence order
+    "CACHE_PREFIX": "Django",                       # str: Cache prefix for login codes and banned IPs
+    "LOGIN_ATTEMPTS": 10,                           # int: Number of login attempts until banned
+    "LOGIN_COOLDOWN": timedelta(minutes=5),         # timedelta: How long until login ban lifted
 }
 
 # List of settings that may be in string dot import notation.
-IMPORT_STRINGS = []
+IMPORT_STRINGS = [
+    "LOGIN_DATA",
+]
 
 auth_settings = APISettings(USER_SETTINGS, DEFAULTS, IMPORT_STRINGS)
 

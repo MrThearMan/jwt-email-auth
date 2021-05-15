@@ -83,7 +83,7 @@ class Login(BaseAPIView):
     def post(self, request: Request, *args, **kwargs) -> Response:
 
         if user_login_blocked(request):
-            x = auth_settings.LOGIN_COOLDOWN // 60
+            x = auth_settings.LOGIN_COOLDOWN.total_seconds() // 60
             return Response(
                 data={"blocked": _(f"Maximum number of attempts reached. Try again in {x} minutes.")},
                 status=status.HTTP_403_FORBIDDEN,

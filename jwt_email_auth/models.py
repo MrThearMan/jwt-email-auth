@@ -11,7 +11,8 @@ __all__ = [
 
 
 class StatelessUser:
-    """Dummy user that is authenticated but does not use django's jwt_email_auth."""
+    """User that is not actually logged in, but enables
+    authentication and permission checks."""
 
     is_active = True
     is_anonymous = True
@@ -33,7 +34,7 @@ class StatelessUser:
 
     @cached_property
     def username(self):
-        return self.token["email"]
+        return "StatelessUser"
 
     @cached_property
     def is_staff(self):

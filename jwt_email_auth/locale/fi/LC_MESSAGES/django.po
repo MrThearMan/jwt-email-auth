@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-05-10 21:46+0300\n"
+"POT-Creation-Date: 2021-05-15 16:48+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,17 +18,33 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: .\exceptions.py:15
+#: .\exceptions.py:16
 msgid "Email server did not respond."
 msgstr "Sähköpostipalvelin ei vastaa."
 
-#: .\exceptions.py:21
+#: .\exceptions.py:22
 msgid "A login code for this email is still valid."
 msgstr "Kirjautumiskoodi tälle sähköpostille on vielä voimassa."
 
-#: .\serializers.py:56
-msgid "Invalid login information."
-msgstr "Virheelliset kirjautumistiedot."
+#: .\exceptions.py:28
+msgid "Data was corrupted."
+msgstr "Data korruptoitunut."
+
+#: .\serializers.py:52
+msgid "Failed to send login codes. Try again later."
+msgstr "Ei voitu lähettää kirjautumiskoodia. Yritä uudelleen myöhemmin."
+
+#: .\serializers.py:67
+msgid "No login code found code for '{attrs['email']}'."
+msgstr "Ei löydetty kirjautumiskoodia sähköpostille '{attrs['email']}'."
+
+#: .\serializers.py:71
+msgid "Incorrect login code."
+msgstr "Väärä kirjautumiskoodi"
+
+#: .\serializers.py:80
+msgid "Data was corrupted. Try to send another login code."
+msgstr "Data korruptoitunut. Yritä lähettää uusi kirjautumiskoodi."
 
 #: .\tokens.py:54
 msgid "Signature has expired."
@@ -58,30 +74,7 @@ msgstr "Puuttuvia tietoja."
 msgid "Invalid token type."
 msgstr "Virheellinen tokenin tyyppi."
 
-#: .\utils.py:57
-#, python-brace-format
-msgid ""
-"\n"
-"                    Your login code:\n"
-"                    \n"
-"                    {code}\n"
-"                    \n"
-"                    This code is valid for the next {valid} minutes.\n"
-"                "
-msgstr ""
-"\n"
-"                    Kirjatumiskoodisi:\n"
-"                    \n"
-"                    {code}\n"
-"                    \n"
-"                    Tämä koodi on voimassa seuraavat {valid} minuuttia.\n"
-"                "
-
-#: .\utils.py:73
-msgid "Login to Django"
-msgstr "Kirjaudu Djangoon"
-
-#: .\utils.py:80
+#: .\utils.py:84
 msgid "Unable to send login codes. Please try again later."
 msgstr "Ei voitu lähettää kirjautumiskoodia. Yritä uudelleen myöhemmin."
 
