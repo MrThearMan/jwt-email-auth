@@ -1,5 +1,5 @@
 import jwt
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Any
 from datetime import datetime
 
 from django.utils.encoding import smart_text
@@ -100,38 +100,38 @@ class AccessToken:
             headers=auth_settings.EXTRA_HEADERS,
         )
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> Any:
         return self.payload[key]
 
-    def __setitem__(self, key: str, value: str):
+    def __setitem__(self, key: str, value: Union[int, float, str, bool, bytes]) -> None:
         self.payload[key] = value
 
-    def __delitem__(self, key: str):
+    def __delitem__(self, key: str) -> None:
         del self.payload[key]
 
     def __contains__(self, key: str) -> bool:
         return key in self.payload
 
-    def get(self, key: str, default: str = None):
+    def get(self, key: str, default: str = None) -> Any:
         return self.payload.get(key, default)
 
-    def verify_payload(self, expected_claims: List[str]):
+    def verify_payload(self, expected_claims: List[str]) -> None:
         for claim in expected_claims:
             if claim not in self:
                 raise AuthenticationFailed(_("Missing claims."))
 
-    def verify_token_type(self):
+    def verify_token_type(self) -> None:
         if self.token_type != self.payload.get("type", "notype"):
             raise AuthenticationFailed(_("Invalid token type."))
 
-    def sync_with(self, token: TokenType):
+    def sync_with(self, token: TokenType) -> None:
         """Sync this token's expiry and issuing times to the other token's.
         NOTE: THIS WILL CHANGE THE ENCODED TOKEN, SO BE SURE TO SAVE IT!
         """
         self.payload["exp"] = token["iat"] + self.lifetime
         self.payload["iat"] = token["iat"]
 
-    def renew(self):
+    def renew(self) -> None:
         """Renew token expiration.
         NOTE: THIS WILL CHANGE THE ENCODED TOKEN, SO BE SURE TO SAVE IT!
         """
@@ -154,7 +154,7 @@ class RefreshToken(AccessToken):
 
         return access
 
-    def update(self, data: Dict[str, str] = None, **kwargs: str):
+    def update(self, data: Dict[str, str] = None, **kwargs: str) -> None:
         """Update payload.
         NOTE: THIS WILL CHANGE THE ENCODED TOKEN, SO BE SURE TO SAVE IT!
         """

@@ -1,3 +1,5 @@
+""""""
+
 import os
 from datetime import timedelta
 
@@ -43,7 +45,7 @@ def load_signing_key() -> "Ed25519PrivateKey":
     return load_ssh_private_key(key.encode(), password=None, backend=default_backend())
 
 
-USER_SETTINGS = getattr(settings, "JWT", None)
+USER_SETTINGS = getattr(settings, "JWT_EMAIL_AUTH", None)
 
 DEFAULTS = {
     "SEND_EMAILS": False,                           # bool: Send email, off by default
@@ -53,6 +55,7 @@ DEFAULTS = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=14),   # timedelta: How long a refresh token is valid for
     "LOGIN_CODE_LIFETIME": timedelta(minutes=5),    # timedelta: How long a login code is stored in cache
     "LOGIN_DATA": "jwt_email_auth.utils.default_login_data",  # callable -> dict: Function to run to gather login data
+    "CODE_GENERATOR": "jwt_email_auth.utils.random_code",     # callable -> str: Function to generate a login code
     "LOGIN_SENDING_EMAIL": None,                    # str: Email sender. Default is settings.DEFAULT_FROM_EMAIL
     "LOGIN_SUBJECT_LINE": "Login to Django",        # str: Email subject line
     "LOGIN_EMAIL_MESSAGE": (                        # str: Message to send in email. Must have {code} and {valid}!
@@ -89,6 +92,7 @@ DEFAULTS = {
 # List of settings that may be in string dot import notation.
 IMPORT_STRINGS = [
     "LOGIN_DATA",
+    "CODE_GENERATOR",
 ]
 
 auth_settings = APISettings(USER_SETTINGS, DEFAULTS, IMPORT_STRINGS)
@@ -99,7 +103,7 @@ def reload_api_settings(*args, **kwargs):
 
     setting, value = kwargs["setting"], kwargs["value"]
 
-    if setting == "JWT":
+    if setting == "JWT_EMAIL_AUTH":
         auth_settings = APISettings(value, DEFAULTS, IMPORT_STRINGS)
 
 

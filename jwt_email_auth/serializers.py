@@ -1,8 +1,6 @@
 """"""
 
 import logging
-from random import randint
-from hashlib import md5
 
 from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
@@ -10,10 +8,11 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound, AuthenticationFailed
 
-from .utils import send_login_email
+from .utils import send_login_email, generate_cache_key
 from .exceptions import LoginCodeStillValid, EmailServerException, CorruptedDataException
 from .tokens import RefreshToken
 from .settings import auth_settings
+from .fields import AutoTokenField
 
 
 __all__ = [
@@ -26,8 +25,22 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-def random_code() -> str:
-    return str(randint(1, 999_999)).zfill(6)
+class BaseAccessSerializer(serializers.Serializer):
+    """Base serializer that adds hidden token field, and takes
+    specified claims from it.
+    """
+
+    token = AutoTokenField()
+    take_form_token: list[str] = []
+    """List of keys to take from token claims and pass to bound method."""
+
+    def to_internal_value(self, data):
+        """Pop token and add specified claims from it to data before validation."""
+        ret = super().to_internal_value(data)
+        token = ret.pop("token")
+        for key in self.take_form_token:
+            ret[key] = token[key]
+        return ret
 
 
 class LoginCodeSerializer(serializers.Serializer):
@@ -36,13 +49,12 @@ class LoginCodeSerializer(serializers.Serializer):
 
     def validate(self, attrs):
 
-        cache_key = f"{auth_settings.CACHE_PREFIX}-{md5(attrs['email'].encode()).hexdigest()}"
-
+        cache_key = generate_cache_key(attrs["email"])
         if cache.get(cache_key, None) is not None:
             raise LoginCodeStillValid()
 
         data = auth_settings.LOGIN_DATA()
-        data["code"] = random_code()
+        data["code"] = auth_settings.CODE_GENERATOR()
         cache.set(cache_key, data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
         try:
@@ -56,13 +68,12 @@ class LoginCodeSerializer(serializers.Serializer):
 
 class ObtainTokenSerializer(serializers.Serializer):
 
-    code = serializers.CharField(help_text="Six digit code.")
+    code = serializers.CharField(help_text="Login code.")
     email = serializers.EmailField(help_text="Email address the code was sent to.")
 
     def validate(self, attrs):
 
-        cache_key = f"{auth_settings.CACHE_PREFIX}-{md5(attrs['email'].encode()).hexdigest()}"
-
+        cache_key = generate_cache_key(attrs["email"])
         if login_info := cache.get(cache_key, None):
             raise NotFound(_(f"No login code found code for '{attrs['email']}'."))
 

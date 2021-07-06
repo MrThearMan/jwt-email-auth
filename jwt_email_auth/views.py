@@ -28,8 +28,6 @@ class BaseAPIView(APIView):
 
     serializer_classes = {}
     """Key: method name (uppercase), value: serializer class."""
-    permission_classes = []
-    authentication_classes = []
     status_ok = status.HTTP_200_OK
 
     def get_serializer(self, *args, **kwargs):
@@ -54,22 +52,20 @@ class BaseAPIView(APIView):
         data.update(**kwargs)
 
         serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        return Response(data=data, status=self.status_ok)
 
 
-class SendLoginCode(BaseAPIView):
+
+
+
+class SendLoginCode(APIView):
     """Send a new login code to the email POST-ed here."""
 
-    serializer_classes = {
-        "POST": LoginCodeSerializer,
-    }
-    status_ok = status.HTTP_204_NO_CONTENT
-
     def post(self, request: Request, *args, **kwargs) -> Response:
-        return self.run_serializer(request, request.data, *args, **kwargs)
+
+        serializer = LoginCodeSerializer(data=request.data, context={"request": self.request, "view": self})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 class Login(BaseAPIView):

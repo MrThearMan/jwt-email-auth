@@ -1,8 +1,13 @@
-from uuid import uuid4
+"""Stateless user model"""
 
-from django.db.models.manager import EmptyManager
-from django.contrib.auth.models import Permission, Group
+from uuid import uuid4
+from typing import TYPE_CHECKING
+
 from django.utils.functional import cached_property
+from django.contrib.auth.models import AnonymousUser
+
+if TYPE_CHECKING:
+    from .tokens import AccessToken
 
 
 __all__ = [
@@ -10,19 +15,18 @@ __all__ = [
 ]
 
 
-class StatelessUser:
-    """User that is not actually logged in, but enables
-    authentication and permission checks."""
+class StatelessUser(AnonymousUser):
+    """
+    User that is not actually logged in, but enables
+    authentication and permission checks.
+    """
 
     is_active = True
-    is_anonymous = True
-    is_authenticated = True
+    username = "StatelessUser"
 
-    _groups = EmptyManager(Group)
-    _user_permissions = EmptyManager(Permission)
-
-    def __init__(self, token):
-        self.token = token
+    def __init__(self, token: "AccessToken" = None):
+        self.token = token if token is not None else {}
+        self.is_partner: bool = self.token.get("partner", False)
 
     @cached_property
     def id(self):
@@ -32,17 +36,9 @@ class StatelessUser:
     def pk(self):
         return self.id
 
-    @cached_property
-    def username(self):
-        return "StatelessUser"
-
-    @cached_property
-    def is_staff(self):
-        return False
-
-    @cached_property
-    def is_superuser(self):
-        return False
+    @property
+    def is_authenticated(self):
+        return True
 
     def __str__(self):
         return self.__class__.__name__
@@ -55,32 +51,3 @@ class StatelessUser:
 
     def __hash__(self):
         return hash(str(self.token))
-
-    @property
-    def groups(self):
-        return self._groups
-
-    @property
-    def user_permissions(self):
-        return self._user_permissions
-
-    def get_user_permissions(self, *args, **kwargs):
-        return set()
-
-    def get_group_permissions(self, *args, **kwargs):
-        return set()
-
-    def get_all_permissions(self, *args, **kwargs):
-        return set()
-
-    def has_perm(self, *args, **kwargs):
-        return False
-
-    def has_perms(self, *args, **kwargs):
-        return False
-
-    def has_module_perms(self, *args, **kwargs):
-        return False
-
-    def get_username(self):
-        return self.username

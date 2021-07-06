@@ -1,6 +1,7 @@
 """Python utility functions, that have nothing to do with the Dynamics database."""
 
 import logging
+from random import randint
 from inspect import cleandoc
 from hashlib import md5
 from ipware import get_client_ip
@@ -17,6 +18,7 @@ from .exceptions import EmailServerException
 
 
 __all__ = [
+    "generate_cache_key",
     "user_login_blocked",
     "send_login_email",
 ]
@@ -25,11 +27,20 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+def random_code() -> str:
+    return str(randint(1, 999_999)).zfill(6)
+
+
+def generate_cache_key(content: str) -> str:
+    """Generate cache key using a prefix (from auth_settings), and md5 hexdigest."""
+    return f"{auth_settings.CACHE_PREFIX}-{md5(content.encode()).hexdigest()}"
+
+
 def default_login_data() -> dict:
     return {}
 
 
-def user_login_blocked(request: Request):
+def user_login_blocked(request: Request) -> bool:
 
     ip, is_routable = get_client_ip(
         request=request,
@@ -39,7 +50,7 @@ def user_login_blocked(request: Request):
         request_header_order=auth_settings.REQUEST_HEADER_ORDER,
     )
 
-    cache_key = f"{auth_settings.CACHE_PREFIX}-{md5(ip.encode()).hexdigest()}"
+    cache_key = generate_cache_key(ip)
     attempts = cache.get(cache_key, 0) + 1
     cache.set(cache_key, attempts, auth_settings.LOGIN_COOLDOWN.total_seconds())
 
@@ -52,7 +63,7 @@ def user_login_blocked(request: Request):
     return block
 
 
-def send_login_email(request: Request, code: str, email: str):
+def send_login_email(request: Request, code: str, email: str) -> None:
 
     with override(request.LANGUAGE_CODE):
         plain_message = cleandoc(
