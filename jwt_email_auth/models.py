@@ -1,5 +1,3 @@
-"""Stateless user model"""
-
 from uuid import uuid4
 from typing import TYPE_CHECKING
 
@@ -10,9 +8,7 @@ if TYPE_CHECKING:
     from .tokens import AccessToken
 
 
-__all__ = [
-    "StatelessUser",
-]
+__all__ = ["StatelessUser"]
 
 
 class StatelessUser(AnonymousUser):

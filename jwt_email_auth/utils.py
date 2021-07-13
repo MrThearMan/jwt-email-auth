@@ -1,20 +1,18 @@
-"""Python utility functions, that have nothing to do with the Dynamics database."""
-
 import logging
 from random import randint
 from inspect import cleandoc
 from hashlib import md5
-from ipware import get_client_ip
 
 from django.core.mail import send_mail
 from django.core.cache import cache
 from django.template.loader import render_to_string
-from django.utils.translation import override, gettext_lazy as _
+from django.utils.translation import override
 
 from rest_framework.request import Request
 
+from ipware import get_client_ip
+
 from .settings import auth_settings
-from .exceptions import EmailServerException
 
 
 __all__ = [
@@ -37,6 +35,7 @@ def generate_cache_key(content: str) -> str:
 
 
 def default_login_data() -> dict:
+    """Default login data function that is meant to be overriden in Django settings."""
     return {}
 
 
@@ -82,16 +81,12 @@ def send_login_email(request: Request, code: str, email: str) -> None:
         )
 
     if auth_settings.SEND_EMAILS:
-        try:
-            send_mail(
-                subject=auth_settings.LOGIN_SUBJECT_LINE,
-                message=plain_message,
-                from_email=auth_settings.LOGIN_SENDING_EMAIL,
-                recipient_list=[email],
-                html_message=html_message,
-            )
-        except Exception as e:  # noqa
-            logger.error(f"Failed to send login code: {e}")
-            raise EmailServerException(_("Unable to send login codes. Please try again later."))
+        send_mail(
+            subject=auth_settings.LOGIN_SUBJECT_LINE,
+            message=plain_message,
+            from_email=auth_settings.LOGIN_SENDING_EMAIL,
+            recipient_list=[email],
+            html_message=html_message,
+        )
     else:
         logger.info(plain_message)

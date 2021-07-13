@@ -1,5 +1,3 @@
-""""""
-
 from rest_framework.fields import HiddenField, empty
 
 from .tokens import AccessToken, RefreshToken
