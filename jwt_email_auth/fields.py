@@ -1,4 +1,4 @@
-from rest_framework.fields import HiddenField, empty
+from rest_framework.fields import CharField
 
 from .tokens import AccessToken, RefreshToken
 from .settings import auth_settings
@@ -9,23 +9,14 @@ __all__ = [
 ]
 
 
-class AutoTokenField(HiddenField):
-    """Field where the JWT gets added from authorization header,
-    but is not shown to the user in schema."""
+class AutoTokenField(CharField):
+    """Field where the JWT can be added from authorization header"""
 
     def __init__(self, **kwargs):
         key = kwargs.pop("return_key", None)
         self.refresh_token = kwargs.pop("refresh_token", False)
-
-        kwargs["default"] = empty
         super().__init__(**kwargs)
-
         self.return_key = key or self.field_name
-        self.write_only = kwargs.get("write_only", self.write_only)
-
-    def get_value(self, dictionary):
-        """Fetch token from data."""
-        return dictionary.get(self.field_name, empty)
 
     def to_internal_value(self, data):
         """Try to construct an Access token, or Refresh token if specified.

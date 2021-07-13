@@ -200,27 +200,30 @@ class SomeView(APIView):
 If you need to use claims from the token in you code, you can use the [BaseAccessSerializer](jwt_email_auth/serializers.py).
 
 ```python
+from rest_framework import serializers
 from rest_framework.views import APIView
-from rest_framework.authentication import get_authorization_header
 from jwt_email_auth.serializers import BaseAccessSerializer
 
 
 class SomeSerializer(BaseAccessSerializer):
    
    take_form_token = ["example", "values"]
+   
+   some = serializers.CharField()
+   data = serializers.CharField()
+   
    ...
 
 
 class SomeView(APIView):
    
     def post(self, request, *args, **kwargs):
-   
-        prefix, encoded_token = get_authorization_header(request).split()
-        serializer = SomeSerializer(data={"token": encoded_token})
+        data = {"some": ..., "data": ...}
+        serializer = SomeSerializer(data=data, context={"request", request})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data  # use .validated_data and not .data!
       
-        print(data)  # {"example": ..., "values": ...}
+        print(data)  # {"some": ..., "data": ..., "example": ..., "values": ...}
         ...
 ```
 
