@@ -6,7 +6,7 @@ pip install jwt-email-auth
 
 This module enables JSON Web Token Authentication in Django Rest framework without using Django's User model.
 Instead, login information is stored in [cache](https://docs.djangoproject.com/en/3.2/topics/cache/#the-low-level-cache-api),
-sent to the user's inbox, and obtained using a code that was sent to the given email.
+a login code is sent to the user's email inbox, and then the cached information is obtained using the code that was sent to the given email.
 
 ### Requirements:
 - [requirements.txt](https://github.com/MrThearMan/jwt-email-auth/blob/main/requirements.txt)
@@ -141,9 +141,9 @@ REST_FRAMEWORK = {
         ...
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-       ...
-       "jwt_email_auth.permissions.HasValidJWT",
-       ...
+        ...
+        "jwt_email_auth.permissions.HasValidJWT",
+        ...
     ]
     ...
 }
@@ -151,21 +151,20 @@ REST_FRAMEWORK = {
 
 ## Usage
 
-
 1. Send a login code to the *authentication* endpoint (from [SendLoginCodeView](jwt_email_auth/views.py) class).
 
 |Request|Response|
 |---|---|
 |POST [Authentication URI] <br>Content-Type: application/json|HTTP 204 NO CONTENT
-|{<br><span style="margin-left: 1rem"></span>"email":"person@example.com"<br>}|...|
+|{<br>  "email":"person@example.com"<br>}|...|
 
 
 2. POST the login code and email to *login* endpoint (from [LoginView](jwt_email_auth/views.py) class).
 
 |Request|Response|
 |---|---|
-|POST [Login URI] <br>Content-Type: application/json|HTTP 204 ACCEPTED
-|{<br><span style="margin-left: 1rem"></span>"email":"person@example.com"<br><span style="margin-left: 1rem"></span>"code":"123222"<br>}|{<br><span style="margin-left: 1rem"></span>"access":"..."<br><span style="margin-left: 1rem"></span>"refresh":"..."<br>}|
+|POST [Login URI] <br>Content-Type: application/json|HTTP 202 ACCEPTED
+|{<br>  "email":"person@example.com"<br>  "code":"123222"<br>}|{<br>  "access":"..."<br>  "refresh":"..."<br>}|
 
 
 3. Refresh access token from the *refresh token* endpoint (from [RefreshTokenView](jwt_email_auth/views.py) class).
@@ -173,7 +172,7 @@ REST_FRAMEWORK = {
 |Request|Response|
 |---|---|
 |POST [Refresh Token URI] <br>Content-Type: application/json|HTTP 200 OK
-|{<br><span style="margin-left: 1rem"></span>"token":"..."<br>}|{<br><span style="margin-left: 1rem"></span>"access":"..."<br>}|
+|{<br>  "token":"..."<br>}|{<br>  "access":"..."<br>}|
 
 
 ### Authentication and Permission classes
@@ -218,10 +217,19 @@ class SomeSerializer(BaseAccessSerializer):
 class SomeView(APIView):
    
     def post(self, request, *args, **kwargs):
+       
         data = {"some": ..., "data": ...}
+        
+        # Request is needed in serializer context to get the access token
         serializer = SomeSerializer(data=data, context={"request", request})
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data  # use .validated_data and not .data!
+        data = serializer.initial_data
+        
+        # ...or this:
+        # serializer.is_valid(raise_exception=True)
+        # data = serializer.validated_data
+        
+        # ...or this:
+        # data = serializer.data
       
         print(data)  # {"some": ..., "data": ..., "example": ..., "values": ...}
         ...

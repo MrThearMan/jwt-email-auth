@@ -42,18 +42,17 @@ class SendLoginCodeView(APIView):
         login_info = self.SendLoginCodeSerializer(data=request.data)
         login_info.is_valid(raise_exception=True)
         data = login_info.data
-        email = data["email"]
 
-        cache_key = generate_cache_key(email)
+        cache_key = generate_cache_key(data["email"])
         if cache.get(cache_key, None) is not None:
             raise LoginCodeStillValid()
 
-        data = auth_settings.LOGIN_DATA()
-        data["code"] = auth_settings.CODE_GENERATOR()
-        cache.set(cache_key, data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
+        login_data = auth_settings.LOGIN_DATA()
+        login_data["code"] = auth_settings.CODE_GENERATOR()
+        cache.set(cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
         try:
-            send_login_email(self.request, code=data["code"], email=email)
+            send_login_email(self.request, code=login_data["code"], email=data["email"])
         except Exception:
             cache.delete(cache_key)
             raise EmailServerException(_("Failed to send login codes. Try again later."))
