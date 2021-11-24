@@ -35,8 +35,13 @@ def generate_cache_key(content: str) -> str:
 
 
 def default_login_data() -> dict:
-    """Default login data function that is meant to be overriden in Django settings."""
+    """Default login data function. It is meant to be overriden in Django settings."""
     return {}
+
+
+def validate(email: str) -> dict:
+    """Default function to validate login. It is meant to be overriden in Django settings."""
+    return {"email": email}
 
 
 def user_login_blocked(request: Request) -> bool:

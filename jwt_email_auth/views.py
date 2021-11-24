@@ -35,8 +35,15 @@ class SendLoginCodeView(APIView):
         - HTTP 503 Service Unavailable: Email server could not send email.
     """
 
+    authentication_classes = []
+    permission_classes = []
+
     class SendLoginCodeSerializer(serializers.Serializer):
         email = serializers.EmailField(help_text="Email address to send the code to.")
+
+        def validate(self, attrs):
+            return auth_settings.VALIDATION_CALLBACK(email=attrs["email"])
+
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         login_info = self.SendLoginCodeSerializer(data=request.data)
@@ -70,6 +77,9 @@ class LoginView(APIView):
         - HTTP 410 Gone: Login data was corrupted.
     """
 
+    authentication_classes = []
+    permission_classes = []
+
     class LoginSerializer(serializers.Serializer):
         code = serializers.CharField(help_text="Login code.")
         email = serializers.EmailField(help_text="Email address the code was sent to.")
@@ -97,7 +107,7 @@ class LoginView(APIView):
         try:
             refresh.update({key: login_info[key] for key in auth_settings.EXPECTED_CLAIMS})
         except KeyError:
-            logger.debug(
+            logger.warning(
                 "Some data was missing from saved login info. If you set EXPECTED_CLAIMS, you "
                 "should provide a custom LOGIN_DATA function that returns them in a dict."
             )
@@ -122,6 +132,9 @@ class RefreshTokenView(APIView):
         - HTTP 400 Bad Request: Token not given or type somehow invalid.
         - HTTP 401 Unauthorized: Refresh token has expired or is invalid.
     """
+
+    authentication_classes = []
+    permission_classes = []
 
     class RefreshTokenSerializer(serializers.Serializer):
         token = serializers.CharField(help_text="Refresh token.")

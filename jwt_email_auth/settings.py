@@ -54,6 +54,7 @@ DEFAULTS = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),              # timedelta: How long a access token is valid for
     "REFRESH_TOKEN_LIFETIME": timedelta(days=14),               # timedelta: How long a refresh token is valid for
     "LOGIN_CODE_LIFETIME": timedelta(minutes=5),                # timedelta: How long a login code is stored in cache
+    "VALIDATION_CALLBACK": "jwt_email_auth.utils.validate",     # callable -> dict: Function to use for validating use from email
     "LOGIN_DATA": "jwt_email_auth.utils.default_login_data",    # callable -> dict: Function to run to gather login data
     "CODE_GENERATOR": "jwt_email_auth.utils.random_code",       # callable -> str: Function to generate a login code
     "LOGIN_SENDING_EMAIL": None,                                # str: Email sender. Default is settings.DEFAULT_FROM_EMAIL
