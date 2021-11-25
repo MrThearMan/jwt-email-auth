@@ -43,7 +43,7 @@ exclude = [
 ]
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/MrThearMan/drf-pipeline-views/issues"
+"Bug Tracker" = "https://github.com/MrThearMan/jwt-email-auth/issues"
 
 
 [tool.poetry.dependencies]

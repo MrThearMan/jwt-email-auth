@@ -10,7 +10,6 @@
 
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/jwt-email-auth)](https://pypi.org/project/jwt-email-auth)
 [![PyPI - Django Version](https://img.shields.io/pypi/djversions/jwt-email-auth)](https://pypi.org/project/jwt-email-auth)
-[![Custom - Django REST Framework Version](https://img.shields.io/badge/drf%20versions-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://pypi.org/project/jwt-email-auth)
 
 ```shell
 pip install jwt-email-auth
