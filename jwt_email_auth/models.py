@@ -1,8 +1,9 @@
-from uuid import uuid4
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
-from django.utils.functional import cached_property
 from django.contrib.auth.models import AnonymousUser
+from django.utils.functional import cached_property
+
 
 if TYPE_CHECKING:
     from .tokens import AccessToken
@@ -22,7 +23,6 @@ class StatelessUser(AnonymousUser):
 
     def __init__(self, token: "AccessToken" = None):
         self.token = token if token is not None else {}
-        self.is_partner: bool = self.token.get("partner", False)
 
     @cached_property
     def id(self):

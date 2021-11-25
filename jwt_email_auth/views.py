@@ -2,18 +2,17 @@ import logging
 
 from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
-
-from rest_framework import status
-from rest_framework import serializers
-from rest_framework.exceptions import NotFound, AuthenticationFailed, PermissionDenied
-from rest_framework.response import Response
+from rest_framework import serializers, status
+from rest_framework.exceptions import AuthenticationFailed, NotFound, PermissionDenied
 from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .exceptions import LoginCodeStillValid, EmailServerException, CorruptedDataException
-from .utils import user_login_blocked, send_login_email, generate_cache_key
+from .exceptions import CorruptedDataException, EmailServerException, LoginCodeStillValid
+from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer
 from .settings import auth_settings
 from .tokens import RefreshToken
+from .utils import generate_cache_key, send_login_email, user_login_blocked
 
 
 __all__ = [
@@ -29,39 +28,36 @@ logger = logging.getLogger(__name__)
 class SendLoginCodeView(APIView):
     """Send a new login code to the email POST-ed here.
 
-    Raises:
-        - HTTP 400 Bad Request: Email not given or type somehow invalid.
-        - HTTP 409 Conflict: There is already a login code valid for this email.
-        - HTTP 503 Service Unavailable: Email server could not send email.
+    HTTP 400 Bad Request: Email not given or type somehow invalid.
+
+    HTTP 409 Conflict: There is already a login code valid for this email.
+
+    HTTP 503 Service Unavailable: Email server could not send email.
     """
 
     authentication_classes = []
     permission_classes = []
-
-    class SendLoginCodeSerializer(serializers.Serializer):
-        email = serializers.EmailField(help_text="Email address to send the code to.")
-
-        def validate(self, attrs):
-            return auth_settings.VALIDATION_CALLBACK(email=attrs["email"])
-
+    serializer_class: serializers.Serializer = SendLoginCodeSerializer
 
     def post(self, request: Request, *args, **kwargs) -> Response:
-        login_info = self.SendLoginCodeSerializer(data=request.data)
+        login_info = self.serializer_class(data=request.data)
         login_info.is_valid(raise_exception=True)
         data = login_info.data
 
         cache_key = generate_cache_key(data["email"])
         if cache.get(cache_key, None) is not None:
-            raise LoginCodeStillValid()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         login_data = auth_settings.LOGIN_DATA()
         login_data["code"] = auth_settings.CODE_GENERATOR()
+        logger.info(login_data)
         cache.set(cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
         try:
             send_login_email(self.request, code=login_data["code"], email=data["email"])
-        except Exception:
+        except Exception as error:
             cache.delete(cache_key)
+            logger.critical(error)
             raise EmailServerException(_("Failed to send login codes. Try again later."))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -70,19 +66,18 @@ class SendLoginCodeView(APIView):
 class LoginView(APIView):
     """Get new refresh and access token pair from a login code and email.
 
-    Raises:
-        - HTTP 400 Bad Request: Email or code not given or their types are somehow invalid.
-        - HTTP 403 Forbidden: User has been blocked aftr too many attemps at login.
-        - HTTP 404 Not Found: No login code found for given email.
-        - HTTP 410 Gone: Login data was corrupted.
+    HTTP 400 Bad Request: Email or code not given or their types are somehow invalid.
+
+    HTTP 403 Forbidden: User has been blocked aftr too many attemps at login.
+
+    HTTP 404 Not Found: No login code found for given email.
+
+    HTTP 410 Gone: Login data was corrupted.
     """
 
     authentication_classes = []
     permission_classes = []
-
-    class LoginSerializer(serializers.Serializer):
-        code = serializers.CharField(help_text="Login code.")
-        email = serializers.EmailField(help_text="Email address the code was sent to.")
+    serializer_class: serializers.Serializer = LoginSerializer
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         if user_login_blocked(request):
@@ -91,12 +86,13 @@ class LoginView(APIView):
                 % {"x": auth_settings.LOGIN_COOLDOWN.total_seconds() // 60}
             )
 
-        login = self.LoginSerializer(data=request.data)
+        login = self.serializer_class(data=request.data)
         login.is_valid(raise_exception=True)
         data = login.data
 
         cache_key = generate_cache_key(data["email"])
-        if login_info := cache.get(cache_key, None):
+        login_info = cache.get(cache_key, None)
+        if login_info is None:
             raise NotFound(_("No login code found code for '%(email)s'.") % {"email": data["email"]})
 
         if not auth_settings.SKIP_CODE_CHECKS:
@@ -128,19 +124,17 @@ class LoginView(APIView):
 class RefreshTokenView(APIView):
     """Get new access token by POST-ing refresh token here.
 
-    Raises:
-        - HTTP 400 Bad Request: Token not given or type somehow invalid.
-        - HTTP 401 Unauthorized: Refresh token has expired or is invalid.
+    HTTP 400 Bad Request: Token not given or type somehow invalid.
+
+    HTTP 401 Unauthorized: Refresh token has expired or is invalid.
     """
 
     authentication_classes = []
     permission_classes = []
-
-    class RefreshTokenSerializer(serializers.Serializer):
-        token = serializers.CharField(help_text="Refresh token.")
+    serializer_class: serializers.Serializer = RefreshTokenSerializer
 
     def post(self, request: Request, *args, **kwargs) -> Response:
-        token = self.RefreshTokenSerializer(data=request.data)
+        token = self.serializer_class(data=request.data)
         token.is_valid(raise_exception=True)
         data = token.data
 

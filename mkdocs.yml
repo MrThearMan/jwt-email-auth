@@ -1,0 +1,12 @@
+site_name: JWT email authentication
+nav:
+  - Home: index.md
+  - Setup: setup.md
+  - Usage: usage.md
+theme:
+  name: readthedocs
+  highlightjs: true
+  hljs_languages:  # https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
+    - python
+    - json
+    - console

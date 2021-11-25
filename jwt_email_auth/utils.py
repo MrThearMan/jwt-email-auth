@@ -1,16 +1,13 @@
 import logging
-from random import randint
-from inspect import cleandoc
 from hashlib import md5
+from inspect import cleandoc
+from random import randint
 
-from django.core.mail import send_mail
 from django.core.cache import cache
+from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils.translation import override
-
-from rest_framework.request import Request
-
 from ipware import get_client_ip
+from rest_framework.request import Request
 
 from .settings import auth_settings
 
@@ -69,13 +66,11 @@ def user_login_blocked(request: Request) -> bool:
 
 def send_login_email(request: Request, code: str, email: str) -> None:
 
-    with override(request.LANGUAGE_CODE):
-        plain_message = cleandoc(
-            auth_settings.LOGIN_EMAIL_MESSAGE.format(
-                code=code,
-                valid=auth_settings.LOGIN_CODE_LIFETIME.total_seconds() // 60
-            )
+    plain_message = cleandoc(
+        auth_settings.LOGIN_EMAIL_MESSAGE.format(
+            code=code, valid=auth_settings.LOGIN_CODE_LIFETIME.total_seconds() // 60
         )
+    )
 
     html_message = None
     if auth_settings.LOGIN_EMAIL_HTML_TEMPLATE is not None:
