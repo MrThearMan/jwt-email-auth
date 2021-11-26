@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jwt-email-auth"
-version = "0.1.0"
+version = "0.1.1"
 description = "JWT authentication from email login codes."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
