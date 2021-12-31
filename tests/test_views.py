@@ -202,7 +202,7 @@ def test_authenticate_endpoint__email_sending_fails(caplog):
         def __init__(self):
             super().__init__("foo")
 
-    with patch("jwt_email_auth.views.send_login_email", side_effect=TestException):
+    with patch("jwt_email_auth.utils.send_login_email", side_effect=TestException):
         response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     log_source, level, message = caplog.record_tuples[0]

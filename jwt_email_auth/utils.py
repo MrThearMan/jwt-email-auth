@@ -2,7 +2,7 @@ import logging
 from hashlib import md5
 from inspect import cleandoc
 from random import randint
-from typing import Dict
+from typing import Any, Dict
 
 from django.core.cache import cache
 from django.core.mail import send_mail
@@ -75,8 +75,8 @@ def user_login_blocked(request: Request) -> bool:
     return block
 
 
-def send_login_email(request: Request, code: str, email: str) -> None:
-
+def send_login_email(request: Request, email: str, login_data: Dict[str, Any]) -> None:
+    code = login_data["code"]
     valid = int(auth_settings.LOGIN_CODE_LIFETIME.total_seconds() // 60)
     plain_message = cleandoc(auth_settings.LOGIN_EMAIL_MESSAGE.format(code=code, valid=valid))
 

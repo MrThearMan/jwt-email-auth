@@ -16,7 +16,7 @@ from .exceptions import CorruptedDataException, EmailServerException
 from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer
 from .settings import auth_settings
 from .tokens import RefreshToken
-from .utils import generate_cache_key, send_login_email, user_login_blocked
+from .utils import generate_cache_key, user_login_blocked
 
 
 __all__ = [
@@ -67,7 +67,7 @@ class SendLoginCodeView(APIView):
         cache.set(cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
         try:
-            send_login_email(self.request, code=login_data["code"], email=data["email"])
+            auth_settings.LOGIN_EMAIL_CALLBACK(request=self.request, email=data["email"], login_data=login_data)
         except Exception as error:
             cache.delete(cache_key)
             logger.critical(f"Email sending failed: {type(error).__name__}('{error}')")
@@ -107,18 +107,18 @@ class LoginView(APIView):
         data = login.data
 
         cache_key = generate_cache_key(data["email"])
-        login_info = cache.get(cache_key, None)
-        if login_info is None:
+        login_data = cache.get(cache_key, None)
+        if login_data is None:
             raise NotFound(_("No login code found code for '%(email)s'.") % {"email": data["email"]})
 
-        login_code = login_info.pop("code", None)
+        login_code = login_data.pop("code", None)
         if not auth_settings.SKIP_CODE_CHECKS:
             if login_code != data["code"]:
                 raise AuthenticationFailed(_("Incorrect login code."))
 
         refresh = RefreshToken()
         try:
-            refresh.update({key: login_info[key] for key in auth_settings.EXPECTED_CLAIMS})
+            refresh.update({key: login_data[key] for key in auth_settings.EXPECTED_CLAIMS})
         except KeyError as error:
             logger.warning(
                 "Some data was missing from saved login info. If you set EXPECTED_CLAIMS, "

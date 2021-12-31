@@ -119,6 +119,11 @@ class JWTEmailAuthSettings(TypedDict):
     # Takes a single argument "ip" of type str, and return None.
     # Default is no additional handling
     BLOCKING_HANDLER: str
+    #
+    # "Dot import notation" to a function that sends the login email.
+    # Takes three arguments: request (Request), email (str), and login data (Dict[str, Any]).
+    # Default handler uses django's send_mail function.
+    LOGIN_EMAIL_CALLBACK: str
 
 
 # DO NOT USE IN PRODUCTION!
@@ -185,6 +190,7 @@ DEFAULTS = JWTEmailAuthSettings(
     LOGIN_ATTEMPTS=10,
     LOGIN_COOLDOWN=timedelta(minutes=5),
     BLOCKING_HANDLER="jwt_email_auth.utils.blocking_handler",
+    LOGIN_EMAIL_CALLBACK="jwt_email_auth.utils.send_login_email",
 )
 
 # List of settings that may be in string dot import notation.
@@ -193,6 +199,7 @@ IMPORT_STRINGS = [
     "LOGIN_DATA",
     "CODE_GENERATOR",
     "BLOCKING_HANDLER",
+    "LOGIN_EMAIL_CALLBACK",
 ]
 
 _AUTH_SETTINGS = APISettings(USER_SETTINGS, DEFAULTS, IMPORT_STRINGS)  # type: ignore
