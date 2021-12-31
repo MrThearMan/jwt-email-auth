@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jwt-email-auth"
-version = "0.1.3"
+version = "0.2.0"
 description = "JWT authentication from email login codes."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
@@ -33,8 +33,8 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Framework :: Django :: 3.1",
     "Framework :: Django :: 3.2",
+    "Framework :: Django :: 4.0",
     "Intended Audience :: Developers",
     "Natural Language :: English",
 ]
@@ -48,27 +48,27 @@ exclude = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
-Django = "^3.2.9"
-djangorestframework = "^3.12.2"
-django-ipware = "^4.0.0"
-cryptography = "^36.0.0"
-PyJWT = "^2.3.0"
+Django = ">=3.2"
+djangorestframework = ">=3.12.0"
+django-ipware = ">=4.0.0"
+cryptography = ">=36.0.0"
+PyJWT = ">=2.3.0"
+cffi = ">=1.15.0"
 
 [tool.poetry.dev-dependencies]
-# For testing and CI
-pytest = "^6.2.5"
-coverage = "^6.1.2"
-tomli = "^1.2.2"
-pytest-django = "^4.4.0"
-pre-commit = "^2.13.0"
-tox-gh-actions = "^2.7.0"
-tox = "^3.24.4"
-coveralls = "^3.2.0"
-# For documentation
-mkdocs = "^1.2.2"
-# For code style
-flake8 = "^3.9.2"
-mypy = "^0.910"
+pytest-cov = "^3.0.0"
+pytest-django = "^4.5.2"
+tomli = "1.2.3"
+pre-commit = "^2.16.0"
+tox-gh-actions = "^2.8.1"
+tox = "^3.24.5"
+coveralls = "^3.3.1"
+mkdocs = "^1.2.3"
+black = "^21.12b0"
+isort = "^5.10.1"
+flake8 = "^4.0.1"
+mypy = "^0.930"
+pylint = "^2.12.2"
 django-stubs = "^1.9.0"
 djangorestframework-stubs = "^1.4.0"
 
@@ -90,7 +90,7 @@ ignore-paths = [
 ]
 
 [tool.pylint.messages_control]
-disable = "C0330, C0326, C0114, C0115, C0116, R0903, R0913, R1721"
+disable = "C0330, C0326, C0114, C0115, C0116, R0903, R0913, R1721, W1203, E0401"
 
 [tool.pylint.format]
 max-line-length = "120"
@@ -99,7 +99,7 @@ max-line-length = "120"
 notes = "FIXME,XXX,BUG"
 
 [tool.mypy]
-python_version = 3.9
+python_version = "3.9"
 warn_return_any = "True"
 warn_unused_configs = "True"
 plugins = [
@@ -128,7 +128,7 @@ django_settings_module = "tests.django.settings"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{38, 39, 310}
+envlist = py{38, 39, 310}-django{32, 40}
 isolated_build = true
 
 [gh-actions]
@@ -142,9 +142,22 @@ whitelist_externals =
     poetry
 setenv =
     PYTHONPATH = {toxinidir}
+deps =
+    django32: Django>=3.2,<4.0
+    django40: Django>=4.0,<4.1
+
+    django32: djangorestframework>=3.12.0,<3.13.0
+    django40: djangorestframework>=3.13.0,<3.14.0
+
+    django-ipware>=4.0.0
+    cryptography>=36.0.0
+    PyJWT>=2.3.0
+    cffi>=1.15.0
+
+    pytest-cov
+    pytest-django
 commands =
-    poetry install
-    poetry run coverage run -m pytest -vv -s --log-cli-level=INFO
+    coverage run -m pytest -vv -s --log-cli-level=INFO
 """
 
 [build-system]

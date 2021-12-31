@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from django.contrib.auth.models import AnonymousUser
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 __all__ = ["StatelessUser"]
 
 
-class StatelessUser(AnonymousUser):
+class StatelessUser(AnonymousUser):  # pylint: disable=W0223
     """
     User that is not actually logged in, but enables
     authentication and permission checks.
@@ -25,25 +25,25 @@ class StatelessUser(AnonymousUser):
         self.token = token if token is not None else {}
 
     @cached_property
-    def id(self):
-        return uuid4()
+    def id(self) -> str:  # pylint: disable=C0103,R0201
+        return str(uuid4())
 
     @cached_property
-    def pk(self):
+    def pk(self) -> str:  # pylint: disable=C0103
         return self.id
 
     @property
-    def is_authenticated(self):
+    def is_authenticated(self) -> bool:  # type: ignore
         return True
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__class__.__name__
 
-    def __eq__(self, other):
-        return self.id == other.id
+    def __eq__(self, other: Any) -> bool:
+        return hash(self) == hash(other)
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self.token))

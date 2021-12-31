@@ -1,12 +1,10 @@
 import logging
 
 from django.conf import settings
-
+from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.permissions import BasePermission
-from rest_framework.exceptions import AuthenticationFailed
 
 from .tokens import AccessToken
-from .settings import auth_settings
 
 
 __all__ = [
@@ -25,9 +23,9 @@ class HasValidJWT(BasePermission):
             return True
 
         try:
-            AccessToken.from_request(request, expected_claims=auth_settings.EXPECTED_CLAIMS)
-        except AuthenticationFailed as f:
-            logger.debug(f)
+            AccessToken.from_request(request)
+        except (AuthenticationFailed, NotAuthenticated) as error:
+            logger.debug(error)
             return False
 
         return True

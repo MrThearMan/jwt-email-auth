@@ -1,7 +1,11 @@
-from rest_framework.fields import CharField
+from functools import lru_cache
+from typing import Any, Optional
 
-from .tokens import AccessToken, RefreshToken
-from .settings import auth_settings
+from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
+from rest_framework.fields import HiddenField, empty
+from rest_framework.request import Request
+
+from .tokens import AccessToken
 
 
 __all__ = [
@@ -9,32 +13,45 @@ __all__ = [
 ]
 
 
-class AutoTokenField(CharField):
-    """Field where the JWT can be added from authorization header"""
+class AutoTokenField(HiddenField):
+    """A field that automatically populates from the parent serializers context.
+    The context dictionary's must include a Request object, and that Request object
+    must have an 'Authorization' header, from which the JWT is created.
+    If any of these are missing, or the created JWT is not valid, an error will be raised.
+
+    Parent serializers 'validated_data' attribute will contain an 'AccessToken' object.
+    Parent serializers 'data' attribute will contain the encoded token as a string.
+
+    AutoTokenField is not shown in the generated schema (due to sublassing HiddenField),
+    since the purpose for this field is to accept the token from the Authorization header
+    and not from user input.
+    """
 
     def __init__(self, **kwargs):
-        key = kwargs.pop("return_key", None)
-        self.refresh_token = kwargs.pop("refresh_token", False)
+        kwargs["default"] = empty
         super().__init__(**kwargs)
-        self.return_key = key or self.field_name
 
-    def to_internal_value(self, data):
-        """Try to construct an Access token, or Refresh token if specified.
+        # Both must always be False so that token appears
+        # in both 'validated_data' and 'data' attributes
+        self.write_only = False
+        self.read_only = False
 
-        :raises AuthenticationFailed: JWT token expired or malformed.
-        """
-        if self.refresh_token:
-            return RefreshToken(token=data, expected_claims=auth_settings.EXPECTED_CLAIMS)
-        return AccessToken(token=data, expected_claims=auth_settings.EXPECTED_CLAIMS)
+    @lru_cache(maxsize=None)
+    def get_default(self) -> AccessToken:  # type: ignore
+        request: Optional[Request] = self.parent.context.get("request")
+        if request is None or not isinstance(request, Request):
+            raise ValidationError("Must include a Request object in the context of the Serializer.")
 
-    def to_representation(self, value):
-        """Construct the JWT for outgoing data."""
+        try:
+            return AccessToken.from_request(request)
+        except (AuthenticationFailed, NotAuthenticated) as error:
+            raise ValidationError(error.detail) from error
 
-        # Change the key under which the token is returned under
-        self.field_name = self.return_key
+    def run_validation(self, data: Any = ...) -> AccessToken:
+        return self.get_default()
 
-        # Special case when refresh token is given,
-        # should return new access token instead
-        if self.refresh_token:
-            return str(value.new_access_token())
+    def get_attribute(self, instance) -> AccessToken:
+        return self.get_default()
+
+    def to_representation(self, value: AccessToken) -> str:
         return str(value)
