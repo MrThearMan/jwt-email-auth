@@ -112,7 +112,6 @@ class LoginView(APIView):
 
         cache.delete(cache_key)
 
-        refresh = RefreshToken()
         access = refresh.new_access_token()
         access.sync_with(refresh)
 
