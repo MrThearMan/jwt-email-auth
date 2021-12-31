@@ -32,10 +32,10 @@ logger = logging.getLogger(__name__)
 class SendLoginCodeView(APIView):
     """Send a new login code to the given email.
 
-    HTTP 200 OK: Email was sent successfully.
-
-    HTTP 204 No Content: Login code for this email already cached,
+    HTTP 200 OK: Login code for this email already cached,
     no email sent as one should have been sent already.
+
+    HTTP 204 No Content: Email was sent successfully.
 
     HTTP 400 Bad Request: Email not given or type somehow invalid.
 

@@ -63,7 +63,6 @@ class JWTEmailAuthSettings(TypedDict):
     LOGIN_SUBJECT_LINE: str
     #
     # Message to send in email. Must have {code} and {valid}!
-    #
     LOGIN_EMAIL_MESSAGE: str
     #
     # Path to html_message template. Context must have {{ code }} and {{ valid }}!
@@ -104,16 +103,16 @@ class JWTEmailAuthSettings(TypedDict):
     # Only these proxy IPs are allowed connections
     PROXY_TRUSTED_IPS: Optional[List[str]]
     #
-    # list[str]: Meta precedence order
+    # Meta precedence order
     REQUEST_HEADER_ORDER: Optional[List[str]]
     #
-    # str: Cache prefix for login codes and banned IPs
+    # Cache prefix for login codes and banned IPs
     CACHE_PREFIX: str
     #
-    # int: Number of login attempts until banned
+    # Number of login attempts until banned
     LOGIN_ATTEMPTS: int
     #
-    # timedelta: How long until login ban lifted
+    # How long until login ban lifted
     LOGIN_COOLDOWN: timedelta
     #
     # "Dot import notation" to a function that does additional handling for blocked IPs.

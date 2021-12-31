@@ -1,6 +1,7 @@
 # Setup
 
-1. Add authentication, login, and token refresh views to urlpatterns.
+① Add authentication, login, and token refresh views to urlpatterns.
+
 ```python
 from django.urls import path
 from jwt_email_auth.views import SendLoginCodeView, LoginView, RefreshTokenView
@@ -31,56 +32,42 @@ urlpatterns = [
     ...
 ]
 ```
+② Configure JWT email auth settings under the `JWT_EMAIL_AUTH` dictionary-type setting.
 
-2. Configure JWT email auth settings.
+| Setting                   | Description                                                                                                                                                                                          | Type                                                                                             |
+|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| SEND_EMAILS               | Send email, off by default                                                                                                                                                                           | bool                                                                                             |
+| SKIP_CODE_CHECKS          | When True, any code will work in login                                                                                                                                                               | bool                                                                                             |
+| SIGNING_KEY               | JWT signing key                                                                                                                                                                                      | [Ed25519<br>PrivateKey](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/) |
+| ACCESS_TOKEN_LIFETIME     | How long an access token is valid for                                                                                                                                                                | timedelta                                                                                        |
+| REFRESH_TOKEN_LIFETIME    | How long a refresh token is valid for                                                                                                                                                                | timedelta                                                                                        |
+| LOGIN_CODE_LIFETIME       | How long a login code is stored in cache                                                                                                                                                             | timedelta                                                                                        |
+| VALIDATION_CALLBACK       | "Dot import notation" to a function to use <br>for validating use from email. <br>Takes a single argument "email" of <br>type str and returns None. <br>Default is no validation.                    | str                                                                                              |
+| LOGIN_DATA                | "Dot import notation" to a function to run <br>to gather login data. Takes no <br>arguments and returns a Dict[str, Any],<br> where Any can be cached <br>in your cache backend. Default is no data. | str                                                                                              |
+| CODE_GENERATOR            | "Dot import notation" to a function to <br>generate a login code. Takes no <br>arguments and returns a string. Default is a <br>function that returns a 6-digit string.                              | str                                                                                              |
+| LOGIN_SENDING_EMAIL       | Email sender. Default is <br>settings.DEFAULT_FROM_EMAIL                                                                                                                                             | str*                                                                                             |
+| LOGIN_SUBJECT_LINE        | Email subject line                                                                                                                                                                                   | str                                                                                              |
+| LOGIN_EMAIL_MESSAGE       | Message to send in email. <br>Must have {code} and {valid}.                                                                                                                                          | str                                                                                              |
+| LOGIN_EMAIL_HTML_TEMPLATE | Path to html_message template. <br>Context must have {{ code }} and {{ valid }}.                                                                                                                     | Path*                                                                                            |
+| ISSUER                    | Issuer of the JWT                                                                                                                                                                                    | str*                                                                                             |
+| AUDIENCE                  | Intended recipient of the JWT                                                                                                                                                                        | str*                                                                                             |
+| LEEWAY                    | A time margin in seconds for the <br>expiration check                                                                                                                                                | int                                                                                              |
+| ALGORITHM                 | Algorithm to sign and decrypt the token with                                                                                                                                                         | str                                                                                              |
+| HEADER_PREFIX             | Authorization: <HEADER_PREFIX> <token>                                                                                                                                                               | str                                                                                              |
+| EXTRA_HEADERS             | Additional JWT header fields                                                                                                                                                                         | Dict[str, str]*                                                                                  |
+| EXPECTED_CLAIMS           | List of expected JWT content                                                                                                                                                                         | List[str]                                                                                        |
+| PROXY_ORDER               | Indicate whether the originating client <br>is on the right or left in the <br>X-Forwarded-For header                                                                                                | "left-most"<br>"right-most"                                                                      |
+| PROXY_COUNT               | Number of proxies between the server <br>and internet                                                                                                                                                | int]                                                                                             |
+| PROXY_TRUSTED_IPS         | Only these proxy IPs are allowed connections                                                                                                                                                         | List[str]*                                                                                       |
+| REQUEST_HEADER_ORDER      | Meta precedence order                                                                                                                                                                                | List[str]*                                                                                       |
+| CACHE_PREFIX              | Cache prefix for login codes and banned IPs                                                                                                                                                          | str                                                                                              |
+| LOGIN_ATTEMPTS            | Number of login attempts until banned                                                                                                                                                                | int                                                                                              |
+| LOGIN_COOLDOWN            | How long until login ban lifted                                                                                                                                                                      | timedelta                                                                                        |
+| BLOCKING_HANDLER          | "Dot import notation" to a function that <br>does additional handling for <br>blocked IPs. Takes a single argument "ip" of <br>type str, and return None. <br>Default is no additional handling.     | str                                                                                              |
 
-```python
-JWT_EMAIL_AUTH = {
-    # Required:
-    #
-    # Off by default, will log message instead if False.
-    "SEND_EMAILS": True,
-    # A path to a function, in dot import notation,
-    # that returns what should be stored in cache before login
-    # codes are sent. This data is then added to the JWT claims
-    # when the login is successful. Note that 'code' is reserved
-    # for the login code that the login is made with, and it's not
-    # added to JWT claims during login.
-    "LOGIN_DATA": "path.to.function",
-    # Other useful ones:
-    #
-    # Skip login code checks, for development.
-    "SKIP_CODE_CHECKS": True,
-    # How long tokens are valid. By default, access tokens
-    # are valid for 5 minutes, and refresh tokens for 14 days.
-    "ACCESS_TOKEN_LIFETIME": timedelta(...),
-    "REFRESH_TOKEN_LIFETIME": timedelta(...),
-    # How long login codes are valid in cache (5 minutes by default).
-    "LOGIN_CODE_LIFETIME": timedelta(...),
-    # Path to an alternative code generator function, in dot import notation.
-    "CODE_GENERATOR": "path.to.function",
-    # The message to send. Should contain '{code}' and '{valid}' which will be
-    # replaced by the login code and valid time in minutes.
-    "LOGIN_EMAIL_MESSAGE": "...",
-    # Path to login HTML template. Context for this will include two values,
-    # 'code' (code needed for login) and 'valid' (code valid time in minutes).
-    "LOGIN_EMAIL_HTML_TEMPLATE": "templates/example_login.html",
-    # List of extra claims that token validation expects to find inside the token.
-    # If not all of these are found, token is deemed invalid. Off by default.
-    "EXPECTED_CLAIMS": [...],
-    # How many times login can be attemted before used is banned
-    # for a short while (10 by default).
-    "LOGIN_ATTEMPTS": 10,
-    # How long user needs to wait from last login attempt until login
-    # ban is lifted (5 minutes by default)
-    "LOGIN_COOLDOWN": timedelta(...),
-}
-```
+\* Optional
 
-Have a look at the [provided settings](https://github.com/MrThearMan/jwt-email-auth/blob/main/jwt_email_auth/settings.py) for more.
-
-
-3. Configure Django's email [email settings](https://docs.djangoproject.com/en/3.2/topics/email/#quick-example).
+③ Configure Django's email [email settings](https://docs.djangoproject.com/en/3.2/topics/email/#quick-example).
 
 ```python
 # Not all of these may be required
@@ -97,26 +84,24 @@ DEFAULT_FROM_EMAIL = ...
 SERVER_EMAIL = ...
 ```
 
-4. Add OpenSSH based [ed25519](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/) `SIGNING_KEY` (in PEM format)
-   to environment variables. You can create one with, e.g., ssh-keygen using the command `ssh-keygen -t ed25519`. The linebreaks in PEM
-   format should be replaced with | (pipe) characters. If you do not want to use environment variables, override the `SIGNING_KEY` setting.
+④ Add OpenSSH based [ed25519](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/)
+`SIGNING_KEY` (in PEM format) to environment variables. You can create one with, e.g., ssh-keygen using
+the command `ssh-keygen -t ed25519`. The linebreaks in PEM format should be replaced with | (pipe) characters.
+If you do not want to use environment variables, override the `SIGNING_KEY` setting.
 
-> A `default signing key` is provided for reference, but this should obviously be changed in production environments.
+> A default signing key is provided for reference in the settings-module,
+> but this should obviously be changed in production environments.
 
-5. (Optional) Add custom authentication classes to Rest framework settings.
+⑤ (Optional) Add custom authentication classes to Rest framework settings.
 
 ```python
 REST_FRAMEWORK = {
     ...
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        ...
         "jwt_email_auth.authentication.JWTAuthentication",
-        ...
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        ...
         "jwt_email_auth.permissions.HasValidJWT",
-        ...
     ]
     ...
 }

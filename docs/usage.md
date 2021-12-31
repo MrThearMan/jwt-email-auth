@@ -2,26 +2,26 @@
 
 1. Send a login code to the *authentication* endpoint (from `SendLoginCodeView` class).
 
-|Request|Response|
-|---|---|
-|POST [Authentication URI] <br>Content-Type: application/json|HTTP 204 NO CONTENT
-|{<br>  "email":"person@example.com"<br>}|...|
+| Request                                                      | Response            |
+|--------------------------------------------------------------|---------------------|
+| POST [Authentication URI] <br>Content-Type: application/json | HTTP 204 NO CONTENT |
+| {<br>  "email":"person@example.com"<br>}                     | ...                 |
 
 
 2. POST the login code and email to *login* endpoint (from `LoginView` class).
 
-|Request|Response|
-|---|---|
-|POST [Login URI] <br>Content-Type: application/json|HTTP 202 ACCEPTED
-|{<br>  "email":"person@example.com"<br>  "code":"123222"<br>}|{<br>  "access":"..."<br>  "refresh":"..."<br>}|
+| Request                                                       | Response                                        |
+|---------------------------------------------------------------|-------------------------------------------------|
+| POST [Login URI] <br>Content-Type: application/json           | HTTP 200 OK                                     |
+| {<br>  "email":"person@example.com"<br>  "code":"123222"<br>} | {<br>  "access":"..."<br>  "refresh":"..."<br>} |
 
 
 3. Refresh access token from the *refresh token* endpoint (from `RefreshTokenView` class).
 
-|Request|Response|
-|---|---|
-|POST [Refresh Token URI] <br>Content-Type: application/json|HTTP 200 OK
-|{<br>  "token":"..."<br>}|{<br>  "access":"..."<br>}|
+| Request                                                     | Response                   |
+|-------------------------------------------------------------|----------------------------|
+| POST [Refresh Token URI] <br>Content-Type: application/json | HTTP 200 OK                |
+| {<br>  "token":"..."<br>}                                   | {<br>  "access":"..."<br>} |
 
 
 ## Authentication and Permission classes
