@@ -124,7 +124,7 @@ class AccessToken:
     def __contains__(self, key: str) -> bool:
         return key in self.payload
 
-    def get(self, key: str, default: str = None) -> Any:
+    def get(self, key: str, default: Optional[Any] = None) -> Any:
         """Fetch the value of a claim from this token."""
         return self.payload.get(key, default)
 
