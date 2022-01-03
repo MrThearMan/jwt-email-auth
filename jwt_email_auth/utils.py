@@ -65,8 +65,8 @@ def user_login_blocked(request: Request) -> bool:
     attempts = cache.get(cache_key, 0) + 1
     cache.set(cache_key, attempts, auth_settings.LOGIN_COOLDOWN.total_seconds())
 
-    block: bool = attempts >= auth_settings.LOGIN_ATTEMPTS
-    wasnt_blocked: bool = attempts - 1 < auth_settings.LOGIN_ATTEMPTS
+    block: bool = attempts > auth_settings.LOGIN_ATTEMPTS
+    wasnt_blocked: bool = attempts - 1 <= auth_settings.LOGIN_ATTEMPTS
 
     if block and wasnt_blocked:
         logger.warning(f"Blocked user with ip '{ip}' due to too many login attempts.")

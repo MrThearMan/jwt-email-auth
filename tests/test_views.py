@@ -143,7 +143,7 @@ def test_login_endpoint__user_gets_blocked(settings, caplog):
 
     settings.JWT_EMAIL_AUTH = {
         "SEND_EMAILS": False,
-        "LOGIN_ATTEMPTS": 2,
+        "LOGIN_ATTEMPTS": 1,
     }
 
     client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
