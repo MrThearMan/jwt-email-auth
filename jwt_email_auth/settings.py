@@ -47,7 +47,7 @@ class JWTEmailAuthSettings(TypedDict):
     VALIDATION_CALLBACK: str
     #
     # "Dot import notation" to a function to run to gather login data.
-    # Takes no arguments and returns a Dict[str, Any], where Any can be cached in your cache backend.
+    # Takes a single argument "email" and returns a Dict[str, Any], where Any can be cached in your cache backend.
     # Default is no data.
     LOGIN_DATA: str
     #

@@ -7,7 +7,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.fields import empty
 from rest_framework.request import Request
 
-from .settings import auth_settings
 from .tokens import AccessToken
 
 
@@ -21,10 +20,6 @@ __all__ = [
 
 class SendLoginCodeSerializer(serializers.Serializer):  # pylint: disable=W0223
     email = serializers.EmailField(help_text="Email address to send the code to.")
-
-    def validate(self, attrs):
-        auth_settings.VALIDATION_CALLBACK(email=attrs["email"])
-        return attrs
 
 
 class LoginSerializer(serializers.Serializer):  # pylint: disable=W0223

@@ -52,22 +52,24 @@ class SendLoginCodeView(APIView):
         login_info = self.serializer_class(data=request.data)
         login_info.is_valid(raise_exception=True)
         data = login_info.data
+        email = data["email"]
 
-        cache_key = generate_cache_key(data["email"])
+        cache_key = generate_cache_key(email)
         if cache.get(cache_key, None) is not None:
             message = _(
                 "Login code for '%(email)s' already exists. "
                 "Please check your inbox and spam folder, or try again later."
-            ) % {"email": data["email"]}
+            ) % {"email": email}
             return Response(data={"message": message}, status=status.HTTP_200_OK)
 
-        login_data = auth_settings.LOGIN_DATA()
+        auth_settings.VALIDATION_CALLBACK(email=email)
+        login_data = auth_settings.LOGIN_DATA(email=email)
         login_data["code"] = auth_settings.CODE_GENERATOR()
         logger.debug(login_data)
         cache.set(cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
         try:
-            auth_settings.LOGIN_EMAIL_CALLBACK(request=self.request, email=data["email"], login_data=login_data)
+            auth_settings.LOGIN_EMAIL_CALLBACK(request=self.request, email=email, login_data=login_data)
         except Exception as error:
             cache.delete(cache_key)
             logger.critical(f"Email sending failed: {type(error).__name__}('{error}')")

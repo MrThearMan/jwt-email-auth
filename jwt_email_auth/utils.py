@@ -36,7 +36,7 @@ def generate_cache_key(content: str) -> str:
     return f"{auth_settings.CACHE_PREFIX}-{md5(content.encode()).hexdigest()}"
 
 
-def default_login_data() -> Dict[str, str]:
+def default_login_data(email: str) -> Dict[str, Any]:  # pylint: disable=W0613
     """Default login data function. It is meant to be overriden in Django settings."""
     return {}
 

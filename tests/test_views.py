@@ -227,7 +227,7 @@ def test_login_endpoint__expected_claims_found(settings, caplog):
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
-    def custom_login_data_function():
+    def custom_login_data_function(email: str):
         return {"foo": 123, "bar": "true"}
 
     with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function) as mock:
@@ -254,7 +254,7 @@ def test_login_endpoint__expected_claims_not_found(settings, caplog):
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
-    def custom_login_data_function():
+    def custom_login_data_function(email: str):
         return {"foo": 123}
 
     with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function) as mock:
@@ -384,7 +384,7 @@ def test_refresh_endpoint__expected_claims_found(settings, caplog):
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
-    def custom_login_data_function():
+    def custom_login_data_function(email: str):
         return {"foo": 123, "bar": "true"}
 
     with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function):
@@ -409,10 +409,10 @@ def test_refresh_endpoint__expected_claims_not_found(settings, caplog):
         "EXPECTED_CLAIMS": ["foo"],
     }
 
-    def custom_login_data_function1():
+    def custom_login_data_function(email: str):
         return {"foo": 123}
 
-    with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function1):
+    with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function):
         client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     message = caplog.record_tuples[0][2]
