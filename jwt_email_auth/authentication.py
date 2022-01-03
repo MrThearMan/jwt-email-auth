@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
+from rest_framework.request import Request
 
 from .models import StatelessUser
 from .settings import auth_settings
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class JWTAuthentication(BaseAuthentication):
-    def authenticate(self, request) -> Optional[Tuple[StatelessUser, str]]:
+    def authenticate(self, request: Request) -> Optional[Tuple[StatelessUser, str]]:
         try:
             token = AccessToken.from_request(request)
             return StatelessUser(token=token), str(token)
@@ -26,5 +27,5 @@ class JWTAuthentication(BaseAuthentication):
             logger.debug(error)
             return None
 
-    def authenticate_header(self, request):
+    def authenticate_header(self, request: Request) -> str:
         return f'{auth_settings.HEADER_PREFIX} realm="api"'

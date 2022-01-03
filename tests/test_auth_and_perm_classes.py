@@ -1,6 +1,9 @@
 import logging
 
 import pytest
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.test import APIClient
 
 from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.models import StatelessUser
@@ -70,3 +73,76 @@ def test_jwt_authentication__get_authenticate_header():
     instance = JWTAuthentication()
     result = instance.authenticate_header(None)
     assert result == 'Bearer realm="api"'
+
+
+def test_perm_view(drf_request):
+    client = APIClient()
+    token = AccessToken()
+    response: Response = client.get("/test-perm", format="json", HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    # Since JWTAuthentication not used, user and token are not available
+    assert response.data.get("token") == "None"
+    assert response.data.get("user") == "AnonymousUser"
+    assert response.data.get("is_authenticated") is False
+    assert response.status_code == status.HTTP_200_OK
+
+
+def test_perm_view__credential_not_provided(drf_request):
+    client = APIClient()
+    response: Response = client.get("/test-perm", format="json")
+
+    assert response.data.get("detail") == "No Authorization header found from request."
+    assert response.data.get("detail").code == "not_authenticated"
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_perm_view__invalid_header(drf_request):
+    client = APIClient()
+    token = AccessToken()
+    response: Response = client.get("/test-perm", format="json", HTTP_AUTHORIZATION=f"{token}")
+
+    assert response.data.get("detail") == "Invalid Authorization header."
+    # code is passed to response
+    assert response.data.get("detail").code == "invalid_header"
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_auth_view(drf_request):
+    client = APIClient()
+    token = AccessToken()
+    response: Response = client.get("/test-auth", format="json", HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    assert response.data.get("token") == str(token)
+    assert response.data.get("user") == "StatelessUser"
+    assert response.data.get("is_authenticated") is True
+    assert response.status_code == status.HTTP_200_OK
+
+
+def test_auth_view__credential_not_provided(drf_request):
+    client = APIClient()
+    response: Response = client.get("/test-auth", format="json")
+
+    assert response.data.get("token") == "None"
+    assert response.data.get("user") == "AnonymousUser"
+    assert response.data.get("is_authenticated") is False
+    assert response.status_code == status.HTTP_200_OK
+
+
+def test_auth_and_permission_view(drf_request):
+    client = APIClient()
+    token = AccessToken()
+    response: Response = client.get("/test-both", format="json", HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    assert response.data.get("token") == str(token)
+    assert response.data.get("user") == "StatelessUser"
+    assert response.data.get("is_authenticated") is True
+    assert response.status_code == status.HTTP_200_OK
+
+
+def test_auth_and_permission_view__credential_not_provided(drf_request):
+    client = APIClient()
+    response: Response = client.get("/test-both", format="json")
+
+    assert response.data.get("detail") == "Authentication credentials were not provided."
+    assert response.data.get("detail").code == "not_authenticated"
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED

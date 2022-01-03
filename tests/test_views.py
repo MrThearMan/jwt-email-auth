@@ -6,10 +6,8 @@ from html.parser import HTMLParser
 from time import sleep
 from unittest.mock import PropertyMock, patch
 
-import pytest
 from django.core.cache import cache
 from rest_framework import status
-from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.test import APIClient
 
 from jwt_email_auth.tokens import AccessToken

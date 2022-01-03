@@ -55,13 +55,13 @@ class AccessToken:
                 )
             except jwt.ExpiredSignatureError as error:
                 logger.info(error)
-                raise AuthenticationFailed(_("Signature has expired.")) from error
+                raise AuthenticationFailed(_("Signature has expired."), code="signature_expired") from error
             except jwt.DecodeError as error:
                 logger.info(error)
-                raise AuthenticationFailed(_("Error decoding signature.")) from error
+                raise AuthenticationFailed(_("Error decoding signature."), code="decoding_error") from error
             except jwt.InvalidTokenError as error:
                 logger.info(error)
-                raise AuthenticationFailed(_("Invalid token.")) from error
+                raise AuthenticationFailed(_("Invalid token."), code="invalid_token") from error
 
             if check_claims:
                 self.verify_payload()
@@ -94,10 +94,10 @@ class AccessToken:
         try:
             prefix, encoded_token = auth_header.decode().split()
         except ValueError as error:
-            raise AuthenticationFailed(_("Invalid Authorization header.")) from error
+            raise AuthenticationFailed(_("Invalid Authorization header."), code="invalid_header") from error
 
         if force_str(prefix).lower() != auth_settings.HEADER_PREFIX.lower():
-            raise AuthenticationFailed(_("Invalid prefix."))
+            raise AuthenticationFailed(_("Invalid prefix."), code="invalid_header_prefix")
 
         return cls(token=encoded_token, check_claims=check_claims)
 
@@ -136,12 +136,12 @@ class AccessToken:
         for claim in auth_settings.EXPECTED_CLAIMS:
             if claim not in self:
                 logger.info(f"Missing claim: {claim}")
-                raise AuthenticationFailed(_("Missing claims."))
+                raise AuthenticationFailed(_("Missing claims."), code="missing_claims")
 
     def verify_token_type(self) -> None:
         if self.token_type != self.payload.get("type", "notype"):
             logger.info(f"Invalid token type: {self.token_type}")
-            raise AuthenticationFailed(_("Invalid token type."))
+            raise AuthenticationFailed(_("Invalid token type."), code="invalid_type")
 
     def sync_with(self, token: Token) -> None:
         """Sync this token with the other token, as if they were created at the same time.
