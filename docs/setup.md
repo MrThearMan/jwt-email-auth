@@ -34,7 +34,24 @@ urlpatterns = [
 ```
 
 
-② Configure JWT email auth settings under the `JWT_EMAIL_AUTH` dictionary-type setting.
+② Configure settings with the `JWT_EMAIL_AUTH` key. Here is a minimal config:
+
+```python
+JWT_EMAIL_AUTH = {
+    "SEND_BY_EMAIL": True,                          # needs to be set explicitly!
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # default
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),   # default
+    "LOGIN_CODE_LIFETIME": timedelta(minutes=5),    # default
+    "EXPECTED_CLAIMS": ["foo", "bar"],              #
+    "CACHE_PREFIX": "PREFIX",                       #
+    "LOGIN_ATTEMPTS": 10,                           # default
+    "LOGIN_COOLDOWN": timedelta(minutes=5),         # default
+    "LOGIN_DATA": "path.to.module.function",        # should return EXPECTED_CLAIMS
+}
+
+```
+
+Here is the full list of settings and what they mean.
 
 | Setting                   | Description                                                                                                                                                                                                                      | Type                                                                                             |
 |---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
@@ -67,6 +84,7 @@ urlpatterns = [
 | LOGIN_COOLDOWN            | How long until login ban lifted                                                                                                                                                                                                  | timedelta                                                                                        |
 | BLOCKING_HANDLER          | "Dot import notation" to a function that <br>does additional handling for <br>blocked IPs. Takes a single argument "ip" of <br>type str, and return None. <br>Default is no additional handling.                                 | str                                                                                              |
 | LOGIN_EMAIL_CALLBACK      | "Dot import notation" to a function that <br>sends the login email.  <br>Takes three arguments: request (Request), <br>email (str), and login data <br>(Dict[str, Any]). Default handler uses <br>django's `send_mail` function. | str                                                                                              |
+| OPTIONS_SCHEMA_ACCESS     | When True (default), OPTIONS requests <br>can be made to the endpoint <br>without token for schema access.                                                                                                                       | bool                                                                                             |
 
 \* Optional, can be left None
 

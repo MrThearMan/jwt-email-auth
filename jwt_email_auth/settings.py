@@ -124,6 +124,9 @@ class JWTEmailAuthSettings(TypedDict):
     # Takes three arguments: request (Request), email (str), and login data (Dict[str, Any]).
     # Default handler uses django's send_mail function.
     LOGIN_EMAIL_CALLBACK: str
+    #
+    # When True (default), OPTIONS requests can be made to the endpoint without token for schema access
+    OPTIONS_SCHEMA_ACCESS: bool
 
 
 # DO NOT USE IN PRODUCTION!
@@ -191,6 +194,7 @@ DEFAULTS = JWTEmailAuthSettings(
     LOGIN_COOLDOWN=timedelta(minutes=5),
     BLOCKING_HANDLER="jwt_email_auth.utils.blocking_handler",
     LOGIN_EMAIL_CALLBACK="jwt_email_auth.utils.send_login_email",
+    OPTIONS_SCHEMA_ACCESS=True,
 )
 
 # List of settings that may be in string dot import notation.

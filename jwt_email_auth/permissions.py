@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.permissions import BasePermission
 
+from .settings import auth_settings
 from .tokens import AccessToken
 
 
@@ -22,9 +23,8 @@ class HasValidJWT(BasePermission):
     code = "permission_denied"
 
     def has_permission(self, request, view):
-
-        # Allow viewing the schema if in debug mode
-        if request.method == "OPTIONS" and settings.DEBUG:
+        if request.method == "OPTIONS" and settings.DEBUG and auth_settings.OPTIONS_SCHEMA_ACCESS:
+            logger.debug("Allow access for OPTIONS requests in DEBUG mode.")
             return True
 
         try:

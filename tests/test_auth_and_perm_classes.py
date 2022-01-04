@@ -146,3 +146,17 @@ def test_auth_and_permission_view__credential_not_provided(drf_request):
     assert response.data.get("detail") == "Authentication credentials were not provided."
     assert response.data.get("detail").code == "not_authenticated"
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_auth_and_permission_view__options_request_without_token(drf_request, settings):
+    settings.DEBUG = True
+    client = APIClient()
+    response: Response = client.options("/test-both", format="json")
+
+    assert response.data == {
+        "name": "Test View3",
+        "description": "",
+        "renders": ["application/json"],
+        "parses": ["application/json"],
+    }
+    assert response.status_code == status.HTTP_200_OK

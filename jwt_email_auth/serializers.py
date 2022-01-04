@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional
 
 from django.utils.functional import cached_property
@@ -16,6 +17,9 @@ __all__ = [
     "LoginSerializer",
     "SendLoginCodeSerializer",
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 class SendLoginCodeSerializer(serializers.Serializer):  # pylint: disable=W0223
@@ -52,8 +56,12 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
         if request is None or not isinstance(request, Request):
             raise ValidationError("Must include a Request object in the context of the Serializer.")
 
-        token = AccessToken.from_request(request)
         data = {}
+        if request.method == "OPTIONS":
+            logger.debug("Allow access without token for OPTIONS requests in DEBUG mode.")
+            return data
+
+        token = AccessToken.from_request(request)
         missing = []
         for key in self.take_form_token:
             try:

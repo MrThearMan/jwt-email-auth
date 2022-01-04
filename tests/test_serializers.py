@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -106,3 +107,22 @@ def test_base_access_serializer__claims_are_cached(drf_request):
 
     # Access token is only created one to fetch claims from it
     mock.assert_called_once()
+
+
+def test_base_access_serializer__options_requests_do_not_need_token(drf_request, caplog):
+    caplog.set_level(logging.DEBUG)
+    token = AccessToken()
+    token.update(foo=1, bar=2)
+    drf_request.method = "OPTIONS"
+
+    class TestSerializer(BaseAccessSerializer):
+        take_form_token = ["type"]
+
+    serializer = TestSerializer(context={"request": drf_request})
+    assert serializer.initial_data == {}
+
+    log_source, level, message = caplog.record_tuples[0]
+
+    assert log_source == "jwt_email_auth.serializers"
+    assert level == logging.DEBUG
+    assert "Allow access without token for OPTIONS requests in DEBUG mode."
