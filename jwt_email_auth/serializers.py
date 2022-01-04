@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.fields import empty
+from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.request import Request
+from rest_framework.settings import api_settings
 
 from .tokens import AccessToken
 
@@ -46,23 +46,22 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
     A ValidationError will be raised if token doesn't have all of these claims.
     """
 
-    def __init__(self, instance=None, data=empty, **kwargs):
-        super().__init__(instance=instance, data=data, **kwargs)
-        self.initial_data = self.add_token_claims(getattr(self, "initial_data", {}))
-
     @cached_property
     def token_claims(self) -> Dict[str, Any]:
         request: Optional[Request] = self.context.get("request")
         if request is None or not isinstance(request, Request):
-            raise ValidationError("Must include a Request object in the context of the Serializer.")
+            raise ValidationError(
+                {
+                    api_settings.NON_FIELD_ERRORS_KEY: ErrorDetail(
+                        string=_("Must include a Request object in the context of the Serializer."),
+                        code="request_missing",
+                    )
+                }
+            )
 
         data = {}
-        if request.method == "OPTIONS":
-            logger.debug("Allow access without token for OPTIONS requests in DEBUG mode.")
-            return data
-
         token = AccessToken.from_request(request)
-        missing = []
+        missing: List[str] = []
         for key in self.take_form_token:
             try:
                 data[key] = token[key]
@@ -70,7 +69,7 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
                 missing.append(key)
         if missing:
             raise ValidationError(
-                _("Token missing required claims for endpoint: %(missing)s.") % {"missing": str(missing)}
+                {claim: ErrorDetail(string=_("Missing token claim."), code="missing_claim") for claim in missing}
             )
         return data
 
