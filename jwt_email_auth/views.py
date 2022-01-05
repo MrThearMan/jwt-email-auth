@@ -68,6 +68,10 @@ class SendLoginCodeView(APIView):
         logger.debug(login_data)
         cache.set(cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
+        if not auth_settings.SEND_EMAILS:
+            logger.info(f"Login code: '{login_data['code']}'")
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
         try:
             auth_settings.LOGIN_EMAIL_CALLBACK(request=self.request, email=email, login_data=login_data)
         except Exception as error:

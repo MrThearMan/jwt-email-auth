@@ -2,11 +2,11 @@ import json
 import logging
 import re
 from datetime import timedelta
-from html.parser import HTMLParser
 from time import sleep
 from unittest.mock import PropertyMock, patch
 
 from django.core.cache import cache
+from django.template.loader import render_to_string
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -34,9 +34,9 @@ def test_authenticate_endpoint(caplog):
     log_source, level, message = caplog.record_tuples[0]
     code = get_login_code_from_message(message)
 
-    assert log_source == "jwt_email_auth.utils"
+    assert log_source == "jwt_email_auth.views"
     assert level == logging.INFO
-    assert re.match(r"Your login code:\n{2}\d{6}\n{2}This code is valid for the next \d+ minutes.", message)
+    assert re.match(r"Login code: '\d{6}'", message)
     assert response.data is None
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -104,34 +104,27 @@ def test_authenticate_endpoint__login_code_already_exists():
 
 def test_authenticate_endpoint__use_email_template(settings, caplog):
     client = APIClient()
+    caplog.set_level(logging.DEBUG)
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SEND_EMAILS": True,
         "LOGIN_EMAIL_HTML_TEMPLATE": "email_test_template.html",
     }
 
-    response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+    # fmt: off
+    with patch("jwt_email_auth.utils.send_mail") as mock1, \
+        patch("jwt_email_auth.utils.render_to_string", side_effect=render_to_string) as mock2:
+        response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+    # fmt: on
+
+    mock1.assert_called_once()
+    mock2.assert_called_once()
 
     log_source, level, message = caplog.record_tuples[0]
 
-    contents = []
-    expected = [r"Here is your login code", r"\d{6}", r"Valid for \d{1} minutes."]
-
-    class TestParser(HTMLParser):
-        def handle_data(self, data):
-            data = data.strip()
-            if not data:
-                return
-            contents.append(data)
-
-    parser = TestParser()
-    parser.feed(message)
-
-    for pattern, value in zip(expected, contents):
-        assert re.match(pattern, value)
-
-    assert log_source == "jwt_email_auth.utils"
-    assert level == logging.INFO
+    assert log_source == "jwt_email_auth.views"
+    assert level == logging.DEBUG
+    assert re.match(r"\{'code': '\d{6}'}", message)  # noqa
     assert response.data is None
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -193,16 +186,20 @@ def test_authenticate_endpoint__send_mock_email(settings):
     )
 
 
-def test_authenticate_endpoint__email_sending_fails(caplog):
+def test_authenticate_endpoint__email_sending_fails(settings, caplog):
     client = APIClient()
+    settings.JWT_EMAIL_AUTH = {
+        "SEND_EMAILS": True,
+    }
 
     class TestException(Exception):
         def __init__(self):
             super().__init__("foo")
 
-    with patch("jwt_email_auth.utils.send_login_email", side_effect=TestException):
+    with patch("jwt_email_auth.utils.send_login_email", side_effect=TestException) as mock:
         response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
+    # mock.assert_called_once()
     log_source, level, message = caplog.record_tuples[0]
 
     assert log_source == "jwt_email_auth.views"

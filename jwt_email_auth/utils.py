@@ -88,16 +88,13 @@ def send_login_email(request: Request, email: str, login_data: Dict[str, Any]) -
             request=request,
         )
 
-    if auth_settings.SEND_EMAILS:
-        send_mail(
-            subject=auth_settings.LOGIN_SUBJECT_LINE,
-            message=plain_message,
-            from_email=auth_settings.LOGIN_SENDING_EMAIL,
-            recipient_list=[email],
-            html_message=html_message,
-        )
-    else:
-        logger.info(plain_message if html_message is None else html_message)
+    send_mail(
+        subject=auth_settings.LOGIN_SUBJECT_LINE,
+        message=plain_message,
+        from_email=auth_settings.LOGIN_SENDING_EMAIL,
+        recipient_list=[email],
+        html_message=html_message,
+    )
 
 
 def token_from_headers(request: Request) -> str:
