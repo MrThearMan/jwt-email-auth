@@ -37,10 +37,10 @@ from jwt_email_auth.permissions import HasValidJWT
 
 class SomeView(APIView):
 
-   authentication_classes = [JWTAuthentication]
-   permission_classes = [HasValidJWT]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [HasValidJWT]
 
-   ...
+    ...
 ```
 
 ## Base Access Serializer
@@ -51,19 +51,24 @@ If you need to use claims from the token in you code, you can use the `BaseAcces
 from rest_framework import serializers
 from rest_framework.views import APIView
 from jwt_email_auth.serializers import BaseAccessSerializer
+from jwt_email_auth.authentication import JWTAuthentication
+from jwt_email_auth.permissions import HasValidJWT
 
 
 class SomeSerializer(BaseAccessSerializer):
 
-   take_form_token = ["example", "values"]
+    take_form_token = ["example", "values"]
 
-   some = serializers.CharField()
-   data = serializers.CharField()
+    some = serializers.CharField()
+    data = serializers.CharField()
 
-   ...
+    ...
 
 
 class SomeView(APIView):
+
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [HasValidJWT]
 
     def post(self, request, *args, **kwargs):
 
@@ -71,13 +76,10 @@ class SomeView(APIView):
 
         # Request is needed in serializer context to get the access token
         serializer = SomeSerializer(data=data, context={"request", request})
-        data = serializer.initial_data
+        serializer.is_valid(raise_exception=True)
 
-        # ...or this:
-        # serializer.is_valid(raise_exception=True)
-        # data = serializer.validated_data
-
-        # ...or this:
+        data = serializer.validated_data
+        # ...or this
         # data = serializer.data
 
         print(data)  # {"some": ..., "data": ..., "example": ..., "values": ...}

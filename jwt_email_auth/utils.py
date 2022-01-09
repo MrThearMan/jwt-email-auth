@@ -1,9 +1,14 @@
 import logging
 from hashlib import md5
 from inspect import cleandoc
+from os import getenv
 from random import randint
 from typing import Any, Dict
+from warnings import warn
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import load_ssh_private_key
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -106,3 +111,31 @@ def token_from_headers(request: Request) -> str:
     if not auth_header:
         raise NotAuthenticated(_("No Authorization header found from request."))
     return auth_header.split()[1].decode()
+
+
+def load_example_signing_key() -> Ed25519PrivateKey:
+    """Loads an example signing key for signing and checking the signature of JWT tokens.
+    You should set 'SIGNING_KEY' to your environment variables, or change this callback
+    with the JWT_EMAIL_AUTH["SIGNING_KEY"] setting before going to production.
+    """
+
+    # _default_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIMOFDpS02jVpNbJidXBM+s9QzWqVx56pxZdWEgVjA4T"
+    _default_private_key = (
+        "-----BEGIN OPENSSH PRIVATE KEY-----|"
+        "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW|"
+        "QyNTUxOQAAACCDDhQ6UtNo1aTWyYnVwTPrPUM1qlceeqcWXVhIFYwOEwAAAJDEf7enxH+3|"
+        "pwAAAAtzc2gtZWQyNTUxOQAAACCDDhQ6UtNo1aTWyYnVwTPrPUM1qlceeqcWXVhIFYwOEw|"
+        "AAAECjUueNb+pa9Mf0cVahpJzyBbwQgZrp2qLgYykEiC4g4IMOFDpS02jVpNbJidXBM+s9|"
+        "QzWqVx56pxZdWEgVjA4TAAAAC2xhbXBwQEtBTlRPAQI=|"
+        "-----END OPENSSH PRIVATE KEY-----"
+    )
+
+    key = getenv("SIGNING_KEY", _default_private_key)
+    if key == _default_private_key:
+        warn(
+            "Using the default signing key. "
+            "Please change before going to production. "
+            "To change, set 'SIGNING_KEY' environment variable."
+        )
+    key = "\n".join(key.split("|"))
+    return load_ssh_private_key(key.encode(), password=None, backend=default_backend())  # type: ignore
