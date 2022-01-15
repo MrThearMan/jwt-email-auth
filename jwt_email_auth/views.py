@@ -165,4 +165,7 @@ class RefreshTokenView(APIView):
         access = refresh.new_access_token()
         data = {"access": str(access)}
 
+        if auth_settings.REFRESH_VIEW_BOTH_TOKENS:
+            data["refresh"] = str(refresh)
+
         return Response(data=data, status=status.HTTP_200_OK)

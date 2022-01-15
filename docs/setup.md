@@ -38,15 +38,15 @@ urlpatterns = [
 
 ```python
 JWT_EMAIL_AUTH = {
-    "SEND_BY_EMAIL": True,                          # needs to be set explicitly!
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # default
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),   # default
-    "LOGIN_CODE_LIFETIME": timedelta(minutes=5),    # default
-    "EXPECTED_CLAIMS": ["foo", "bar"],              #
-    "CACHE_PREFIX": "PREFIX",                       #
-    "LOGIN_ATTEMPTS": 10,                           # default
-    "LOGIN_COOLDOWN": timedelta(minutes=5),         # default
-    "LOGIN_DATA": "path.to.module.function",        # should return values for EXPECTED_CLAIMS
+    "SEND_BY_EMAIL": True,  # needs to be set explicitly!
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
+    "LOGIN_CODE_LIFETIME": timedelta(minutes=5),
+    "EXPECTED_CLAIMS": ["foo", "bar"],
+    "CACHE_PREFIX": "PREFIX",
+    "LOGIN_ATTEMPTS": 10,
+    "LOGIN_COOLDOWN": timedelta(minutes=5),
+    "LOGIN_DATA": "path.to.module.function",
 }
 
 ```
@@ -85,21 +85,21 @@ Here is the full list of settings and what they mean.
 | BLOCKING_HANDLER          | "Dot import notation" to a function that <br>does additional handling for <br>blocked IPs. Takes a single argument "ip" of <br>type str, and return None. <br>Default is no additional handling.                                                        | str                         |
 | LOGIN_EMAIL_CALLBACK      | "Dot import notation" to a function that <br>sends the login email.  <br>Takes three arguments: request (Request), <br>email (str), and login data <br>(Dict[str, Any]). Default handler uses <br>django's `send_mail` function.                        | str                         |
 | OPTIONS_SCHEMA_ACCESS     | When True (default), OPTIONS requests <br>can be made to the endpoint <br>without token for schema access.                                                                                                                                              | bool                        |
+| REFRESH_VIEW_BOTH_TOKENS  | If True, Refresh view sould return <br>both the access token, and <br>the refresh token                                                                                                                                                                 | bool                        |
 
 \* Optional, can be left None
 
 
-③ Add OpenSSH based [ed25519](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/)
-`SIGNING_KEY` (in PEM format) to environment variables. You can create one with, e.g., ssh-keygen using
-the command `ssh-keygen -t ed25519`. The linebreaks in PEM format should be replaced with | (pipe) characters.
+③ Add OpenSSH based [ed25519][ed25519] `SIGNING_KEY` (in PEM format) to environment variables.
+You can create one with, e.g., ssh-keygen using the command `ssh-keygen -t ed25519`.
+The linebreaks in PEM format should be replaced with | (pipe) characters.
 If you do not want to use environment variables, override the `SIGNING_KEY` setting.
 
 > A default signing key is provided for reference in the settings-module,
 > but this should obviously be changed in production environments.
 
 
-④ Configure Django's email [email settings](https://docs.djangoproject.com/en/3.2/topics/email/#quick-example)
-(if using django's email sending).
+④ Configure Django's email [email settings][email_settings] (if using django's email sending).
 
 ```python
 # Not all of these may be required
@@ -133,3 +133,5 @@ REST_FRAMEWORK = {
 ```
 
 [pk]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
+[ed25519]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
+[email_settings]: https://docs.djangoproject.com/en/3.2/topics/email/#quick-example

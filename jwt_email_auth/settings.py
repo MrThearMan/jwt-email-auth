@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Literal, NamedTuple, Optional, Set, Union
 
 from django.conf import settings
 from django.test.signals import setting_changed
-from settings_holder import SettingsHolder
+from settings_holder import SettingsHolder, reload_settings
 
 
 __all__ = [
@@ -133,9 +133,14 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # When True (default), OPTIONS requests can be made to the endpoint without token for schema access
     OPTIONS_SCHEMA_ACCESS: bool = True
+    #
+    # If True, Refresh view sould return both the access token, and the refresh token
+    REFRESH_VIEW_BOTH_TOKENS: bool = False
 
 
-USER_SETTINGS: Optional[Dict[str, Any]] = getattr(settings, "JWT_EMAIL_AUTH", None)
+SETTING_NAME: str = "JWT_EMAIL_AUTH"
+
+USER_SETTINGS: Optional[Dict[str, Any]] = getattr(settings, SETTING_NAME, None)
 
 DEFAULTS: Dict[str, Any] = JWTEmailAuthSettings()._asdict()
 
@@ -159,11 +164,4 @@ auth_settings = SettingsHolder(
 )
 
 
-def reload_settings(*args, **kwargs) -> None:  # pylint: disable=W0613
-    setting, value = kwargs["setting"], kwargs["value"]
-
-    if setting == "JWT_EMAIL_AUTH":
-        auth_settings.reload(new_user_settings=value)
-
-
-setting_changed.connect(reload_settings)
+setting_changed.connect(reload_settings(SETTING_NAME, auth_settings))

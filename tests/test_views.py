@@ -10,7 +10,7 @@ from django.template.loader import render_to_string
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from jwt_email_auth.tokens import AccessToken
+from jwt_email_auth.tokens import AccessToken, RefreshToken
 from jwt_email_auth.utils import blocking_handler, default_login_data, generate_cache_key, login_validation, random_code
 
 from .conftest import equals_regex
@@ -432,3 +432,22 @@ def test_refresh_endpoint__token_is_mandatory():
 
     assert response.data.get("token")[0] == "This field is required."
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_refresh_endpoint__return_both_tokens(settings):
+    client = APIClient()
+    token = RefreshToken()
+    settings.JWT_EMAIL_AUTH = {
+        "SEND_EMAILS": False,
+        "REFRESH_VIEW_BOTH_TOKENS": True,
+    }
+    response = client.post("/refresh", {"token": str(token)}, format="json")
+
+    assert response.data == {
+        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+    }
+    assert response.status_code == status.HTTP_200_OK
+
+    # returned refresh token is the same as input
+    assert str(token) == str(response.data["refresh"])
