@@ -14,6 +14,7 @@
 ```shell
 pip install jwt-email-auth
 ```
+
 ---
 
 **Documentation**: [https://mrthearman.github.io/jwt-email-auth/](https://mrthearman.github.io/jwt-email-auth/)
