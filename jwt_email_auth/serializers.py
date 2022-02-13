@@ -13,13 +13,20 @@ from .tokens import AccessToken
 
 __all__ = [
     "BaseAccessSerializer",
-    "RefreshTokenSerializer",
-    "LoginSerializer",
     "SendLoginCodeSerializer",
+    "SendLoginCodeOutputSerializer",
+    "LoginSerializer",
+    "LoginOutputSerializer",
+    "RefreshTokenSerializer",
+    "RefreshTokenOutputOneSerializer",
+    "RefreshTokenOutputTwoSerializer",
+    "DetailSerializer",
 ]
 
 
 logger = logging.getLogger(__name__)
+
+# Input
 
 
 class SendLoginCodeSerializer(serializers.Serializer):  # pylint: disable=W0223
@@ -33,6 +40,36 @@ class LoginSerializer(serializers.Serializer):  # pylint: disable=W0223
 
 class RefreshTokenSerializer(serializers.Serializer):  # pylint: disable=W0223
     token = serializers.CharField(help_text="Refresh token.")
+
+
+# Output
+
+
+class SendLoginCodeOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Email was sent successfully."""
+
+
+class LoginOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Refresh token valid and new access token was created."""
+
+    access = serializers.CharField(help_text="Access token.")
+    refresh = serializers.CharField(help_text="Refresh token.")
+
+
+class RefreshTokenOutputOneSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Login was successful."""
+
+    access = serializers.CharField(help_text="Access token.")
+
+
+class RefreshTokenOutputTwoSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Login was successful."""
+
+    access = serializers.CharField(help_text="Access token.")
+    refresh = serializers.CharField(help_text="Refresh token.")
+
+
+# Utility
 
 
 class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
@@ -84,3 +121,7 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
     def to_representation(self, instance) -> Dict[str, Any]:
         ret = super().to_representation(instance)
         return self.add_token_claims(ret)
+
+
+class DetailSerializer(serializers.Serializer):  # pylint: disable=W0223
+    detail = serializers.CharField()

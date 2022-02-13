@@ -14,9 +14,7 @@ help:
 	@echo ""
 	@echo "Commands:"
 	@echo "  dev              Serve manual testing server on 127.0.0.1:8080."
-	@echo "  serve-docs       Serve mkdocs on 127.0.0.1:8000 for development."
-	@echo "  build-docs       Build documentation site."
-	@echo "  submit-docs      Sumbit docs to github pages."
+	@echo "  docs       	  Serve mkdocs on 127.0.0.1:8000 for development."
 	@echo "  translations     Make and compile translations."
 	@echo "  tests            Run all tests"
 	@echo "  test <name>      Run tests maching the given <name>"
@@ -32,14 +30,8 @@ help:
 dev:
 	@poetry run python manage.py runserver 127.0.0.1:8080
 
-serve-docs:
+docs:
 	@poetry run mkdocs serve
-
-build-docs:
-	@poetry run mkdocs build
-
-submit-docs:
-	@poetry run mkdocs gh-deploy
 
 tox:
 	@poetry run tox

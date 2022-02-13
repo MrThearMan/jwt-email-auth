@@ -1,5 +1,5 @@
 import logging
-from typing import List, Type
+from typing import Any, List, Type
 
 from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
@@ -9,10 +9,12 @@ from rest_framework.exceptions import AuthenticationFailed, NotFound, Permission
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
 from .exceptions import CorruptedDataException, EmailServerException
+from .schema import LoginSchemaMixin, RefreshTokenSchemaMixin, SendLoginCodeSchemaMixin
 from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer
 from .settings import auth_settings
 from .tokens import RefreshToken
@@ -29,24 +31,40 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class SendLoginCodeView(APIView):
-    """Send a new login code to the given email.
+class BaseAuthView(APIView):
+    """Base class for JWT authentication"""
 
-    HTTP 200 OK: Login code for this email already cached,
-    no email sent as one should have been sent already.
+    serializer_class: Type[BaseSerializer]
 
-    HTTP 204 No Content: Email was sent successfully.
+    def get_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer:
+        kwargs["serializer_class"] = self.get_serializer_class()
+        return self.initialize_serializer(*args, **kwargs)
 
-    HTTP 400 Bad Request: Email not given or type somehow invalid.
+    def initialize_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer:
+        serializer_class: Type[BaseSerializer] = kwargs.pop("serializer_class")
+        kwargs.setdefault("context", self.get_serializer_context())
+        kwargs.setdefault("many", getattr(serializer_class, "many", False))
+        return serializer_class(*args, **kwargs)
 
-    HTTP 409 Conflict: There is already a login code valid for this email.
+    def get_serializer_class(self) -> Type[BaseSerializer]:
+        assert self.serializer_class, "Serializer class not defined"
+        return self.serializer_class
 
-    HTTP 503 Service Unavailable: Email server could not send email.
-    """
+    def get_serializer_context(self):
+        return {"request": self.request, "format": self.format_kwarg, "view": self}
+
+    @classmethod
+    def get_extra_actions(cls) -> List[str]:
+        return []
+
+
+class SendLoginCodeView(BaseAuthView):
+    """Send a new login code to the given email."""
 
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
     serializer_class: Type[BaseSerializer] = SendLoginCodeSerializer
+    schema = type("Schema", (SendLoginCodeSchemaMixin, AutoSchema), {})()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
         login_info = self.serializer_class(data=request.data)
@@ -60,7 +78,7 @@ class SendLoginCodeView(APIView):
                 "Login code for '%(email)s' already exists. "
                 "Please check your inbox and spam folder, or try again later."
             ) % {"email": email}
-            return Response(data={"message": message}, status=status.HTTP_200_OK)
+            return Response(data={"detail": message}, status=status.HTTP_200_OK)
 
         auth_settings.VALIDATION_CALLBACK(email=email)
         login_data = auth_settings.LOGIN_DATA(email=email)
@@ -82,24 +100,13 @@ class SendLoginCodeView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class LoginView(APIView):
-    """Get new refresh and access token pair from a login code and email.
-
-    HTTP 200 OK: Login was successful.
-
-    HTTP 400 Bad Request: Email or code not given or their types are somehow invalid.
-
-    HTTP 403 Forbidden: Given login code was incorrect,
-    or user has been blocked after too many attemps at login.
-
-    HTTP 404 Not Found: No login code found for given email.
-
-    HTTP 410 Gone: Login data was corrupted.
-    """
+class LoginView(BaseAuthView):
+    """Get new refresh and access token pair from a login code and email."""
 
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
     serializer_class: Type[BaseSerializer] = LoginSerializer
+    schema = type("Schema", (LoginSchemaMixin, AutoSchema), {})()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
         if user_login_blocked(request):
@@ -142,19 +149,13 @@ class LoginView(APIView):
         return Response(data=data, status=status.HTTP_200_OK)
 
 
-class RefreshTokenView(APIView):
-    """Get new access token from a refresh token.
-
-    HTTP 200 OK: Refresh token valid and new access token was created.
-
-    HTTP 400 Bad Request: Token not given or type somehow invalid.
-
-    HTTP 403 Forbidden: Refresh token has expired or is invalid.
-    """
+class RefreshTokenView(BaseAuthView):
+    """Get new access token from a refresh token."""
 
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
     serializer_class: Type[BaseSerializer] = RefreshTokenSerializer
+    schema = type("Schema", (RefreshTokenSchemaMixin, AutoSchema), {})()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
         token = self.serializer_class(data=request.data)

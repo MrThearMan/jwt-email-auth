@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-01-04 23:20+0200\n"
+"POT-Creation-Date: 2022-02-13 15:11+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,11 +34,11 @@ msgstr "Data korruptoitunut."
 msgid "Invalid token."
 msgstr "Virheellinen tokeni."
 
-#: .\jwt_email_auth\serializers.py:56
+#: .\jwt_email_auth\serializers.py:93
 msgid "Must include a Request object in the context of the Serializer."
 msgstr "Täytyy antaa Request-objekti Serializerin context-muuttujassa."
 
-#: .\jwt_email_auth\serializers.py:72
+#: .\jwt_email_auth\serializers.py:109
 msgid "Missing token claim."
 msgstr "Puuttuvia tietoja."
 
@@ -50,7 +50,7 @@ msgstr "Allekirjoitus on vahnentunut"
 msgid "Error decoding signature."
 msgstr "Virhe allekirjoituksen tulkitsemisessa."
 
-#: .\jwt_email_auth\tokens.py:92 .\jwt_email_auth\utils.py:110
+#: .\jwt_email_auth\tokens.py:92 .\jwt_email_auth\utils.py:112
 msgid "No Authorization header found from request."
 msgstr "Authorization headeria ei löytynyt."
 
@@ -70,7 +70,7 @@ msgstr "Puuttuvia tietoja."
 msgid "Invalid token type."
 msgstr "Virheellinen tokenin tyyppi."
 
-#: .\jwt_email_auth\views.py:60
+#: .\jwt_email_auth\views.py:78
 #, python-format
 msgid ""
 "Login code for '%(email)s' already exists. Please check your inbox and spam "
@@ -79,26 +79,26 @@ msgstr ""
 "Kirjautumiskoodi sähköpostille '%(email)s' on jo olemassa. Tarkistakaa "
 "saapuneet viestit ja roskaposti, tai yrittäkää uudelleen myöhemmin."
 
-#: .\jwt_email_auth\views.py:76
+#: .\jwt_email_auth\views.py:98
 msgid "Failed to send login codes. Try again later."
 msgstr "Ei voitu lähettää kirjautumiskoodia. Yritä uudelleen myöhemmin."
 
-#: .\jwt_email_auth\views.py:103
+#: .\jwt_email_auth\views.py:114
 #, python-format
 msgid "Maximum number of attempts reached. Try again in %(x)s minutes."
 msgstr ""
 "Sallittu määrä kirjautumisyrityksiä ylitetty. Yritä uudeleen %(x)s minuutin "
 "päästä."
 
-#: .\jwt_email_auth\views.py:114
+#: .\jwt_email_auth\views.py:125
 #, python-format
 msgid "No login code found code for '%(email)s'."
 msgstr "Ei löydetty kirjautumiskoodia sähköpostille '%(email)s'."
 
-#: .\jwt_email_auth\views.py:119
+#: .\jwt_email_auth\views.py:130
 msgid "Incorrect login code."
 msgstr "Väärä kirjautumiskoodi"
 
-#: .\jwt_email_auth\views.py:130
+#: .\jwt_email_auth\views.py:141
 msgid "Data was corrupted. Try to send another login code."
 msgstr "Data korruptoitunut. Yritä lähettää uusi kirjautumiskoodi."

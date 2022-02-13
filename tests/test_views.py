@@ -8,10 +8,12 @@ from unittest.mock import PropertyMock, patch
 from django.core.cache import cache
 from django.template.loader import render_to_string
 from rest_framework import status
+from rest_framework.routers import DefaultRouter
 from rest_framework.test import APIClient
 
 from jwt_email_auth.tokens import AccessToken, RefreshToken
 from jwt_email_auth.utils import blocking_handler, default_login_data, generate_cache_key, login_validation, random_code
+from jwt_email_auth.views import BaseAuthView, LoginView, RefreshTokenView, SendLoginCodeView
 
 from .conftest import equals_regex
 from .helpers import get_login_code_from_message
@@ -96,7 +98,7 @@ def test_authenticate_endpoint__login_code_already_exists():
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 
     assert response2.data == {
-        "message": "Login code for 'foo@bar.com' already exists. "
+        "detail": "Login code for 'foo@bar.com' already exists. "
         "Please check your inbox and spam folder, or try again later."
     }
     assert response2.status_code == status.HTTP_200_OK
@@ -451,3 +453,7 @@ def test_refresh_endpoint__return_both_tokens(settings):
 
     # returned refresh token is the same as input
     assert str(token) == str(response.data["refresh"])
+
+
+def test_base_auth_view_extra_actions():
+    assert BaseAuthView.get_extra_actions() == []

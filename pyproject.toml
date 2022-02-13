@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jwt-email-auth"
-version = "0.4.1"
+version = "0.4.2"
 description = "JWT authentication from email login codes."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
@@ -59,18 +59,18 @@ cffi = ">=1.15.0"
 [tool.poetry.dev-dependencies]
 pytest-cov = "^3.0.0"
 pytest-django = "^4.5.2"
-tomli = "1.2.3"
+tomli = "2.0.1"
 pre-commit = "^2.17.0"
 tox = "^3.24.5"
 tox-gh-actions = "^2.8.1"
 coveralls = "^3.3.1"
-black = "^21.12b0"
+black = "^22.1.0"
 isort = "^5.10.1"
 flake8 = "^4.0.1"
 mypy = "^0.931"
 pylint = "^2.12.2"
 mkdocs = "^1.2.3"
-pymdown-extensions = "^9.1"
+pymdown-extensions = "^9.2"
 django-stubs = "^1.9.0"
 djangorestframework-stubs = "^1.4.0"
 
@@ -92,13 +92,26 @@ ignore-paths = [
 ]
 
 [tool.pylint.messages_control]
-disable = "C0330, C0326, C0114, C0115, C0116, R0903, R0913, R1721, W1203, E0401"
+disable = [
+    "bad-continuation",
+    "bad-whitespace",
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "import-error",
+    "logging-fstring-interpolation",
+    "too-few-public-methods",
+]
 
 [tool.pylint.format]
 max-line-length = "120"
 
 [tool.pylint.miscellaneous]
-notes = "FIXME,XXX,BUG"
+notes = [
+    "BUG",
+    "REFACTOR",
+    "CHECK",
+]
 
 [tool.mypy]
 python_version = "3.9"
@@ -122,6 +135,7 @@ omit = [
 exclude_lines = [
     "if TYPE_CHECKING:",
     "except ImportError:",
+    "pragma: no cover",
 ]
 
 [tool.django-stubs]
