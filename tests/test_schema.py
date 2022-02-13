@@ -1,9 +1,11 @@
+from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 
 from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.permissions import HasValidJWT
 from jwt_email_auth.schema import (
     DisablePermChecks,
+    MultipleResponseMixin,
     add_jwt_email_auth_security_requirement,
     add_jwt_email_auth_security_scheme,
     add_unauthenticated_response,
@@ -78,29 +80,54 @@ def test_add_unauthenticated_response__authentication_classes():
     class View(APIView):
         authentication_classes = [JWTAuthentication]
         permission_classes = []
+        schema = type("Schema", (MultipleResponseMixin, AutoSchema), {})()
 
     responses = {}
-    add_unauthenticated_response(View, responses)
-    assert responses == {401: "Unauthenticated"}
+    add_unauthenticated_response(View().schema, responses)
+    assert responses == {
+        401: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/Detail",
+                    },
+                },
+            },
+            "description": "Unauthenticated",
+        }
+    }
 
 
 def test_add_unauthenticated_response__permission_classes():
     class View(APIView):
         authentication_classes = []
         permission_classes = [HasValidJWT]
+        schema = type("Schema", (MultipleResponseMixin, AutoSchema), {})()
 
     responses = {}
-    add_unauthenticated_response(View, responses)
-    assert responses == {401: "Unauthenticated"}
+    add_unauthenticated_response(View().schema, responses)
+    assert responses == {
+        401: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/Detail",
+                    },
+                },
+            },
+            "description": "Unauthenticated",
+        }
+    }
 
 
 def test_add_unauthenticated_response__none():
     class View(APIView):
         authentication_classes = []
         permission_classes = []
+        schema = type("Schema", (MultipleResponseMixin, AutoSchema), {})()
 
     responses = {}
-    add_unauthenticated_response(View, responses)
+    add_unauthenticated_response(View().schema, responses)
     assert responses == {}
 
 

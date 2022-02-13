@@ -1,6 +1,7 @@
 from typing import Any, Dict, Type, Union
 
 from rest_framework import serializers
+from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 
 from jwt_email_auth.authentication import JWTAuthentication
@@ -40,7 +41,7 @@ def add_jwt_email_auth_security_scheme(schema: Dict[str, Any]) -> None:
     }
 
 
-def add_jwt_email_auth_security_requirement(view: Type[APIView], operation: Dict[str, Any]) -> None:
+def add_jwt_email_auth_security_requirement(view: APIView, operation: Dict[str, Any]) -> None:
     """Add JWT email auth security requirement to the view if it has JWT permission or authentication classes.
     Use in `rest_framework.schemas.openapi.AutoSchema.get_operation`.
     """
@@ -48,12 +49,22 @@ def add_jwt_email_auth_security_requirement(view: Type[APIView], operation: Dict
         operation["security"] = [{"jwt_email_auth": []}]
 
 
-def add_unauthenticated_response(view: Type[APIView], responses: Dict[int, Any]) -> None:
+def add_unauthenticated_response(self: AutoSchema, responses: Dict[int, Any]) -> None:
     """Adds 401 response to the given responses-dict if it has JWT permission or authentication classes.
     Use in `rest_framework.schemas.openapi.AutoSchema.get_responses`.
     """
-    if JWTAuthentication in view.authentication_classes or HasValidJWT in view.permission_classes:
-        responses.setdefault(401, "Unauthenticated")
+    if JWTAuthentication in self.view.authentication_classes or HasValidJWT in self.view.permission_classes:
+        responses.setdefault(
+            401,
+            {
+                "content": {
+                    "application/json": {
+                        "schema": self._get_reference(DetailSerializer()),  # pylint: disable=W0212
+                    },
+                },
+                "description": "Unauthenticated",
+            },
+        )
 
 
 class DisablePermChecks:
@@ -63,7 +74,7 @@ class DisablePermChecks:
     `permission_classes` are shown in the schema.
     """
 
-    def has_view_permissions(self, path, method, view):  # pylint: disable=W0613,R0201
+    def has_view_permissions(self, path, method, view) -> bool:  # pylint: disable=W0613,R0201
         return True
 
 
@@ -76,7 +87,7 @@ class MultipleResponseMixin:
 
     responses: Dict[int, Union[str, Type[serializers.Serializer]]] = {}
 
-    def get_components(self, path, method):
+    def get_components(self, path, method) -> Dict[str, Any]:
         request_serializer = self.get_serializer(path, method)
 
         components = {}
@@ -99,11 +110,11 @@ class MultipleResponseMixin:
 
         return components
 
-    def get_responses(self, path, method):  # pylint: disable=W0613
+    def get_responses(self, path, method) -> Dict[str, Any]:  # pylint: disable=W0613
         data = {}
 
         responses = self.responses
-        add_unauthenticated_response(self.view, responses)
+        add_unauthenticated_response(self, responses)
 
         for status_code, info in responses.items():
             serializer_class = DetailSerializer
