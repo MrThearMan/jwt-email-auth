@@ -8,12 +8,11 @@ from unittest.mock import PropertyMock, patch
 from django.core.cache import cache
 from django.template.loader import render_to_string
 from rest_framework import status
-from rest_framework.routers import DefaultRouter
 from rest_framework.test import APIClient
 
 from jwt_email_auth.tokens import AccessToken, RefreshToken
 from jwt_email_auth.utils import blocking_handler, default_login_data, generate_cache_key, login_validation, random_code
-from jwt_email_auth.views import BaseAuthView, LoginView, RefreshTokenView, SendLoginCodeView
+from jwt_email_auth.views import BaseAuthView
 
 from .conftest import equals_regex
 from .helpers import get_login_code_from_message
@@ -29,7 +28,7 @@ def test_authenticate_endpoint(caplog):
         response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
     # fmt: on
 
-    mock1.assert_called_once_with(email="foo@bar.com")
+    mock1.assert_called_once_with("foo@bar.com")
     mock2.assert_called_once()
     mock3.assert_called_once()
 
@@ -99,7 +98,7 @@ def test_authenticate_endpoint__login_code_already_exists():
 
     assert response2.data == {
         "detail": "Login code for 'foo@bar.com' already exists. "
-        "Please check your inbox and spam folder, or try again later."
+        "Please wait a moment for the message to arrive or try again later."
     }
     assert response2.status_code == status.HTTP_200_OK
 
@@ -109,7 +108,7 @@ def test_authenticate_endpoint__use_email_template(settings, caplog):
     caplog.set_level(logging.DEBUG)
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": True,
+        "SENDING_ON": True,
         "LOGIN_EMAIL_HTML_TEMPLATE": "email_test_template.html",
     }
 
@@ -135,7 +134,7 @@ def test_login_endpoint__user_gets_blocked(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "LOGIN_ATTEMPTS": 1,
     }
 
@@ -173,7 +172,7 @@ def test_authenticate_endpoint__send_mock_email(settings):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": True,
+        "SENDING_ON": True,
     }
 
     with patch("jwt_email_auth.utils.send_mail", return_value=None) as mock:
@@ -191,7 +190,7 @@ def test_authenticate_endpoint__send_mock_email(settings):
 def test_authenticate_endpoint__email_sending_fails(settings, caplog):
     client = APIClient()
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": True,
+        "SENDING_ON": True,
     }
 
     class TestException(Exception):
@@ -206,7 +205,7 @@ def test_authenticate_endpoint__email_sending_fails(settings, caplog):
 
     assert log_source == "jwt_email_auth.views"
     assert level == logging.CRITICAL
-    assert message == "Email sending failed: TestException('foo')"
+    assert message == "Login code sending failed: TestException('foo')"
 
     key = generate_cache_key("foo@bar.com")
     assert cache.get(key) is None
@@ -220,7 +219,7 @@ def test_login_endpoint__expected_claims_found(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
@@ -247,7 +246,7 @@ def test_login_endpoint__expected_claims_not_found(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
@@ -287,7 +286,7 @@ def test_login_endpoint__login_code_not_found():
     client = APIClient()
     response = client.post("/login", {"email": "foo@bar.com", "code": 123456}, format="json")
 
-    assert response.data.get("detail") == "No login code found code for 'foo@bar.com'."
+    assert response.data.get("detail") == "No login code found for 'foo@bar.com'."
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -328,7 +327,7 @@ def test_login_endpoint__login_code_expired(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "LOGIN_CODE_LIFETIME": timedelta(seconds=1),
     }
     key = generate_cache_key("foo@bar.com")
@@ -345,7 +344,7 @@ def test_login_endpoint__login_code_expired(settings, caplog):
 
     response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
 
-    assert response.data.get("detail") == "No login code found code for 'foo@bar.com'."
+    assert response.data.get("detail") == "No login code found for 'foo@bar.com'."
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -402,7 +401,7 @@ def test_refresh_endpoint__expected_claims_not_found(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo"],
     }
 
@@ -418,7 +417,7 @@ def test_refresh_endpoint__expected_claims_not_found(settings, caplog):
     response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
@@ -440,7 +439,7 @@ def test_refresh_endpoint__return_both_tokens(settings):
     client = APIClient()
     token = RefreshToken()
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "REFRESH_VIEW_BOTH_TOKENS": True,
     }
     response = client.post("/refresh", {"token": str(token)}, format="json")

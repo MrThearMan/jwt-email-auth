@@ -38,7 +38,7 @@ urlpatterns = [
 
 ```python
 JWT_EMAIL_AUTH = {
-    "SEND_BY_EMAIL": True,  # needs to be set explicitly!
+    "SENDING_ON": True,  # needs to be set explicitly!
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
     "LOGIN_CODE_LIFETIME": timedelta(minutes=5),
@@ -55,7 +55,7 @@ Here is the full list of settings and what they mean.
 
 | Setting                   | Description                                                                                                                                                                                                                                             | Type                        |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|
-| SEND_EMAILS               | Whether emails should be sent or not. <br>When off, login code is logged instead. <br>This can be useful during development.                                                                                                                            | bool                        |
+| SENDING_ON                | Whether emails should be sent or not. <br>When off, login code is logged instead. <br>This can be useful during development.                                                                                                                            | bool                        |
 | SKIP_CODE_CHECKS          | When True, login code will not be checked <br>on login. This can be useful during <br>development.                                                                                                                                                      | bool                        |
 | SIGNING_KEY               | "Dot import notation" to a function to <br>load JWT signing key. Takes no arguments <br>and returns the [Ed25519PrivateKey][pk]<br> object used to check the JWT signature. <br>Default function loads an example key,<br> DO NOT USE IT IN PRODUCTION! | str                         |
 | ACCESS_TOKEN_LIFETIME     | How long an access token is valid for                                                                                                                                                                                                                   | timedelta                   |
@@ -83,7 +83,7 @@ Here is the full list of settings and what they mean.
 | LOGIN_ATTEMPTS            | Number of login attempts until banned                                                                                                                                                                                                                   | int                         |
 | LOGIN_COOLDOWN            | How long until login ban lifted                                                                                                                                                                                                                         | timedelta                   |
 | BLOCKING_HANDLER          | "Dot import notation" to a function that <br>does additional handling for <br>blocked IPs. Takes a single argument "ip" of <br>type str, and return None. <br>Default is no additional handling.                                                        | str                         |
-| LOGIN_EMAIL_CALLBACK      | "Dot import notation" to a function that <br>sends the login email.  <br>Takes three arguments: request (Request), <br>email (str), and login data <br>(Dict[str, Any]). Default handler uses <br>django's `send_mail` function.                        | str                         |
+| LOGIN_CALLBACK            | "Dot import notation" to a function that <br>sends the login email.  <br>Takes three arguments: email (str)<br>and login data (Dict[str, Any]), and<br>request (Request). Default handler uses <br>django's `send_mail` function.                       | str                         |
 | OPTIONS_SCHEMA_ACCESS     | When True (default), OPTIONS requests <br>can be made to the endpoint <br>without token for schema access.                                                                                                                                              | bool                        |
 | REFRESH_VIEW_BOTH_TOKENS  | If True, Refresh view sould return <br>both the access token, and <br>the refresh token                                                                                                                                                                 | bool                        |
 

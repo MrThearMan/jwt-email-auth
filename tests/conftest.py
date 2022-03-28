@@ -29,7 +29,7 @@ def setup_django_settings() -> SettingsWrapper:
         "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "cache_table"}
     }
     wrapper.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
     }
 
     yield wrapper

@@ -4,16 +4,16 @@ from rest_framework.exceptions import APIException
 
 
 __all__ = [
-    "EmailServerException",
+    "ServerException",
     "LoginCodeStillValid",
     "CorruptedDataException",
 ]
 
 
-class EmailServerException(APIException):
+class ServerException(APIException):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_detail = _("Email server did not respond.")
-    default_code = "email_server_down"
+    default_detail = _("Server did not respond.")
+    default_code = "server_down"
 
 
 class LoginCodeStillValid(APIException):

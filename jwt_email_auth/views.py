@@ -13,7 +13,7 @@ from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
-from .exceptions import CorruptedDataException, EmailServerException
+from .exceptions import CorruptedDataException, ServerException
 from .schema import LoginSchemaMixin, RefreshTokenSchemaMixin, SendLoginCodeSchemaMixin
 from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer
 from .settings import auth_settings
@@ -70,32 +70,33 @@ class SendLoginCodeView(BaseAuthView):
         login_info = self.serializer_class(data=request.data)
         login_info.is_valid(raise_exception=True)
         data = login_info.data
-        email = data["email"]
+        key = list(login_info.fields.keys())[0]
+        value = data[key]
 
-        cache_key = generate_cache_key(email)
+        cache_key = generate_cache_key(value)
         if cache.get(cache_key, None) is not None:
             message = _(
-                "Login code for '%(email)s' already exists. "
-                "Please check your inbox and spam folder, or try again later."
-            ) % {"email": email}
+                "Login code for '%(value)s' already exists. "
+                "Please wait a moment for the message to arrive or try again later."
+            ) % {"value": value}
             return Response(data={"detail": message}, status=status.HTTP_200_OK)
 
-        auth_settings.VALIDATION_CALLBACK(email=email)
-        login_data = auth_settings.LOGIN_DATA(email=email)
+        auth_settings.VALIDATION_CALLBACK(value)
+        login_data = auth_settings.LOGIN_DATA(value)
         login_data["code"] = auth_settings.CODE_GENERATOR()
         logger.debug(login_data)
         cache.set(cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
-        if not auth_settings.SEND_EMAILS:
+        if not auth_settings.SENDING_ON:
             logger.info(f"Login code: '{login_data['code']}'")
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         try:
-            auth_settings.LOGIN_EMAIL_CALLBACK(request=self.request, email=email, login_data=login_data)
+            auth_settings.LOGIN_CALLBACK(value, login_data=login_data, request=self.request)
         except Exception as error:
             cache.delete(cache_key)
-            logger.critical(f"Email sending failed: {type(error).__name__}('{error}')")
-            raise EmailServerException(_("Failed to send login codes. Try again later.")) from error
+            logger.critical(f"Login code sending failed: {type(error).__name__}('{error}')")
+            raise ServerException(_("Failed to send login codes. Try again later.")) from error
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -118,11 +119,13 @@ class LoginView(BaseAuthView):
         login = self.serializer_class(data=request.data)
         login.is_valid(raise_exception=True)
         data = login.data
+        key = [key for key in login.fields.keys() if key != "code"][0]
+        value = data[key]
 
-        cache_key = generate_cache_key(data["email"])
+        cache_key = generate_cache_key(value)
         login_data = cache.get(cache_key, None)
         if login_data is None:
-            raise NotFound(_("No login code found code for '%(email)s'.") % {"email": data["email"]})
+            raise NotFound(_("No login code found for '%(value)s'.") % {"value": value})
 
         login_code = login_data.pop("code", None)
         if not auth_settings.SKIP_CODE_CHECKS:

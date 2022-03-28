@@ -116,7 +116,7 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 
 JWT_EMAIL_AUTH = {
-    "SEND_EMAILS": False,
+    "SENDING_ON": False,
 }
 
 REST_FRAMEWORK = {

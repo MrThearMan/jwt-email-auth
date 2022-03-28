@@ -80,7 +80,7 @@ def user_login_blocked(request: Request) -> bool:
     return block
 
 
-def send_login_email(request: Request, email: str, login_data: Dict[str, Any]) -> None:
+def send_login_email(email: str, login_data: Dict[str, Any], request: Request) -> None:
     code = login_data["code"]
     valid = int(auth_settings.LOGIN_CODE_LIFETIME.total_seconds() // 60)
     plain_message = cleandoc(auth_settings.LOGIN_EMAIL_MESSAGE.format(code=code, valid=valid))

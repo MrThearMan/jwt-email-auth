@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class JWTEmailAuthSettings(NamedTuple):
     # Whether emails should be sent or not. When off,
     # login code is logged instead (for development).
-    SEND_EMAILS: bool = False
+    SENDING_ON: bool = False
     #
     # When True, any code will work in login
     SKIP_CODE_CHECKS: bool = False
@@ -129,7 +129,7 @@ class JWTEmailAuthSettings(NamedTuple):
     # "Dot import notation" to a function that sends the login email.
     # Takes three arguments: request (Request), email (str), and login data (Dict[str, Any]).
     # Default handler uses django's send_mail function.
-    LOGIN_EMAIL_CALLBACK: str = "jwt_email_auth.utils.send_login_email"
+    LOGIN_CALLBACK: str = "jwt_email_auth.utils.send_login_email"
     #
     # When True (default), OPTIONS requests can be made to the endpoint without token for schema access
     OPTIONS_SCHEMA_ACCESS: bool = True
@@ -150,10 +150,13 @@ IMPORT_STRINGS: Set[Union[bytes, str]] = {
     "LOGIN_DATA",
     "CODE_GENERATOR",
     "BLOCKING_HANDLER",
-    "LOGIN_EMAIL_CALLBACK",
+    "LOGIN_CALLBACK",
 }
 
-REMOVED_SETTINGS: Set[str] = set()
+REMOVED_SETTINGS: Set[str] = {
+    "LOGIN_EMAIL_CALLBACK",
+    "SEND_EMAILS",
+}
 
 
 auth_settings = SettingsHolder(
