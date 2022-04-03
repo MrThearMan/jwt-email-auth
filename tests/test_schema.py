@@ -85,11 +85,17 @@ def test_add_unauthenticated_response__authentication_classes():
     responses = {}
     add_unauthenticated_response(View().schema, responses)
     assert responses == {
-        401: {
+        "401": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
+                        "type": "object",
+                        "properties": {
+                            "detail": {
+                                "type": "string",
+                                "default": "Error message.",
+                            },
+                        },
                     },
                 },
             },
@@ -107,11 +113,17 @@ def test_add_unauthenticated_response__permission_classes():
     responses = {}
     add_unauthenticated_response(View().schema, responses)
     assert responses == {
-        401: {
+        "401": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
+                        "type": "object",
+                        "properties": {
+                            "detail": {
+                                "type": "string",
+                                "default": "Error message.",
+                            },
+                        },
                     },
                 },
             },
@@ -138,15 +150,6 @@ def test_send_login_code_schema__get_components(drf_request):
     view.format_kwarg = None
     components = view.schema.get_components("", "")
     assert components == {
-        "Detail": {
-            "properties": {
-                "detail": {
-                    "type": "string",
-                },
-            },
-            "required": ["detail"],
-            "type": "object",
-        },
         "SendLoginCode": {
             "properties": {
                 "email": {
@@ -156,10 +159,6 @@ def test_send_login_code_schema__get_components(drf_request):
                 }
             },
             "required": ["email"],
-            "type": "object",
-        },
-        "SendLoginCodeOutput": {
-            "properties": {},
             "type": "object",
         },
     }
@@ -172,15 +171,6 @@ def test_login_schema__get_components(drf_request):
     view.format_kwarg = None
     components = view.schema.get_components("", "")
     assert components == {
-        "Detail": {
-            "properties": {
-                "detail": {
-                    "type": "string",
-                },
-            },
-            "required": ["detail"],
-            "type": "object",
-        },
         "Login": {
             "properties": {
                 "code": {
@@ -220,15 +210,6 @@ def test_refresh_token_schema__get_components(drf_request):
     view.format_kwarg = None
     components = view.schema.get_components("", "")
     assert components == {
-        "Detail": {
-            "properties": {
-                "detail": {
-                    "type": "string",
-                },
-            },
-            "required": ["detail"],
-            "type": "object",
-        },
         "RefreshToken": {
             "properties": {
                 "token": {
@@ -263,42 +244,58 @@ def test_send_login_code_schema__get_responses(drf_request):
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
-            "description": "Login code for this email already cached, no email "
-            "sent as one should have been sent already.",
+            "description": "Data already cached for this login code.",
         },
         "204": {
             "content": {
                 "application/json": {
-                    "schema": {
-                        "$ref": "#/components/schemas/SendLoginCodeOutput",
-                    },
+                    "default": "",
+                    "type": "string",
                 },
             },
-            "description": "Email was sent successfully.",
+            "description": "Authorization successful, login data cached and code sent.",
         },
         "400": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error " "message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
-            "description": "Email not given or type somehow invalid.",
+            "description": "Missing data or invalid types.",
         },
         "503": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
-            "description": "Email server could not send email.",
+            "description": "Server could not send login code.",
         },
     }
 
@@ -313,7 +310,9 @@ def test_login_schema__get_responses(drf_request):
         "200": {
             "content": {
                 "application/json": {
-                    "schema": {"$ref": "#/components/schemas/LoginOutput"},
+                    "schema": {
+                        "$ref": "#/components/schemas/LoginOutput",
+                    },
                 },
             },
             "description": "Refresh token valid and new access token was created.",
@@ -322,19 +321,31 @@ def test_login_schema__get_responses(drf_request):
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
-            "description": "Email or code not given or their types are somehow invalid.",
+            "description": "Missing data or invalid types.",
         },
         "401": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
             "description": "Given login code was incorrect, or user has been "
             "blocked after too many attemps at login.",
@@ -343,19 +354,31 @@ def test_login_schema__get_responses(drf_request):
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
-            "description": "No login code found for given email.",
+            "description": "No data found for login code.",
         },
         "410": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
             "description": "Login data was corrupted.",
         },
@@ -377,25 +400,37 @@ def test_refresh_token_schema__get_responses(drf_request):
                     },
                 },
             },
-            "description": "Login was successful.",
+            "description": "Token refreshed.",
         },
         "400": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
-            "description": "Token not given or type somehow invalid.",
+            "description": "Missing data or invalid types",
         },
         "401": {
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/Detail",
-                    },
-                },
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
             },
             "description": "Refresh token has expired or is invalid.",
         },

@@ -6,13 +6,6 @@ from rest_framework.views import APIView
 
 from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.permissions import HasValidJWT
-from jwt_email_auth.serializers import (
-    DetailSerializer,
-    LoginOutputSerializer,
-    RefreshTokenOutputOneSerializer,
-    RefreshTokenOutputTwoSerializer,
-    SendLoginCodeOutputSerializer,
-)
 from jwt_email_auth.settings import auth_settings
 
 
@@ -26,6 +19,26 @@ __all__ = [
     "LoginSchemaMixin",
     "RefreshTokenSchemaMixin",
 ]
+
+
+class LoginOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Refresh token valid and new access token was created."""
+
+    access = serializers.CharField(help_text="Access token.")
+    refresh = serializers.CharField(help_text="Refresh token.")
+
+
+class RefreshTokenOutputOneSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Token refreshed."""
+
+    access = serializers.CharField(help_text="Access token.")
+
+
+class RefreshTokenOutputTwoSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Token refreshed."""
+
+    access = serializers.CharField(help_text="Access token.")
+    refresh = serializers.CharField(help_text="Refresh token.")
 
 
 def add_jwt_email_auth_security_scheme(schema: Dict[str, Any]) -> None:
@@ -49,18 +62,26 @@ def add_jwt_email_auth_security_requirement(view: APIView, operation: Dict[str, 
         operation["security"] = [{"jwt_email_auth": []}]
 
 
-def add_unauthenticated_response(self: AutoSchema, responses: Dict[int, Any]) -> None:
+def add_unauthenticated_response(self: AutoSchema, responses: Dict[str, Any]) -> None:
     """Adds 401 response to the given responses-dict if it has JWT permission or authentication classes.
     Use in `rest_framework.schemas.openapi.AutoSchema.get_responses`.
     """
     if JWTAuthentication in self.view.authentication_classes or HasValidJWT in self.view.permission_classes:
         responses.setdefault(
-            401,
+            "401",
             {
                 "content": {
                     "application/json": {
-                        "schema": self._get_reference(DetailSerializer()),  # pylint: disable=W0212
-                    },
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "detail": {
+                                    "type": "string",
+                                    "default": "Error message.",
+                                },
+                            },
+                        },
+                    }
                 },
                 "description": "Unauthenticated",
             },
@@ -88,18 +109,12 @@ class MultipleResponseMixin:
     responses: Dict[int, Union[str, Type[serializers.Serializer]]] = {}
 
     def get_components(self, path, method) -> Dict[str, Any]:
-        request_serializer = self.get_serializer(path, method)
-
         components = {}
 
-        component_name = self.get_component_name(DetailSerializer())
-        content = self.map_serializer(DetailSerializer())
+        request_serializer = self.get_serializer(path, method)
+        component_name = self.get_component_name(request_serializer)
+        content = self.map_serializer(request_serializer)
         components.setdefault(component_name, content)
-
-        if isinstance(request_serializer, serializers.Serializer):
-            component_name = self.get_component_name(request_serializer)
-            content = self.map_serializer(request_serializer)
-            components.setdefault(component_name, content)
 
         for serializer_class in self.responses.values():
             if isinstance(serializer_class, type) and issubclass(serializer_class, serializers.Serializer):
@@ -117,18 +132,30 @@ class MultipleResponseMixin:
         add_unauthenticated_response(self, responses)
 
         for status_code, info in responses.items():
-            serializer_class = DetailSerializer
 
-            if isinstance(info, type) and issubclass(info, serializers.Serializer):
+            if status_code == 204:
+                schema = {"type": "string", "default": ""}
+
+            elif isinstance(info, type) and issubclass(info, serializers.Serializer):
                 serializer_class = info
                 info = serializer_class.__doc__
-
-            serializer = self.view.initialize_serializer(serializer_class=serializer_class)
-
-            schema = self._get_reference(serializer)
+                serializer = self.view.initialize_serializer(serializer_class=serializer_class)
+                schema = {"schema": self._get_reference(serializer)}
+            else:
+                schema = {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "detail": {
+                                "type": "string",
+                                "default": "Error message.",
+                            },
+                        },
+                    }
+                }
 
             data[str(status_code)] = {
-                "content": {"application/json": {"schema": schema}},
+                "content": {"application/json": schema},
                 "description": info,
             }
 
@@ -138,10 +165,10 @@ class MultipleResponseMixin:
 class SendLoginCodeSchemaMixin(MultipleResponseMixin):
 
     responses = {
-        200: "Login code for this email already cached, no email sent as one should have been sent already.",
-        204: SendLoginCodeOutputSerializer,
-        400: "Email not given or type somehow invalid.",
-        503: "Email server could not send email.",
+        200: "Data already cached for this login code.",
+        204: "Authorization successful, login data cached and code sent.",
+        400: "Missing data or invalid types.",
+        503: "Server could not send login code.",
     }
 
 
@@ -149,9 +176,9 @@ class LoginSchemaMixin(MultipleResponseMixin):
 
     responses = {
         200: LoginOutputSerializer,
-        400: "Email or code not given or their types are somehow invalid.",
+        400: "Missing data or invalid types.",
         401: "Given login code was incorrect, or user has been blocked after too many attemps at login.",
-        404: "No login code found for given email.",
+        404: "No data found for login code.",
         410: "Login data was corrupted.",
     }
 
@@ -164,6 +191,6 @@ class RefreshTokenSchemaMixin(MultipleResponseMixin):
             if auth_settings.REFRESH_VIEW_BOTH_TOKENS
             else RefreshTokenOutputOneSerializer
         ),
-        400: "Token not given or type somehow invalid.",
+        400: "Missing data or invalid types",
         401: "Refresh token has expired or is invalid.",
     }
