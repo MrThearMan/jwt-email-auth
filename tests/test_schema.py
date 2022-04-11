@@ -240,22 +240,6 @@ def test_send_login_code_schema__get_responses(drf_request):
     view.format_kwarg = None
     components = view.schema.get_responses("", "")
     assert components == {
-        "200": {
-            "content": {
-                "application/json": {
-                    "schema": {
-                        "properties": {
-                            "detail": {
-                                "default": "Error message.",
-                                "type": "string",
-                            },
-                        },
-                        "type": "object",
-                    }
-                }
-            },
-            "description": "Data already cached for this login code.",
-        },
         "204": {
             "content": {
                 "application/json": {

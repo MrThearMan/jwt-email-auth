@@ -165,7 +165,6 @@ class MultipleResponseMixin:
 class SendLoginCodeSchemaMixin(MultipleResponseMixin):
 
     responses = {
-        200: "Data already cached for this login code.",
         204: "Authorization successful, login data cached and code sent.",
         400: "Missing data or invalid types.",
         503: "Server could not send login code.",

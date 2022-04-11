@@ -88,19 +88,19 @@ def test_refresh_endpoint(caplog):
     assert response1.data["access"] != response2.data["access"]
 
 
-def test_authenticate_endpoint__login_code_already_exists():
+def test_authenticate_endpoint__login_code_already_exists(caplog):
     client = APIClient()
 
     response1 = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
     response2 = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
 
-    assert response2.data == {
-        "detail": "Login code for 'foo@bar.com' already exists. "
-        "Please wait a moment for the message to arrive or try again later."
-    }
-    assert response2.status_code == status.HTTP_200_OK
+    code_1 = get_login_code_from_message(caplog.record_tuples[0][2])
+    code_2 = get_login_code_from_message(caplog.record_tuples[1][2])
+
+    assert code_1 != code_2
 
 
 def test_authenticate_endpoint__use_email_template(settings, caplog):

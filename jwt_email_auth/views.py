@@ -74,15 +74,11 @@ class SendLoginCodeView(BaseAuthView):
         value = data[key]
 
         cache_key = generate_cache_key(value)
-        if cache.get(cache_key, None) is not None:
-            message = _(
-                "Login code for '%(value)s' already exists. "
-                "Please wait a moment for the message to arrive or try again later."
-            ) % {"value": value}
-            return Response(data={"detail": message}, status=status.HTTP_200_OK)
+        login_data = cache.get(cache_key, None)
+        if login_data is None:
+            auth_settings.VALIDATION_CALLBACK(value)
+            login_data = auth_settings.LOGIN_DATA(value)
 
-        auth_settings.VALIDATION_CALLBACK(value)
-        login_data = auth_settings.LOGIN_DATA(value)
         login_data["code"] = auth_settings.CODE_GENERATOR()
         logger.debug(login_data)
         cache.set(cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
