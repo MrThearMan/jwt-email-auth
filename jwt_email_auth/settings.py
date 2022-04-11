@@ -136,6 +136,11 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # If True, Refresh view sould return both the access token, and the refresh token
     REFRESH_VIEW_BOTH_TOKENS: bool = False
+    #
+    # "Dot import notation" to a function that is used to check if request is allowed to check login code.
+    # Takes a single argument: request (Request) and should return a boolean. Default handler blocks
+    # user based on their IP address after a number of attempts defined by LOGIN_ATTEMPTS.
+    LOGIN_BLOCKER_CALLBACK: str = "jwt_email_auth.utils.user_login_blocked"
 
 
 SETTING_NAME: str = "JWT_EMAIL_AUTH"
@@ -151,6 +156,7 @@ IMPORT_STRINGS: Set[Union[bytes, str]] = {
     "CODE_GENERATOR",
     "BLOCKING_HANDLER",
     "LOGIN_CALLBACK",
+    "LOGIN_BLOCKER_CALLBACK",
 }
 
 REMOVED_SETTINGS: Set[str] = {

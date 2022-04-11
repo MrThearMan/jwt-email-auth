@@ -18,7 +18,7 @@ from .schema import LoginSchemaMixin, RefreshTokenSchemaMixin, SendLoginCodeSche
 from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer
 from .settings import auth_settings
 from .tokens import RefreshToken
-from .utils import generate_cache_key, user_login_blocked
+from .utils import generate_cache_key
 
 
 __all__ = [
@@ -110,7 +110,7 @@ class LoginView(BaseAuthView):
     schema = type("Schema", (LoginSchemaMixin, AutoSchema), {})()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
-        if user_login_blocked(request):
+        if auth_settings.LOGIN_BLOCKER_CALLBACK(request):
             raise PermissionDenied(
                 _("Maximum number of attempts reached. Try again in %(x)s minutes.")
                 % {"x": int(auth_settings.LOGIN_COOLDOWN.total_seconds() // 60)}
