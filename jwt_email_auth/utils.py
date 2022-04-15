@@ -23,9 +23,9 @@ from .settings import auth_settings
 
 __all__ = [
     "generate_cache_key",
-    "user_login_blocked",
     "send_login_email",
     "token_from_headers",
+    "user_is_blocked",
 ]
 
 
@@ -36,28 +36,7 @@ def random_code() -> str:
     return str(randint(1, 999_999)).zfill(6)
 
 
-def generate_cache_key(content: str) -> str:
-    """Generate cache key using a prefix (from auth_settings), and md5 hexdigest."""
-    return f"{auth_settings.CACHE_PREFIX}-{md5(content.encode()).hexdigest()}"
-
-
-def default_login_data(email: str) -> Dict[str, Any]:  # pylint: disable=W0613
-    """Default login data function. It is meant to be overriden in Django settings."""
-    return {}
-
-
-def login_validation(email: str) -> None:  # pylint: disable=W0613
-    """Default function to validate login. It is meant to be overriden in Django settings."""
-    return
-
-
-def blocking_handler(ip: str) -> None:  # pylint: disable=W0613,C0103
-    """Default blocker ip handler. It is meant to be overriden in Django settings."""
-    return
-
-
-def user_login_blocked(request: Request) -> bool:
-
+def get_ip(request: Request) -> str:
     ip, is_routable = get_client_ip(  # pylint: disable=C0103,W0612
         request=request,
         proxy_order=auth_settings.PROXY_ORDER,
@@ -65,8 +44,34 @@ def user_login_blocked(request: Request) -> bool:
         proxy_trusted_ips=auth_settings.PROXY_TRUSTED_IPS,
         request_header_order=auth_settings.REQUEST_HEADER_ORDER,
     )
+    return ip
 
-    cache_key = generate_cache_key(ip)
+
+def generate_cache_key(content: str, /, extra_prefix: str) -> str:
+    """Generate cache key using a prefix (from auth_settings), and md5 hexdigest."""
+    return f"{auth_settings.CACHE_PREFIX}-{extra_prefix}-{md5(content.encode()).hexdigest()}"
+
+
+def validate_login_and_provide_login_data(email: str) -> Dict[str, Any]:  # pylint: disable=W0613
+    """Default function to validate login and provide login data. It is meant to be overriden in Django settings."""
+    return {}
+
+
+def blocking_handler(request: Request) -> None:  # pylint: disable=W0613
+    return
+
+
+def blocking_cache_key_from_ip(request: Request) -> str:
+    return generate_cache_key(get_ip(request), extra_prefix="block")
+
+
+def blocking_cache_key_from_email(request: Request) -> str:
+    value = [value for key, value in request.data.items() if key != "code"][0]
+    return generate_cache_key(value, extra_prefix="block")
+
+
+def user_is_blocked(request: Request) -> bool:
+    cache_key = auth_settings.LOGIN_BLOCKER_CACHE_KEY_CALLBACK(request)
     attempts = cache.get(cache_key, 0) + 1
     cache.set(cache_key, attempts, auth_settings.LOGIN_COOLDOWN.total_seconds())
 
@@ -74,8 +79,8 @@ def user_login_blocked(request: Request) -> bool:
     wasnt_blocked: bool = attempts - 1 <= auth_settings.LOGIN_ATTEMPTS
 
     if block and wasnt_blocked:
-        logger.warning(f"Blocked user with ip '{ip}' due to too many login attempts.")
-        auth_settings.BLOCKING_HANDLER(ip=ip)
+        logger.warning(f"Blocked login for {get_ip(request)!r} due to too many attempts.")
+        auth_settings.USER_BLOCKED_ADDITIONAL_HANDLER(request)
 
     return block
 

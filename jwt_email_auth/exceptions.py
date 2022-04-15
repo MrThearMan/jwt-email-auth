@@ -5,8 +5,8 @@ from rest_framework.exceptions import APIException
 
 __all__ = [
     "ServerException",
-    "LoginCodeStillValid",
     "CorruptedDataException",
+    "SendCodeCooldown",
 ]
 
 
@@ -16,10 +16,10 @@ class ServerException(APIException):
     default_code = "server_down"
 
 
-class LoginCodeStillValid(APIException):
-    status_code = status.HTTP_409_CONFLICT
-    default_detail = _("A login code for this email is still valid.")
-    default_code = "login_still_valid"
+class SendCodeCooldown(APIException):
+    status_code = status.HTTP_412_PRECONDITION_FAILED
+    default_detail = _("This user is not allowed to send another login code yet.")
+    default_code = "send_code_cooldown"
 
 
 class CorruptedDataException(APIException):

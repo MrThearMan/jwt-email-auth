@@ -5,7 +5,7 @@ from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.permissions import HasValidJWT
 from jwt_email_auth.schema import (
     DisablePermChecks,
-    MultipleResponseMixin,
+    JWTEmailAuthSchema,
     add_jwt_email_auth_security_requirement,
     add_jwt_email_auth_security_scheme,
     add_unauthenticated_response,
@@ -80,7 +80,7 @@ def test_add_unauthenticated_response__authentication_classes():
     class View(APIView):
         authentication_classes = [JWTAuthentication]
         permission_classes = []
-        schema = type("Schema", (MultipleResponseMixin, AutoSchema), {})()
+        schema = type("Schema", (JWTEmailAuthSchema, AutoSchema), {})()
 
     responses = {}
     add_unauthenticated_response(View().schema, responses)
@@ -108,7 +108,7 @@ def test_add_unauthenticated_response__permission_classes():
     class View(APIView):
         authentication_classes = []
         permission_classes = [HasValidJWT]
-        schema = type("Schema", (MultipleResponseMixin, AutoSchema), {})()
+        schema = type("Schema", (JWTEmailAuthSchema, AutoSchema), {})()
 
     responses = {}
     add_unauthenticated_response(View().schema, responses)
@@ -136,7 +136,7 @@ def test_add_unauthenticated_response__none():
     class View(APIView):
         authentication_classes = []
         permission_classes = []
-        schema = type("Schema", (MultipleResponseMixin, AutoSchema), {})()
+        schema = type("Schema", (JWTEmailAuthSchema, AutoSchema), {})()
 
     responses = {}
     add_unauthenticated_response(View().schema, responses)
@@ -255,7 +255,7 @@ def test_send_login_code_schema__get_responses(drf_request):
                     "schema": {
                         "properties": {
                             "detail": {
-                                "default": "Error " "message.",
+                                "default": "Error message.",
                                 "type": "string",
                             },
                         },
@@ -264,6 +264,22 @@ def test_send_login_code_schema__get_responses(drf_request):
                 }
             },
             "description": "Missing data or invalid types.",
+        },
+        "412": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "This user is not allowed to send another login code yet.",
         },
         "503": {
             "content": {

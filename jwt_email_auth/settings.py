@@ -25,11 +25,6 @@ class JWTEmailAuthSettings(NamedTuple):
     # When True, any code will work in login
     SKIP_CODE_CHECKS: bool = False
     #
-    # "Dot import notation" to a function to run to load JWT signing key.
-    # Takes no arguments and returns the Ed25519PrivateKey object used to check the JWT signature.
-    # Default function loads an example key, DO NOT USE IT IN PRODUCTION!
-    SIGNING_KEY: str = "jwt_email_auth.utils.load_example_signing_key"
-    #
     # How long an access token is valid for
     ACCESS_TOKEN_LIFETIME: timedelta = timedelta(minutes=5)
     #
@@ -39,20 +34,19 @@ class JWTEmailAuthSettings(NamedTuple):
     # How long a login code is stored in cache
     LOGIN_CODE_LIFETIME: timedelta = timedelta(minutes=5)
     #
-    # "Dot import notation" to a function to use for validating use from email.
-    # Takes a single argument "email" of type str and returns None.
-    # Default is no validation.
-    VALIDATION_CALLBACK: str = "jwt_email_auth.utils.login_validation"
+    # After user has exceeded defined number of login attemprs,
+    # this is the cooldown until they can attempt login again.
+    LOGIN_COOLDOWN: timedelta = timedelta(minutes=5)
     #
-    # "Dot import notation" to a function to run to gather login data.
-    # Takes a single argument "email" and returns a Dict[str, Any], where Any can be cached in your cache backend.
-    # Default is no data.
-    LOGIN_DATA: str = "jwt_email_auth.utils.default_login_data"
+    # After a user has sent a login code, this is the cooldown until
+    # they can send one again.
+    CODE_SEND_COOLDOWN: timedelta = timedelta(minutes=1)
     #
-    # "Dot import notation" to a function to generate a login code.
-    # Takes no arguments and returns a string.
-    # Default is a function that returns a 6-digit string.
-    CODE_GENERATOR: str = "jwt_email_auth.utils.random_code"
+    # Number of login attempts until user is banned
+    LOGIN_ATTEMPTS: int = 10
+    #
+    # List of expected JWT content
+    EXPECTED_CLAIMS: List[str] = []
     #
     # Email sender. Default is settings.DEFAULT_FROM_EMAIL
     LOGIN_SENDING_EMAIL: Optional[str] = None
@@ -74,8 +68,6 @@ class JWTEmailAuthSettings(NamedTuple):
     # Path to html_message template. Context must have {{ code }} and {{ valid }}!
     LOGIN_EMAIL_HTML_TEMPLATE: Optional[Path] = None
     #
-    # Encoding and decoding options:
-    #
     # Issuer of the JWT
     ISSUER: Optional[str] = None
     #
@@ -94,8 +86,39 @@ class JWTEmailAuthSettings(NamedTuple):
     # Additional JWT header fields
     EXTRA_HEADERS: Optional[Dict[str, str]] = None
     #
-    # List of expected JWT content
-    EXPECTED_CLAIMS: List[str] = []
+    # Cache prefix
+    CACHE_PREFIX: str = "Django"
+    #
+    # When True (default), OPTIONS requests can be made to the endpoint without token for schema access
+    OPTIONS_SCHEMA_ACCESS: bool = True
+    #
+    # If True, Refresh view sould return both the access token, and the refresh token
+    REFRESH_VIEW_BOTH_TOKENS: bool = False
+    #
+    # Function to load JWT signing key.
+    # Takes no arguments. Returns the Ed25519PrivateKey-object used to check the JWT signature.
+    # Default function loads an example key, DO NOT USE IT IN PRODUCTION!
+    SIGNING_KEY: str = "jwt_email_auth.utils.load_example_signing_key"
+    #
+    # Function to generate a login code.
+    # Takes no arguments. Returns a login code (str).
+    CODE_GENERATOR: str = "jwt_email_auth.utils.random_code"
+    #
+    # Function that sends the login email.
+    # Arguments: email (str), and login data (Dict[str, Any]), and request (Request). Returns None.
+    SEND_LOGIN_CODE_CALLBACK: str = "jwt_email_auth.utils.send_login_email"
+    #
+    # Function to use for validating user and providing login data.
+    # Arguments: email (str). Returns login data (Dict[str, Any]).
+    LOGIN_VALIDATION_AND_DATA_CALLBACK: str = "jwt_email_auth.utils.validate_login_and_provide_login_data"
+    #
+    # Function to generate cache key for storing user's login attempts.
+    # Arguments: request (Request). Returns a cache key (str).
+    LOGIN_BLOCKER_CACHE_KEY_CALLBACK: str = "jwt_email_auth.utils.blocking_cache_key_from_ip"
+    #
+    # Function for additional handling for blocked users.
+    # Arguments: request (Request). Returns None.
+    USER_BLOCKED_ADDITIONAL_HANDLER: str = "jwt_email_auth.utils.blocking_handler"
     #
     # IP address spoofing prevention settings:
     # https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users
@@ -111,36 +134,6 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # Meta precedence order
     REQUEST_HEADER_ORDER: Optional[List[str]] = None
-    #
-    # Cache prefix for login codes and banned IPs
-    CACHE_PREFIX: str = "Django"
-    #
-    # Number of login attempts until banned
-    LOGIN_ATTEMPTS: int = 10
-    #
-    # How long until login ban lifted
-    LOGIN_COOLDOWN: timedelta = timedelta(minutes=5)
-    #
-    # "Dot import notation" to a function that does additional handling for blocked IPs.
-    # Takes a single argument "ip" of type str, and return None.
-    # Default is no additional handling
-    BLOCKING_HANDLER: str = "jwt_email_auth.utils.blocking_handler"
-    #
-    # "Dot import notation" to a function that sends the login email.
-    # Takes three arguments: request (Request), email (str), and login data (Dict[str, Any]).
-    # Default handler uses django's send_mail function.
-    LOGIN_CALLBACK: str = "jwt_email_auth.utils.send_login_email"
-    #
-    # When True (default), OPTIONS requests can be made to the endpoint without token for schema access
-    OPTIONS_SCHEMA_ACCESS: bool = True
-    #
-    # If True, Refresh view sould return both the access token, and the refresh token
-    REFRESH_VIEW_BOTH_TOKENS: bool = False
-    #
-    # "Dot import notation" to a function that is used to check if request is allowed to check login code.
-    # Takes a single argument: request (Request) and should return a boolean. Default handler blocks
-    # user based on their IP address after a number of attempts defined by LOGIN_ATTEMPTS.
-    LOGIN_BLOCKER_CALLBACK: str = "jwt_email_auth.utils.user_login_blocked"
 
 
 SETTING_NAME: str = "JWT_EMAIL_AUTH"
@@ -151,17 +144,21 @@ DEFAULTS: Dict[str, Any] = JWTEmailAuthSettings()._asdict()
 
 IMPORT_STRINGS: Set[Union[bytes, str]] = {
     b"SIGNING_KEY",
-    "VALIDATION_CALLBACK",
-    "LOGIN_DATA",
     "CODE_GENERATOR",
-    "BLOCKING_HANDLER",
-    "LOGIN_CALLBACK",
-    "LOGIN_BLOCKER_CALLBACK",
+    "SEND_LOGIN_CODE_CALLBACK",
+    "LOGIN_VALIDATION_AND_DATA_CALLBACK",
+    "LOGIN_BLOCKER_CACHE_KEY_CALLBACK",
+    "USER_BLOCKED_ADDITIONAL_HANDLER",
 }
 
 REMOVED_SETTINGS: Set[str] = {
     "LOGIN_EMAIL_CALLBACK",
     "SEND_EMAILS",
+    "LOGIN_DATA",
+    "VALIDATION_CALLBACK",
+    "LOGIN_CALLBACK",
+    "BLOCKING_HANDLER",
+    "LOGIN_BLOCKER_CALLBACK",
 }
 
 

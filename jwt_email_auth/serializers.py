@@ -2,7 +2,6 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from django.utils.functional import cached_property
-from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.request import Request
@@ -16,10 +15,14 @@ __all__ = [
     "SendLoginCodeSerializer",
     "LoginSerializer",
     "RefreshTokenSerializer",
+    "LoginOutputSerializer",
+    "RefreshTokenOutputOneSerializer",
+    "RefreshTokenOutputTwoSerializer",
 ]
 
 
 logger = logging.getLogger(__name__)
+
 
 # Input
 
@@ -58,7 +61,7 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
             raise ValidationError(
                 {
                     api_settings.NON_FIELD_ERRORS_KEY: ErrorDetail(
-                        string=_("Must include a Request object in the context of the Serializer."),
+                        string="Must include a Request object in the context of the Serializer.",
                         code="request_missing",
                     )
                 }
@@ -74,7 +77,7 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
                 missing.append(key)
         if missing:
             raise ValidationError(
-                {claim: ErrorDetail(string=_("Missing token claim."), code="missing_claim") for claim in missing}
+                {claim: ErrorDetail(string="Missing token claim.", code="missing_claim") for claim in missing}
             )
         return data
 
@@ -89,3 +92,26 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
     def to_representation(self, instance) -> Dict[str, Any]:
         ret = super().to_representation(instance)
         return self.add_token_claims(ret)
+
+
+# Output (for schema)
+
+
+class LoginOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Refresh token valid and new access token was created."""
+
+    access = serializers.CharField(help_text="Access token.")
+    refresh = serializers.CharField(help_text="Refresh token.")
+
+
+class RefreshTokenOutputOneSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Token refreshed."""
+
+    access = serializers.CharField(help_text="Access token.")
+
+
+class RefreshTokenOutputTwoSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Token refreshed."""
+
+    access = serializers.CharField(help_text="Access token.")
+    refresh = serializers.CharField(help_text="Refresh token.")

@@ -34,7 +34,7 @@ urlpatterns = [
 ```
 
 
-② Configure settings with the `JWT_EMAIL_AUTH` key. Here is a minimal config:
+② Configure settings with the `JWT_EMAIL_AUTH` key. Here is a minimal config (some values are defaults):
 
 ```python
 JWT_EMAIL_AUTH = {
@@ -46,49 +46,59 @@ JWT_EMAIL_AUTH = {
     "CACHE_PREFIX": "PREFIX",
     "LOGIN_ATTEMPTS": 10,
     "LOGIN_COOLDOWN": timedelta(minutes=5),
-    "LOGIN_DATA": "path.to.module.function",
+    "CODE_SEND_COOLDOWN": timedelta(minutes=1),
+    "LOGIN_VALIDATION_AND_DATA_CALLBACK": "path.to.module.function",
 }
 
 ```
 
-Here is the full list of settings and what they mean.
+Here are the rest of the settings and what they mean.
 
-| Setting                   | Description                                                                                                                                                                                                                                                                                                     | Type                        |
-|---------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|
-| SENDING_ON                | Whether emails should be sent or not. <br>When off, login code is logged instead. <br>This can be useful during development.                                                                                                                                                                                    | bool                        |
-| SKIP_CODE_CHECKS          | When True, login code will not be checked <br>on login. This can be useful during <br>development.                                                                                                                                                                                                              | bool                        |
-| SIGNING_KEY               | "Dot import notation" to a function to <br>load JWT signing key. Takes no arguments <br>and returns the [Ed25519PrivateKey][pk]<br> object used to check the JWT signature. <br>Default function loads an example key,<br> DO NOT USE IT IN PRODUCTION!                                                         | str                         |
-| ACCESS_TOKEN_LIFETIME     | How long an access token is valid for                                                                                                                                                                                                                                                                           | timedelta                   |
-| REFRESH_TOKEN_LIFETIME    | How long a refresh token is valid for                                                                                                                                                                                                                                                                           | timedelta                   |
-| LOGIN_CODE_LIFETIME       | How long a login code is stored in cache                                                                                                                                                                                                                                                                        | timedelta                   |
-| VALIDATION_CALLBACK       | "Dot import notation" to a function to use <br>for validating use from email. <br>Takes a single argument "email" of <br>type str and returns None. <br>Default is no validation.                                                                                                                               | str                         |
-| LOGIN_DATA                | "Dot import notation" to a function to run <br>to gather login data. Takes no <br>arguments and returns a Dict[str, Any],<br> where Any can be cached <br>in your cache backend. Default is no data.                                                                                                            | str                         |
-| CODE_GENERATOR            | "Dot import notation" to a function to <br>generate a login code. Takes no <br>arguments and returns a string. Default is a <br>function that returns a 6-digit string.                                                                                                                                         | str                         |
-| LOGIN_SENDING_EMAIL       | Email sender. Default is <br>settings.DEFAULT_FROM_EMAIL                                                                                                                                                                                                                                                        | str*                        |
-| LOGIN_SUBJECT_LINE        | Email subject line                                                                                                                                                                                                                                                                                              | str                         |
-| LOGIN_EMAIL_MESSAGE       | Message to send in email. <br>Must have {code} and {valid}.                                                                                                                                                                                                                                                     | str                         |
-| LOGIN_EMAIL_HTML_TEMPLATE | Path to html_message template. <br>Context must have {{ code }} and {{ valid }}.                                                                                                                                                                                                                                | Path*                       |
-| ISSUER                    | Issuer of the JWT                                                                                                                                                                                                                                                                                               | str*                        |
-| AUDIENCE                  | Intended recipient of the JWT                                                                                                                                                                                                                                                                                   | str*                        |
-| LEEWAY                    | A time margin in seconds for the <br>expiration check                                                                                                                                                                                                                                                           | int                         |
-| ALGORITHM                 | Algorithm to sign and decrypt the token with                                                                                                                                                                                                                                                                    | str                         |
-| HEADER_PREFIX             | Authorization scheme used in Authorization <br>header, as in `HEADER_PREFIX token`                                                                                                                                                                                                                              | str                         |
-| EXTRA_HEADERS             | Additional JWT header fields                                                                                                                                                                                                                                                                                    | Dict[str, str]*             |
-| EXPECTED_CLAIMS           | List of expected JWT content                                                                                                                                                                                                                                                                                    | List[str]                   |
-| PROXY_ORDER               | Indicate whether the originating client <br>is on the right or left in the <br>X-Forwarded-For header                                                                                                                                                                                                           | "left-most"<br>"right-most" |
-| PROXY_COUNT               | Number of proxies between the server <br>and internet                                                                                                                                                                                                                                                           | int]                        |
-| PROXY_TRUSTED_IPS         | Only these proxy IPs are allowed connections                                                                                                                                                                                                                                                                    | List[str]*                  |
-| REQUEST_HEADER_ORDER      | Meta precedence order                                                                                                                                                                                                                                                                                           | List[str]*                  |
-| CACHE_PREFIX              | Cache prefix for login codes and banned IPs                                                                                                                                                                                                                                                                     | str                         |
-| LOGIN_ATTEMPTS            | Number of login attempts until banned                                                                                                                                                                                                                                                                           | int                         |
-| LOGIN_COOLDOWN            | How long until login ban lifted                                                                                                                                                                                                                                                                                 | timedelta                   |
-| BLOCKING_HANDLER          | "Dot import notation" to a function that <br>does additional handling for <br>blocked IPs. Takes a single argument "ip" of <br>type str, and return None. <br>Default is no additional handling.                                                                                                                | str                         |
-| LOGIN_CALLBACK            | "Dot import notation" to a function that <br>sends the login email. <br>Takes three arguments: email (str)<br>and login data (Dict[str, Any]), and<br>request (Request). Default handler uses <br>django's `send_mail` function.                                                                                | str                         |
-| OPTIONS_SCHEMA_ACCESS     | When True (default), OPTIONS requests <br>can be made to the endpoint <br>without token for schema access.                                                                                                                                                                                                      | bool                        |
-| REFRESH_VIEW_BOTH_TOKENS  | If True, Refresh view sould return <br>both the access token, and <br>the refresh token                                                                                                                                                                                                                         | bool                        |
-| LOGIN_BLOCKER_CALLBACK    | "Dot import notation" to a function <br>that is used to check if <br>request is allowed to check login code.<br>Takes a single argument: request<br>(Request) and should return a boolean.<br>Default handler blocks user based<br>on their IP address after a number of<br>attempts defined by LOGIN_ATTEMPTS. | str                         |
+| Setting                     | Description                                                                                                                       | Type           |
+|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------|----------------|
+| `SENDING_ON`                | Whether emails<br>should be sent or not.<br>When off, login code is<br>logged instead<br>(for development).                       | bool           |
+| `SKIP_CODE_CHECKS`          | When True, any<br>code will work in login.                                                                                        | bool           |
+| `ACCESS_TOKEN_LIFETIME`     | How long an access<br>token is valid for.                                                                                         | timedelta      |
+| `REFRESH_TOKEN_LIFETIME`    | How long a refresh<br>token is valid for.                                                                                         | timedelta      |
+| `LOGIN_CODE_LIFETIME`       | How long a login<br>code is stored in cache.                                                                                      | timedelta      |
+| `LOGIN_COOLDOWN`            | After user has<br>exceeded defined number<br>of login attemprs,<br>this is the cooldown<br>until they can attempt<br>login again. | timedelta      |
+| `CODE_SEND_COOLDOWN`        | After a user has<br>sent a login code,<br>this is the cooldown<br>until they can send<br>one again.                               | timedelta      |
+| `LOGIN_ATTEMPTS`            | Number of login<br>attempts until user<br>is banned.                                                                              | int            |
+| `EXPECTED_CLAIMS`           | List of expected JWT<br>content.                                                                                                  | list[str]      |
+| `LOGIN_SENDING_EMAIL`       | Email sender.                                                                                                                     | str            |
+| `LOGIN_SUBJECT_LINE`        | Email subject line.                                                                                                               | str            |
+| `LOGIN_EMAIL_MESSAGE`       | Message to send in<br>email. Must have<br>{code} and {valid}!                                                                     | str            |
+| `LOGIN_EMAIL_HTML_TEMPLATE` | Path to html_message<br>template. Context<br>must have {{ code }}<br>and {{ valid }}!                                             | Path           |
+| `CACHE_PREFIX`              | Cache prefix.                                                                                                                     | str            |
+| `OPTIONS_SCHEMA_ACCESS`     | When True (default),<br>OPTIONS requests can<br>be made to the endpoint<br>without token for schema<br>access.                    | bool           |
+| `REFRESH_VIEW_BOTH_TOKENS`  | If True, Refresh view<br>sould return both<br>the access token, and<br>the refresh token.                                         | bool           |
+| `ISSUER`                    | Issuer of the JWT.                                                                                                                | str            |
+| `AUDIENCE`                  | Intended recipient<br>of the JWT.                                                                                                 | str            |
+| `LEEWAY`                    | A time margin in<br>seconds for the<br>expiration check.                                                                          | int            |
+| `ALGORITHM`                 | Algorithm to sign<br>and decrypt the<br>token with.                                                                               | str            |
+| `HEADER_PREFIX`             | Authorization scheme<br>used in Authorization header,<br>as in `HEADER_PREFIX token`.                                             | str            |
+| `EXTRA_HEADERS`             | Additional JWT header<br>fields.                                                                                                  | dict[str, str] |
 
-\* Optional, can be left None
+These settings should be specified in "dot import notation" to a function, which will be imported as the value for the setting.
+
+| Setting                              | Description                                                             | Arguments                          | Returns        |
+|--------------------------------------|-------------------------------------------------------------------------|------------------------------------|----------------|
+| `SIGNING_KEY`                        | Function to load<br>JWT signing key.                                    |                                    |                |
+| `CODE_GENERATOR`                     | Function to generate<br>a login code.                                   |                                    | str            |
+| `SEND_LOGIN_CODE_CALLBACK`           | Function that sends<br>the login email.                                 | str,<br>dict[str, Any],<br>Request | None           |
+| `LOGIN_VALIDATION_AND_DATA_CALLBACK` | Function to use for<br>validating user and providing<br>login data.     | str                                | dict[str, Any] |
+| `LOGIN_BLOCKER_CACHE_KEY_CALLBACK`   | Function to generate<br>cache key for storing user's<br>login attempts. | Request                            | str            |
+| `USER_BLOCKED_ADDITIONAL_HANDLER`    | Function for additional<br>handling for blocked users.                  | Request                            | None           |
+
+
+[IP address spoofing][IP spoofing] prevention settings:
+
+| Setting                | Description                                                                                            | Type                        |
+|------------------------|--------------------------------------------------------------------------------------------------------|-----------------------------|
+| `PROXY_ORDER`          | Indicate whether the<br>originating client is on<br>the right or left in the<br>X-Forwarded-For header | "left-most"<br>"right-most" |
+| `PROXY_COUNT`          | Number of proxies between<br>the server and internet.                                                  | int                         |
+| `PROXY_TRUSTED_IPS`    | Only these proxy IPs<br>are allowed connections                                                        | List[str]                   |
+| `REQUEST_HEADER_ORDER` | Meta precedence order.                                                                                 | List[str]                   |
 
 
 ③ Add OpenSSH based [ed25519][ed25519] `SIGNING_KEY` (in PEM format) to environment variables.
@@ -97,7 +107,7 @@ The linebreaks in PEM format should be replaced with | (pipe) characters.
 If you do not want to use environment variables, override the `SIGNING_KEY` setting.
 
 > A default signing key is provided for reference in the settings-module,
-> but this should obviously be changed in production environments.
+> but this should be changed in production environments.
 
 
 ④ Configure Django's email [email settings][email_settings] (if using django's email sending).
@@ -136,3 +146,4 @@ REST_FRAMEWORK = {
 [pk]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
 [ed25519]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
 [email_settings]: https://docs.djangoproject.com/en/3.2/topics/email/#quick-example
+[IP spoofing]: https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users

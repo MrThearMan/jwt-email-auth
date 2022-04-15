@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import jwt
 from django.utils.encoding import force_str
@@ -133,10 +133,13 @@ class AccessToken:
         self.payload.update({} if data is None else data, **kwargs)
 
     def verify_payload(self) -> None:
+        missing_claims: List[str] = []
         for claim in auth_settings.EXPECTED_CLAIMS:
             if claim not in self:
-                logger.info(f"Missing claim: {claim}")
-                raise AuthenticationFailed(_("Missing claims."), code="missing_claims")
+                missing_claims.append(claim)
+
+        if missing_claims:
+            raise AuthenticationFailed(f"Missing token claims: {missing_claims}.", code="missing_claims")
 
     def verify_token_type(self) -> None:
         if self.token_type != self.payload.get("type", "notype"):

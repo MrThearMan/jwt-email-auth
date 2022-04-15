@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jwt-email-auth"
-version = "0.6.0"
+version = "0.7.0"
 description = "JWT authentication from email login codes."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
@@ -61,7 +61,7 @@ pytest = "7.1.1"
 coverage = "6.3.2"
 pytest-django = "4.5.2"
 pre-commit = "2.18.1"
-tox = "3.24.5"
+tox = "3.25.0"
 tox-gh-actions = "2.9.1"
 coveralls = "3.3.1"
 mypy = "0.942"

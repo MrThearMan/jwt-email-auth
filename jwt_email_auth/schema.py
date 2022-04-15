@@ -1,4 +1,4 @@
-from typing import Any, Dict, Type, Union
+from typing import Any, Dict, Optional, Sequence, Type, Union
 
 from rest_framework import serializers
 from rest_framework.schemas.openapi import AutoSchema
@@ -6,7 +6,6 @@ from rest_framework.views import APIView
 
 from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.permissions import HasValidJWT
-from jwt_email_auth.settings import auth_settings
 
 
 __all__ = [
@@ -14,10 +13,8 @@ __all__ = [
     "add_jwt_email_auth_security_requirement",
     "add_unauthenticated_response",
     "DisablePermChecks",
-    "MultipleResponseMixin",
-    "SendLoginCodeSchemaMixin",
-    "LoginSchemaMixin",
-    "RefreshTokenSchemaMixin",
+    "JWTEmailAuthSchema",
+    "JWTEmailAuthSchemaMixin",
 ]
 
 NO_CONTENT_SCHEMA = {"type": "string", "default": ""}
@@ -31,26 +28,6 @@ ERROR_SCHEMA = {
         },
     },
 }
-
-
-class LoginOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
-    """Refresh token valid and new access token was created."""
-
-    access = serializers.CharField(help_text="Access token.")
-    refresh = serializers.CharField(help_text="Refresh token.")
-
-
-class RefreshTokenOutputOneSerializer(serializers.Serializer):  # pylint: disable=W0223
-    """Token refreshed."""
-
-    access = serializers.CharField(help_text="Access token.")
-
-
-class RefreshTokenOutputTwoSerializer(serializers.Serializer):  # pylint: disable=W0223
-    """Token refreshed."""
-
-    access = serializers.CharField(help_text="Access token.")
-    refresh = serializers.CharField(help_text="Refresh token.")
 
 
 def add_jwt_email_auth_security_scheme(schema: Dict[str, Any]) -> None:
@@ -99,12 +76,7 @@ class DisablePermChecks:
         return True
 
 
-class MultipleResponseMixin:
-    """`rest_framework.schemas.openapi.AutoSchema` mixin class.
-
-    Allows setting multiple responses for different status codes.
-    Values can be serializers, or string (which will then use `jwt_email_auth.serializers.DetailSerializer`).
-    """
+class JWTEmailAuthSchemaMixin:
 
     responses: Dict[int, Union[str, Type[serializers.Serializer]]] = {}
 
@@ -149,34 +121,13 @@ class MultipleResponseMixin:
         return data
 
 
-class SendLoginCodeSchemaMixin(MultipleResponseMixin):
-
-    responses = {
-        204: "Authorization successful, login data cached and code sent.",
-        400: "Missing data or invalid types.",
-        503: "Server could not send login code.",
-    }
-
-
-class LoginSchemaMixin(MultipleResponseMixin):
-
-    responses = {
-        200: LoginOutputSerializer,
-        400: "Missing data or invalid types.",
-        401: "Given login code was incorrect, or user has been blocked after too many attemps at login.",
-        404: "No data found for login code.",
-        410: "Login data was corrupted.",
-    }
-
-
-class RefreshTokenSchemaMixin(MultipleResponseMixin):
-
-    responses = {
-        200: (
-            RefreshTokenOutputTwoSerializer
-            if auth_settings.REFRESH_VIEW_BOTH_TOKENS
-            else RefreshTokenOutputOneSerializer
-        ),
-        400: "Missing data or invalid types",
-        401: "Refresh token has expired or is invalid.",
-    }
+class JWTEmailAuthSchema(JWTEmailAuthSchemaMixin, AutoSchema):
+    def __init__(
+        self,
+        responses: Optional[Dict[int, Union[str, Type[serializers.Serializer]]]] = None,
+        tags: Optional[Sequence[str]] = None,
+        operation_id_base: Optional[str] = None,
+        component_name: Optional[str] = None,
+    ):
+        self.responses = responses or self.responses
+        super().__init__(tags=tags, operation_id_base=operation_id_base, component_name=component_name)

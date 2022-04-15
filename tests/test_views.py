@@ -11,7 +11,12 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from jwt_email_auth.tokens import AccessToken, RefreshToken
-from jwt_email_auth.utils import blocking_handler, default_login_data, generate_cache_key, login_validation, random_code
+from jwt_email_auth.utils import (
+    blocking_handler,
+    generate_cache_key,
+    random_code,
+    validate_login_and_provide_login_data,
+)
 from jwt_email_auth.views import BaseAuthView
 
 from .conftest import equals_regex
@@ -21,16 +26,16 @@ from .helpers import get_login_code_from_message
 def test_authenticate_endpoint(caplog):
     client = APIClient()
 
-    # fmt: off
-    with patch("jwt_email_auth.utils.login_validation", side_effect=login_validation) as mock1, \
-        patch("jwt_email_auth.utils.default_login_data", side_effect=default_login_data) as mock2, \
-        patch("jwt_email_auth.utils.random_code", side_effect=random_code) as mock3:
-        response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
-    # fmt: on
+    str_1 = "jwt_email_auth.utils.validate_login_and_provide_login_data"
+    func_1 = validate_login_and_provide_login_data
+    str_2 = "jwt_email_auth.utils.random_code"
+    func_2 = random_code
 
-    mock1.assert_called_once_with("foo@bar.com")
-    mock2.assert_called_once()
-    mock3.assert_called_once()
+    with patch(str_1, side_effect=func_1) as mock_1, patch(str_2, side_effect=func_2) as mock_2:
+        response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    mock_1.assert_called_once_with("foo@bar.com")
+    mock_2.assert_called_once()
 
     log_source, level, message = caplog.record_tuples[0]
     code = get_login_code_from_message(message)
@@ -41,7 +46,7 @@ def test_authenticate_endpoint(caplog):
     assert response.data is None
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    key = generate_cache_key("foo@bar.com")
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code}
 
 
@@ -53,7 +58,7 @@ def test_login_endpoint(caplog):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    key = generate_cache_key("foo@bar.com")
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code}
 
     response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
@@ -103,6 +108,24 @@ def test_authenticate_endpoint__login_code_already_exists(caplog):
     assert code_1 != code_2
 
 
+def test_authenticate_endpoint__block_user_sending_too_many_emails(settings, caplog):
+    client = APIClient()
+    caplog.set_level(logging.DEBUG)
+
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": True,
+    }
+
+    with patch("jwt_email_auth.utils.send_mail") as mock:
+        response1 = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+        response2 = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
+
+    assert response2.data.get("detail") == "This user is not allowed to send another login code yet."
+
+
 def test_authenticate_endpoint__use_email_template(settings, caplog):
     client = APIClient()
     caplog.set_level(logging.DEBUG)
@@ -112,11 +135,11 @@ def test_authenticate_endpoint__use_email_template(settings, caplog):
         "LOGIN_EMAIL_HTML_TEMPLATE": "email_test_template.html",
     }
 
-    # fmt: off
-    with patch("jwt_email_auth.utils.send_mail") as mock1, \
-        patch("jwt_email_auth.utils.render_to_string", side_effect=render_to_string) as mock2:
+    str_1 = "jwt_email_auth.utils.send_mail"
+    str_2 = "jwt_email_auth.utils.render_to_string"
+
+    with patch(str_1) as mock1, patch(str_2, side_effect=render_to_string) as mock2:
         response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
-    # fmt: on
 
     mock1.assert_called_once()
     mock2.assert_called_once()
@@ -130,7 +153,7 @@ def test_authenticate_endpoint__use_email_template(settings, caplog):
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
-def test_login_endpoint__user_gets_blocked(settings, caplog):
+def test_login_endpoint__user_gets_blocked__ip(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
@@ -155,17 +178,68 @@ def test_login_endpoint__user_gets_blocked(settings, caplog):
     # authentication_class, and thus WWW-Authenticate header cannot be determined.
     assert response1.status_code == status.HTTP_403_FORBIDDEN
 
-    with patch("jwt_email_auth.utils.blocking_handler", side_effect=blocking_handler) as mock:
+    str_1 = "jwt_email_auth.utils.blocking_handler"
+    str_2 = "jwt_email_auth.utils.generate_cache_key"
+    func_1 = blocking_handler
+    func_2 = generate_cache_key
+
+    with patch(str_1, side_effect=func_1) as mock1, patch(str_2, side_effect=func_2) as mock2:
         response2 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
 
-    mock.assert_called_once_with(ip=equals_regex(r".+"))
+    mock1.assert_called_once()
+    mock2.assert_called_once_with(equals_regex(r".*"), extra_prefix="block")
 
     message = caplog.record_tuples[-2][2]
 
     assert response2.data.get("detail") == equals_regex(r"Maximum number of attempts reached. Try again in \d minutes.")
     assert response2.status_code == status.HTTP_403_FORBIDDEN
 
-    assert message == equals_regex(r"Blocked user with ip '.+' due to too many login attempts\.")
+    assert message == equals_regex(r"Blocked login for '.+' due to too many attempts\.")
+
+
+def test_login_endpoint__user_gets_blocked__email(settings, caplog):
+    client = APIClient()
+
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "LOGIN_ATTEMPTS": 1,
+        "LOGIN_BLOCKER_CACHE_KEY_CALLBACK": "jwt_email_auth.utils.blocking_cache_key_from_email",
+    }
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    real_code = get_login_code_from_message(message)
+
+    while True:
+        code = random_code()
+        if code != real_code:
+            break
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert response1.data.get("detail") == "Incorrect login code."
+    # 401 is coerced to 403 by APIView.handle_exception since login endpoint doesn't contain an
+    # authentication_class, and thus WWW-Authenticate header cannot be determined.
+    assert response1.status_code == status.HTTP_403_FORBIDDEN
+
+    str_1 = "jwt_email_auth.utils.blocking_handler"
+    str_2 = "jwt_email_auth.utils.generate_cache_key"
+    func_1 = blocking_handler
+    func_2 = generate_cache_key
+
+    with patch(str_1, side_effect=func_1) as mock1, patch(str_2, side_effect=func_2) as mock2:
+        response2 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    mock1.assert_called_once()
+    mock2.assert_called_once_with("foo@bar.com", extra_prefix="block")
+
+    message = caplog.record_tuples[-2][2]
+
+    assert response2.data.get("detail") == equals_regex(r"Maximum number of attempts reached. Try again in \d minutes.")
+    assert response2.status_code == status.HTTP_403_FORBIDDEN
+
+    assert message == equals_regex(r"Blocked login for '.+' due to too many attempts\.")
 
 
 def test_authenticate_endpoint__send_mock_email(settings):
@@ -175,7 +249,7 @@ def test_authenticate_endpoint__send_mock_email(settings):
         "SENDING_ON": True,
     }
 
-    with patch("jwt_email_auth.utils.send_mail", return_value=None) as mock:
+    with patch("jwt_email_auth.utils.send_mail") as mock:
         client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     mock.assert_called_once_with(
@@ -200,14 +274,13 @@ def test_authenticate_endpoint__email_sending_fails(settings, caplog):
     with patch("jwt_email_auth.utils.send_login_email", side_effect=TestException) as mock:
         response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
-    # mock.assert_called_once()
     log_source, level, message = caplog.record_tuples[0]
 
     assert log_source == "jwt_email_auth.views"
     assert level == logging.CRITICAL
     assert message == "Login code sending failed: TestException('foo')"
 
-    key = generate_cache_key("foo@bar.com")
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) is None
 
     assert response.data.get("detail") == "Failed to send login codes. Try again later."
@@ -226,7 +299,9 @@ def test_login_endpoint__expected_claims_found(settings, caplog):
     def custom_login_data_function(email: str):
         return {"foo": 123, "bar": "true"}
 
-    with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function) as mock:
+    str_1 = "jwt_email_auth.utils.validate_login_and_provide_login_data"
+
+    with patch(str_1, side_effect=custom_login_data_function) as mock:
         client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     mock.assert_called_once()
@@ -253,7 +328,9 @@ def test_login_endpoint__expected_claims_not_found(settings, caplog):
     def custom_login_data_function(email: str):
         return {"foo": 123}
 
-    with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function) as mock:
+    str_1 = "jwt_email_auth.utils.validate_login_and_provide_login_data"
+
+    with patch(str_1, side_effect=custom_login_data_function) as mock:
         client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     mock.assert_called_once()
@@ -261,7 +338,7 @@ def test_login_endpoint__expected_claims_not_found(settings, caplog):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    key = generate_cache_key("foo@bar.com")
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code, "foo": 123}
 
     response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
@@ -270,16 +347,6 @@ def test_login_endpoint__expected_claims_not_found(settings, caplog):
     assert response.status_code == status.HTTP_410_GONE
 
     assert cache.get(key) is None
-
-    log_source, level, message = caplog.record_tuples[-2]
-
-    assert log_source == "jwt_email_auth.views"
-    assert level == logging.WARNING
-    assert message == (
-        "Some data was missing from saved login info. "
-        "If you set EXPECTED_CLAIMS, you should provide a custom "
-        "LOGIN_DATA function that returns them."
-    )
 
 
 def test_login_endpoint__login_code_not_found():
@@ -330,7 +397,7 @@ def test_login_endpoint__login_code_expired(settings, caplog):
         "SENDING_ON": False,
         "LOGIN_CODE_LIFETIME": timedelta(seconds=1),
     }
-    key = generate_cache_key("foo@bar.com")
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
 
     client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
@@ -383,7 +450,9 @@ def test_refresh_endpoint__expected_claims_found(settings, caplog):
     def custom_login_data_function(email: str):
         return {"foo": 123, "bar": "true"}
 
-    with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function):
+    str_1 = "jwt_email_auth.utils.validate_login_and_provide_login_data"
+
+    with patch(str_1, side_effect=custom_login_data_function):
         client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     message = caplog.record_tuples[0][2]
@@ -408,7 +477,9 @@ def test_refresh_endpoint__expected_claims_not_found(settings, caplog):
     def custom_login_data_function(email: str):
         return {"foo": 123}
 
-    with patch("jwt_email_auth.utils.default_login_data", side_effect=custom_login_data_function):
+    str_1 = "jwt_email_auth.utils.validate_login_and_provide_login_data"
+
+    with patch(str_1, side_effect=custom_login_data_function):
         client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
     message = caplog.record_tuples[0][2]
@@ -423,7 +494,7 @@ def test_refresh_endpoint__expected_claims_not_found(settings, caplog):
 
     response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
 
-    assert response2.data.get("detail") == "Missing claims."
+    assert response2.data.get("detail") == "Missing token claims: ['bar']."
     assert response2.status_code == status.HTTP_403_FORBIDDEN
 
 
