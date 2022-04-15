@@ -20,6 +20,18 @@ __all__ = [
     "RefreshTokenSchemaMixin",
 ]
 
+NO_CONTENT_SCHEMA = {"type": "string", "default": ""}
+
+ERROR_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "detail": {
+            "type": "string",
+            "default": "Error message.",
+        },
+    },
+}
+
 
 class LoginOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
     """Refresh token valid and new access token was created."""
@@ -70,19 +82,7 @@ def add_unauthenticated_response(self: AutoSchema, responses: Dict[str, Any]) ->
         responses.setdefault(
             "401",
             {
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "detail": {
-                                    "type": "string",
-                                    "default": "Error message.",
-                                },
-                            },
-                        },
-                    }
-                },
+                "content": {"application/json": {"schema": ERROR_SCHEMA}},
                 "description": "Unauthenticated",
             },
         )
@@ -127,14 +127,11 @@ class MultipleResponseMixin:
 
     def get_responses(self, path, method) -> Dict[str, Any]:  # pylint: disable=W0613
         data = {}
+        response_media_types = self.map_renderers(path, method)
 
-        responses = self.responses
-        add_unauthenticated_response(self, responses)
-
-        for status_code, info in responses.items():
-
+        for status_code, info in self.responses.items():
             if status_code == 204:
-                schema = {"type": "string", "default": ""}
+                schema = NO_CONTENT_SCHEMA
 
             elif isinstance(info, type) and issubclass(info, serializers.Serializer):
                 serializer_class = info
@@ -142,20 +139,10 @@ class MultipleResponseMixin:
                 serializer = self.view.initialize_serializer(serializer_class=serializer_class)
                 schema = {"schema": self._get_reference(serializer)}
             else:
-                schema = {
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "detail": {
-                                "type": "string",
-                                "default": "Error message.",
-                            },
-                        },
-                    }
-                }
+                schema = {"schema": ERROR_SCHEMA}
 
             data[str(status_code)] = {
-                "content": {"application/json": schema},
+                "content": {content_type: schema for content_type in response_media_types},
                 "description": info,
             }
 
