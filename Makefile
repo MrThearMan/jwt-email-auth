@@ -1,6 +1,6 @@
 export DJANGO_SETTINGS_MODULE = tests.django.settings
 
-.PHONY: help dev docs translations tests test tox hook pre-commit mypy Makefile
+.PHONY: help dev docs translations tests test tox hook pre-commit pre-commit-update mypy Makefile
 
 # Trick to allow passing commands to make
 # Use quotes (" ") if command contains flags (-h / --help)
@@ -13,15 +13,16 @@ args = `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 help:
 	@echo ""
 	@echo "Commands:"
-	@echo "  dev           Serve manual testing server"
-	@echo "  docs          Serve mkdocs for development."
-	@echo "  translations  Make and compile translations."
-	@echo "  tests         Run all tests with coverage."
-	@echo "  test <name>   Run all tests maching the given <name>"
-	@echo "  tox           Run all tests with tox."
-	@echo "  hook          Install pre-commit hook."
-	@echo "  pre-commit    Run pre-commit hooks on all files."
-	@echo "  mypy          Run mypy on all files."
+	@echo "  dev                  Serve manual testing server"
+	@echo "  docs                 Serve mkdocs for development."
+	@echo "  translations         Make and compile translations."
+	@echo "  tests                Run all tests with coverage."
+	@echo "  test <name>          Run all tests maching the given <name>"
+	@echo "  tox                  Run all tests with tox."
+	@echo "  hook                 Install pre-commit hook."
+	@echo "  pre-commit           Run pre-commit hooks on all files."
+	@echo "  pre-commit-update    Run pre-commit hooks on all files."
+	@echo "  mypy                 Run mypy on all files."
 
 dev:
 	@poetry run python manage.py runserver localhost:8000
@@ -53,6 +54,9 @@ hook:
 
 pre-commit:
 	@poetry run pre-commit run --all-files
+
+pre-commit-update:
+	@poetry run pre-commit autoupdate
 
 mypy:
 	@poetry run mypy jwt_email_auth/
