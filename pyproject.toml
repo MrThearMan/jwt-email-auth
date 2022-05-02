@@ -162,12 +162,13 @@ deps =
     django40: djangorestframework>=3.13.0,<3.14.0
 
     django-ipware>=4.0.0
-    django-settings-holder>=0.0.2
+    django-settings-holder>=0.0.3
     cryptography>=36.0.0
     PyJWT>=2.3.0
     cffi>=1.15.0
 
-    pytest-cov
+    pytest
+    coverage
     pytest-django
 commands =
     coverage run -m pytest -vv -s --log-cli-level=INFO

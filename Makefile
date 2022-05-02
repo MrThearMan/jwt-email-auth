@@ -21,7 +21,7 @@ help:
 	@echo "  tox                  Run all tests with tox."
 	@echo "  hook                 Install pre-commit hook."
 	@echo "  pre-commit           Run pre-commit hooks on all files."
-	@echo "  pre-commit-update    Run pre-commit hooks on all files."
+	@echo "  pre-commit-update    Update pre-commit hooks."
 	@echo "  mypy                 Run mypy on all files."
 
 dev:
