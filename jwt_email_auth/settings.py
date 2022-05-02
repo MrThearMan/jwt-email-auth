@@ -169,5 +169,6 @@ auth_settings = SettingsHolder(
     removed_settings=REMOVED_SETTINGS,
 )
 
+reload_jwt_auth_settings = reload_settings(SETTING_NAME, auth_settings)
 
-setting_changed.connect(reload_settings(SETTING_NAME, auth_settings))
+setting_changed.connect(reload_jwt_auth_settings)
