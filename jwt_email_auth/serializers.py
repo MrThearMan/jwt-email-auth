@@ -15,9 +15,7 @@ __all__ = [
     "SendLoginCodeSerializer",
     "LoginSerializer",
     "RefreshTokenSerializer",
-    "LoginOutputSerializer",
-    "RefreshTokenOutputOneSerializer",
-    "RefreshTokenOutputTwoSerializer",
+    "TokenOutputSerializer",
 ]
 
 
@@ -97,21 +95,8 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
 # Output (for schema)
 
 
-class LoginOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
-    """Refresh token valid and new access token was created."""
-
-    access = serializers.CharField(help_text="Access token.")
-    refresh = serializers.CharField(help_text="Refresh token.")
-
-
-class RefreshTokenOutputOneSerializer(serializers.Serializer):  # pylint: disable=W0223
-    """Token refreshed."""
-
-    access = serializers.CharField(help_text="Access token.")
-
-
-class RefreshTokenOutputTwoSerializer(serializers.Serializer):  # pylint: disable=W0223
-    """Token refreshed."""
+class TokenOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """New refresh and access token pair."""
 
     access = serializers.CharField(help_text="Access token.")
     refresh = serializers.CharField(help_text="Refresh token.")

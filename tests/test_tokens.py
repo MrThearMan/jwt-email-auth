@@ -1,118 +1,23 @@
+import re
 from datetime import timedelta
-from time import sleep
+from time import perf_counter, sleep
 from unittest.mock import PropertyMock, patch
 
 import pytest
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 
+from jwt_email_auth.rotation.models import RefreshTokenRotationLog
 from jwt_email_auth.tokens import AccessToken, RefreshToken
 
 from .conftest import equals_regex
 
 
-def test_create_access_token():
+def test_access_token():
     token = AccessToken()
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
     assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
     assert str(token).count(".") == 2
-
-
-def test_create_access_token__from_request(drf_request):
-    old_token = AccessToken()
-
-    drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {old_token}"
-
-    token = AccessToken.from_request(drf_request)
-
-    assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
-
-
-def test_create_access_token__from_request__authorization_header_not_found(drf_request):
-    with pytest.raises(NotAuthenticated, match="No Authorization header found from request."):
-        AccessToken.from_request(drf_request)
-
-
-def test_create_access_token__from_request__authorization_header_invalid(drf_request):
-    old_token = AccessToken()
-
-    drf_request.META["HTTP_AUTHORIZATION"] = f"{old_token}"
-    with pytest.raises(AuthenticationFailed, match="Invalid Authorization header."):
-        AccessToken.from_request(drf_request)
-
-
-def test_create_access_token__from_request__authorization_header_invalid_prefix(drf_request):
-    old_token = AccessToken()
-
-    drf_request.META["HTTP_AUTHORIZATION"] = f"Foo {old_token}"
-    with pytest.raises(AuthenticationFailed, match="Invalid prefix."):
-        AccessToken.from_request(drf_request)
-
-
-def test_create_access_token__add_audience(settings):
-    settings.JWT_EMAIL_AUTH = {"AUDIENCE": "foo"}
-
-    token = AccessToken()
-
-    assert list(token.payload.keys()) == ["type", "exp", "iat", "aud"]
-    assert token.payload["aud"] == "foo"
-
-
-def test_create_access_token__add_issuer(settings):
-    settings.JWT_EMAIL_AUTH = {"ISSUER": "foo"}
-
-    token = AccessToken()
-
-    assert list(token.payload.keys()) == ["type", "exp", "iat", "iss"]
-    assert token.payload["iss"] == "foo"
-
-
-def test_decode_access_token():
-    token = AccessToken(token=str(AccessToken()))
-
-    assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
-
-
-def test_decode_access_token__expired():
-    with patch(
-        "jwt_email_auth.tokens.AccessToken.lifetime",
-        new_callable=PropertyMock,
-        return_value=timedelta(seconds=1),
-    ):
-        old_token = str(AccessToken())
-
-    # Wait for token to expire
-    sleep(2)
-
-    with pytest.raises(AuthenticationFailed, match="Signature has expired."):
-        AccessToken(token=old_token)
-
-
-def test_decode_access_token__decing_error():
-    with pytest.raises(AuthenticationFailed, match="Error decoding signature."):
-        AccessToken(token="foo")
-
-
-def test_decode_access_token__invalid_token(settings):
-    # All other PyJWT errors are caugth with this error
-
-    settings.JWT_EMAIL_AUTH = {"ISSUER": "foo"}
-    token = str(AccessToken())
-
-    settings.JWT_EMAIL_AUTH = {"ISSUER": "bar"}
-    with pytest.raises(AuthenticationFailed, match="Invalid token."):
-        AccessToken(token=token)
-
-
-def test_decode_access_token__invalid_token_type():
-    token = str(RefreshToken())
-
-    with pytest.raises(AuthenticationFailed, match="Invalid token type."):
-        AccessToken(token=token)
 
 
 def test_access_token__get_claim():
@@ -161,12 +66,340 @@ def test_access_token__repr():
     assert repr(token) == repr(token.payload)
 
 
+def test_access_token__add_audience(settings):
+    settings.JWT_EMAIL_AUTH = {"AUDIENCE": "foo"}
+
+    token = AccessToken()
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat", "aud"]
+    assert token.payload["aud"] == "foo"
+
+
+def test_access_token__add_issuer(settings):
+    settings.JWT_EMAIL_AUTH = {"ISSUER": "foo"}
+
+    token = AccessToken()
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat", "iss"]
+    assert token.payload["iss"] == "foo"
+
+
+def test_access_token__add_not_before_time(settings):
+    settings.JWT_EMAIL_AUTH = {"NOT_BEFORE_TIME": timedelta(minutes=1)}
+
+    token = AccessToken()
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat", "nbf"]
+
+
+def test_access_token__sync_with():
+    old_token = AccessToken()
+    sleep(1)
+    new_token = AccessToken()
+
+    new_token.sync_with(old_token)
+
+    assert old_token["exp"] == new_token["exp"]
+
+
+def test_access_token__sync_with__not_before(settings):
+    settings.JWT_EMAIL_AUTH = {"NOT_BEFORE_TIME": timedelta(minutes=1)}
+
+    old_token = AccessToken()
+    sleep(1)
+    new_token = AccessToken()
+
+    new_token.sync_with(old_token)
+
+    assert old_token["exp"] == new_token["exp"]
+
+
+def test_access_token__from_request(drf_request):
+    old_token = AccessToken()
+
+    drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {old_token}"
+
+    token = AccessToken.from_request(drf_request)
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat"]
+    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
+    assert str(token).count(".") == 2
+
+
+def test_access_token__from_request__authorization_header_not_found(drf_request):
+    with pytest.raises(NotAuthenticated, match="No Authorization header found from request."):
+        AccessToken.from_request(drf_request)
+
+
+def test_access_token__from_request__authorization_header_invalid(drf_request):
+    old_token = AccessToken()
+
+    drf_request.META["HTTP_AUTHORIZATION"] = f"{old_token}"
+    with pytest.raises(AuthenticationFailed, match="Invalid Authorization header."):
+        AccessToken.from_request(drf_request)
+
+
+def test_access_token__from_request__authorization_header_invalid_prefix(drf_request):
+    old_token = AccessToken()
+
+    drf_request.META["HTTP_AUTHORIZATION"] = f"Foo {old_token}"
+    with pytest.raises(AuthenticationFailed, match="Invalid prefix."):
+        AccessToken.from_request(drf_request)
+
+
+def test_access_token__from_token():
+    token = AccessToken(token=str(AccessToken()))
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat"]
+    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
+    assert str(token).count(".") == 2
+
+
+def test_access_token__from_token__expired():
+    with patch(
+        "jwt_email_auth.tokens.AccessToken.lifetime",
+        new_callable=PropertyMock,
+        return_value=timedelta(seconds=1),
+    ):
+        old_token = str(AccessToken())
+
+    # Wait for token to expire
+    sleep(2)
+
+    with pytest.raises(AuthenticationFailed, match="Signature has expired."):
+        AccessToken(token=old_token)
+
+
+def test_access_token__from_token__decing_error():
+    with pytest.raises(AuthenticationFailed, match="Error decoding signature."):
+        AccessToken(token="foo")
+
+
+def test_access_token__from_token__invalid_token(settings):
+    # All other PyJWT errors are caugth with this error
+
+    settings.JWT_EMAIL_AUTH = {"ISSUER": "foo"}
+    token = str(AccessToken())
+
+    settings.JWT_EMAIL_AUTH = {"ISSUER": "bar"}
+    with pytest.raises(AuthenticationFailed, match="Invalid token."):
+        AccessToken(token=token)
+
+
+def test_access_token__from_token__invalid_token_type():
+    token = str(RefreshToken())
+
+    with pytest.raises(AuthenticationFailed, match="Invalid token type."):
+        AccessToken(token=token)
+
+
 def test_refresh_token():
     token = RefreshToken()
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
     assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
     assert str(token).count(".") == 2
+
+
+@pytest.mark.django_db
+def test_refresh_token__add_to_log(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    token = RefreshToken()
+    token.add_to_log()
+
+    assert token["jti"] == 1
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+
+@pytest.mark.django_db
+def test_refresh_token__check_log(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    token = RefreshToken()
+    token.add_to_log()
+
+    log = token.check_log()
+    assert log.id == 1
+
+    RefreshTokenRotationLog.objects.get(id=log.id).delete()
+
+    with pytest.raises(AuthenticationFailed, match=re.escape("Token is no longer accepted.")):
+        token.check_log()
+
+
+@pytest.mark.django_db
+def test_refresh_token__rotate(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    token = RefreshToken()
+    token.add_to_log()
+
+    assert token["jti"] == 1
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    new_token = token.rotate()
+
+    assert str(token) != str(new_token)
+    assert new_token["jti"] == 2
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+
+@pytest.mark.django_db
+def test_refresh_token__rotate__delete_new_token_when_old_token_used(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    old_token = RefreshToken()
+    old_token.add_to_log()
+
+    log_1 = old_token.check_log()
+    assert log_1.id == 1
+
+    logs = list(RefreshTokenRotationLog.objects.all())
+    assert len(logs) == 1
+    assert logs[0].id == 1
+
+    new_token = old_token.rotate()
+
+    log_2 = new_token.check_log()
+    assert log_2.id == 2
+
+    logs = list(RefreshTokenRotationLog.objects.all())
+    assert len(logs) == 1
+    assert logs[0].id == 2
+
+    with pytest.raises(AuthenticationFailed, match=re.escape("Token is no longer accepted.")):
+        old_token.check_log()
+
+    logs = list(RefreshTokenRotationLog.objects.all())
+    assert len(logs) == 0
+
+
+@pytest.mark.django_db
+def test_refresh_token__remove_from_log(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    token = RefreshToken()
+    token.add_to_log()
+
+    assert token["jti"] == 1
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    RefreshTokenRotationLog.objects.remove_by_jti(str(token))
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+
+@pytest.mark.django_db
+def test_refresh_token__expired():
+    with patch(
+        "jwt_email_auth.tokens.RefreshToken.lifetime",
+        new_callable=PropertyMock,
+        return_value=timedelta(seconds=1),
+    ):
+        old_token = str(RefreshToken())
+
+    # Wait for token to expire
+    sleep(2)
+
+    with pytest.raises(AuthenticationFailed, match="Signature has expired."):
+        RefreshToken(token=old_token)
+
+
+@pytest.mark.django_db
+def test_refresh_token__expired__rotated(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    with patch(
+        "jwt_email_auth.tokens.RefreshToken.lifetime",
+        new_callable=PropertyMock,
+        return_value=timedelta(seconds=1),
+    ):
+        token = RefreshToken()
+        token.add_to_log()
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    # Wait for token to expire
+    sleep(2)
+
+    with pytest.raises(AuthenticationFailed, match="Signature has expired."):
+        RefreshToken(token=str(token))
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+
+@pytest.mark.django_db
+def test_refresh_token__remove_expired_tokens_from_other_groups(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    with patch(
+        "jwt_email_auth.tokens.RefreshToken.lifetime",
+        new_callable=PropertyMock,
+        return_value=timedelta(seconds=1),
+    ):
+        old_token = RefreshToken()
+        old_token.add_to_log()
+
+    logs = list(RefreshTokenRotationLog.objects.all())
+    assert len(logs) == 1
+    assert logs[0].id == 1
+
+    # Wait for token to expire
+    sleep(2)
+
+    new_token = RefreshToken()
+    new_token.add_to_log()
+
+    logs = list(RefreshTokenRotationLog.objects.all())
+    assert len(logs) == 1
+    assert logs[0].id == 2
+
+
+@pytest.mark.django_db
+def test_refresh_token__missing_jti(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    token = RefreshToken()
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    with pytest.raises(AuthenticationFailed, match="Missing jti claim."):
+        RefreshToken(token=str(token))
 
 
 @pytest.mark.parametrize("sync", [[False], [True]])

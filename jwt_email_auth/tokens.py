@@ -1,8 +1,11 @@
+# pylint: disable=import-outside-toplevel
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+import uuid
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import jwt
+from django.db import transaction
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from rest_framework.authentication import get_authorization_header
@@ -10,6 +13,10 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
 
 from .settings import auth_settings
+
+
+if TYPE_CHECKING:
+    from .rotation.models import RefreshTokenRotationLog
 
 
 __all__ = [
@@ -28,14 +35,13 @@ class AccessToken:
     token_type = "access"
     lifetime = auth_settings.ACCESS_TOKEN_LIFETIME
 
-    def __init__(self, token: Optional[str] = None, check_claims: bool = True, type_check: bool = True):
+    def __init__(self, token: Optional[str] = None) -> None:
         """Create a new token or construct one from encoded string.
 
         :param token: Encoded token without prefix.
-        :param check_claims: Verify that claims set in the EXPECTED_CLAIMS are found.
-        :param type_check: Check if token is of correct token type.
         :raises AuthenticationFailed: Token was invalid.
         """
+        rotate = auth_settings.ROTATE_REFRESH_TOKENS and self.token_type == "refresh"
 
         if token is not None:
             try:
@@ -43,8 +49,10 @@ class AccessToken:
                     jwt=token,
                     key=auth_settings.SIGNING_KEY,
                     options={
-                        "require_exp": True,
+                        "require": ["jti"] if rotate else [],
                         "verify_exp": True,
+                        "verify_iat": True,
+                        "verify_nbf": auth_settings.NOT_BEFORE_TIME is not None,
                         "verify_aud": auth_settings.AUDIENCE is not None,
                         "verify_iss": auth_settings.ISSUER is not None,
                     },
@@ -53,36 +61,51 @@ class AccessToken:
                     issuer=auth_settings.ISSUER,
                     algorithms=[auth_settings.ALGORITHM],
                 )
+
+            except jwt.MissingRequiredClaimError as error:
+                logger.info(error)
+                raise AuthenticationFailed("Missing jti claim.", code="missing_jti") from error
+
             except jwt.ExpiredSignatureError as error:
                 logger.info(error)
+                if rotate:
+                    from .rotation.models import RefreshTokenRotationLog
+
+                    RefreshTokenRotationLog.objects.remove_by_jti(token)
+
                 raise AuthenticationFailed(_("Signature has expired."), code="signature_expired") from error
+
             except jwt.DecodeError as error:
                 logger.info(error)
                 raise AuthenticationFailed(_("Error decoding signature."), code="decoding_error") from error
+
             except jwt.InvalidTokenError as error:
                 logger.info(error)
                 raise AuthenticationFailed(_("Invalid token."), code="invalid_token") from error
 
-            if check_claims:
-                self.verify_payload()
-            if type_check:
-                self.verify_token_type()
+            except Exception as error:  # pragma: no cover
+                logger.info(error)
+                raise AuthenticationFailed(_("Unexpected error."), code="unexpected_error") from error
+
+            self.verify_token_type()
+            self.verify_payload()
 
         else:  # new token
-            self.payload = {"type": self.token_type}
-            self.renew()
+            now = datetime.now(tz=timezone.utc)
+            self.payload = {"type": self.token_type, "exp": now + self.lifetime, "iat": now}
 
+            if auth_settings.NOT_BEFORE_TIME is not None:
+                self.payload["nbf"] = now + auth_settings.NOT_BEFORE_TIME
             if auth_settings.AUDIENCE is not None:
                 self.payload["aud"] = auth_settings.AUDIENCE
             if auth_settings.ISSUER is not None:
                 self.payload["iss"] = auth_settings.ISSUER
 
     @classmethod
-    def from_request(cls, request: Request, check_claims: bool = True) -> "AccessToken":
+    def from_request(cls, request: Request) -> "AccessToken":
         """Construct a token from request Authorization header.
 
         :param request: Request with Authorization header.
-        :param check_claims: Verify that claims set in the EXPECTED_CLAIMS are found.
         :raises NotAuthenticated: No token in Authorization header.
         :raises AuthenticationFailed: Request header or token was invalid.
         """
@@ -99,7 +122,7 @@ class AccessToken:
         if force_str(prefix).lower() != auth_settings.HEADER_PREFIX.lower():
             raise AuthenticationFailed(_("Invalid prefix."), code="invalid_header_prefix")
 
-        return cls(token=encoded_token, check_claims=check_claims)
+        return cls(token=encoded_token)
 
     def __repr__(self) -> str:
         return repr(self.payload)
@@ -152,14 +175,15 @@ class AccessToken:
         """
         self.payload["exp"] = token["iat"] + self.lifetime
         self.payload["iat"] = token["iat"]
+        if auth_settings.NOT_BEFORE_TIME is not None:
+            self.payload["nbf"] = token["iat"] + auth_settings.NOT_BEFORE_TIME
 
-    def renew(self) -> None:
-        """Renew token expiration.
-
-        NOTE: THIS WILL CHANGE THE ENCODED TOKEN, SO BE SURE TO SAVE IT!
-        """
-        self.payload["exp"] = datetime.utcnow() + self.lifetime
-        self.payload["iat"] = datetime.utcnow()
+    def copy_claims(self, token: Token) -> None:
+        """Copy claims from token."""
+        for claim, value in token.payload.items():
+            if claim in ("exp", "iat", "nbf", "aud", "iss", "jti", "type"):
+                continue
+            self[claim] = value
 
 
 class RefreshToken(AccessToken):
@@ -170,16 +194,50 @@ class RefreshToken(AccessToken):
     def new_access_token(self, sync: bool = False) -> "AccessToken":
         """Create a new access token from this refresh token.
 
-        :param sync: Sync access the two tokens, as if they were created at the same time.
+        :param sync: Sync the two tokens, as if they were created at the same time.
                      This changes the created access tokens "exp" and "iat" claims.
         """
         access = AccessToken()
         if sync:
             access.sync_with(self)
 
-        for claim, value in self.payload.items():
-            if claim in ("aud", "iss", "exp", "iat", "type"):
-                continue
-            access[claim] = value
-
+        access.copy_claims(self)
         return access
+
+    def rotate(self) -> "RefreshToken":
+        """Rotate refresh token."""
+        log = self.check_log()
+        refresh = RefreshToken()
+        refresh.copy_claims(self)
+        refresh.add_to_log(group=log.group)
+        return refresh
+
+    def check_log(self) -> "RefreshTokenRotationLog":
+        """Check if token is in the rotation log."""
+        from .rotation.models import RefreshTokenRotationLog
+
+        jti = int(self.payload["jti"])
+        sub = str(self.payload["sub"])
+        try:
+            log = RefreshTokenRotationLog.objects.get(id=jti)
+        except RefreshTokenRotationLog.DoesNotExist as error:  # pylint: disable=no-member
+            RefreshTokenRotationLog.objects.filter(group=sub).delete()
+            raise AuthenticationFailed(_("Token is no longer accepted."), code="unaccepted_token") from error
+
+        return log
+
+    @transaction.atomic
+    def add_to_log(self, group: Optional[uuid.UUID] = None) -> None:
+        """
+        Update rotation log for the given group,
+        and set the "jti" and "sub" claims for this token.
+        """
+        from .rotation.models import RefreshTokenRotationLog
+
+        if group is None:
+            group = uuid.uuid4()
+
+        log = RefreshTokenRotationLog.objects.create(group=group, expires_at=self["exp"])
+        RefreshTokenRotationLog.objects.prune_group_and_expired_logs(log)
+        self.payload["jti"] = log.id
+        self.payload["sub"] = str(group)

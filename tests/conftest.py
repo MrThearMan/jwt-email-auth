@@ -1,39 +1,16 @@
 import logging
-import os
 import re
 
 import pytest
 from django.core.cache import cache
 from django.http import HttpRequest
 from pytest import FixtureRequest, LogCaptureFixture
-from pytest_django.fixtures import SettingsWrapper
 from rest_framework.request import Request
 
 
 __all__ = [
     "equals_regex",
 ]
-
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tests.django.settings")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_django_settings() -> SettingsWrapper:
-    wrapper = SettingsWrapper()
-    wrapper.DEBUG = False
-    wrapper.LANGUAGE_CODE = "en"
-    wrapper.LANGUAGES = [("en", "English"), ("fi", "Finland")]
-    wrapper.DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
-    wrapper.CACHES = {
-        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "cache_table"}
-    }
-    wrapper.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
-    }
-
-    yield wrapper
-    wrapper.finalize()
 
 
 @pytest.fixture()

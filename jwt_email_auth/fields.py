@@ -1,6 +1,6 @@
-from functools import lru_cache
 from typing import Any, Optional
 
+from django.utils.functional import cached_property
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
 from rest_framework.fields import HiddenField, empty
 from rest_framework.request import Request
@@ -36,8 +36,8 @@ class AutoTokenField(HiddenField):
         self.write_only = False
         self.read_only = False
 
-    @lru_cache(maxsize=None)
-    def get_default(self) -> AccessToken:  # type: ignore
+    @cached_property
+    def _default(self) -> AccessToken:  # type: ignore
         request: Optional[Request] = self.parent.context.get("request")
         if request is None or not isinstance(request, Request):
             raise ValidationError("Must include a Request object in the context of the Serializer.")
@@ -46,6 +46,9 @@ class AutoTokenField(HiddenField):
             return AccessToken.from_request(request)
         except (AuthenticationFailed, NotAuthenticated) as error:
             raise ValidationError(error.detail) from error
+
+    def get_default(self) -> AccessToken:  # type: ignore
+        return self._default
 
     def run_validation(self, data: Any = ...) -> AccessToken:
         return self.get_default()

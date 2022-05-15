@@ -5,11 +5,13 @@ from datetime import timedelta
 from time import sleep
 from unittest.mock import PropertyMock, patch
 
+import pytest
 from django.core.cache import cache
 from django.template.loader import render_to_string
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from jwt_email_auth.rotation.models import RefreshTokenRotationLog
 from jwt_email_auth.tokens import AccessToken, RefreshToken
 from jwt_email_auth.utils import (
     blocking_handler,
@@ -87,7 +89,10 @@ def test_refresh_endpoint(caplog):
 
     response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
 
-    assert response2.data == {"access": equals_regex(r"[a-zA-Z0-9-_.]+")}
+    assert response2.data == {
+        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+    }
     assert response2.status_code == status.HTTP_200_OK
 
     assert response1.data["access"] != response2.data["access"]
@@ -462,7 +467,7 @@ def test_refresh_endpoint__expected_claims_found(settings, caplog):
 
     response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
 
-    assert response2.data == {"access": equals_regex(r".+")}
+    assert response2.data == {"access": equals_regex(r".+"), "refresh": equals_regex(r"[a-zA-Z0-9-_.]+")}
     assert response2.status_code == status.HTTP_200_OK
 
 
@@ -506,23 +511,35 @@ def test_refresh_endpoint__token_is_mandatory():
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_refresh_endpoint__return_both_tokens(settings):
-    client = APIClient()
-    token = RefreshToken()
+@pytest.mark.django_db
+def test_refresh_endpoint__rotate(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "SENDING_ON": False,
-        "REFRESH_VIEW_BOTH_TOKENS": True,
+        "ROTATE_REFRESH_TOKENS": True,
     }
-    response = client.post("/refresh", {"token": str(token)}, format="json")
 
-    assert response.data == {
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert response2.data == {
         "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
         "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
     }
-    assert response.status_code == status.HTTP_200_OK
+    assert response2.status_code == status.HTTP_200_OK
 
-    # returned refresh token is the same as input
-    assert str(token) == str(response.data["refresh"])
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
 
 
 def test_base_auth_view_extra_actions():

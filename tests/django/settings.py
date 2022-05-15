@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "jwt_email_auth.rotation",
 ]
 
 MIDDLEWARE = [
@@ -57,6 +58,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "cache_table",
     }
 }
 
@@ -100,7 +102,7 @@ LOGGING = {
 
 ROOT_URLCONF = "tests.django.urls"
 WSGI_APPLICATION = "tests.django.wsgi.application"
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
 LANGUAGES = [("en", "English"), ("fi", "Finland")]
 TIME_ZONE = "UTC"
 USE_I18N = True
@@ -117,6 +119,7 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 JWT_EMAIL_AUTH = {
     "SENDING_ON": False,
+    "ROTATE_REFRESH_TOKENS": False,
 }
 
 REST_FRAMEWORK = {

@@ -186,7 +186,7 @@ def test_login_schema__get_components(drf_request):
             "required": ["code", "email"],
             "type": "object",
         },
-        "LoginOutput": {
+        "TokenOutput": {
             "properties": {
                 "access": {
                     "description": "Access token.",
@@ -220,14 +220,18 @@ def test_refresh_token_schema__get_components(drf_request):
             "required": ["token"],
             "type": "object",
         },
-        "RefreshTokenOutputOne": {
+        "TokenOutput": {
             "properties": {
                 "access": {
                     "description": "Access token.",
                     "type": "string",
                 },
+                "refresh": {
+                    "description": "Refresh token.",
+                    "type": "string",
+                },
             },
-            "required": ["access"],
+            "required": ["access", "refresh"],
             "type": "object",
         },
     }
@@ -311,11 +315,11 @@ def test_login_schema__get_responses(drf_request):
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/LoginOutput",
+                        "$ref": "#/components/schemas/TokenOutput",
                     },
                 },
             },
-            "description": "Refresh token valid and new access token was created.",
+            "description": "New refresh and access token pair.",
         },
         "400": {
             "content": {
@@ -396,11 +400,11 @@ def test_refresh_token_schema__get_responses(drf_request):
             "content": {
                 "application/json": {
                     "schema": {
-                        "$ref": "#/components/schemas/RefreshTokenOutputOne",
+                        "$ref": "#/components/schemas/TokenOutput",
                     },
                 },
             },
-            "description": "Token refreshed.",
+            "description": "New refresh and access token pair.",
         },
         "400": {
             "content": {

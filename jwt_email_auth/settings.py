@@ -42,10 +42,18 @@ class JWTEmailAuthSettings(NamedTuple):
     # they can send one again.
     CODE_SEND_COOLDOWN: timedelta = timedelta(minutes=1)
     #
+    # How long after the creation of the JWT token does it become valid.
+    NOT_BEFORE_TIME: Optional[timedelta] = None
+    #
+    # If True, return a new refresh token when requesting a new
+    # access token from RefreshTokenView. The old refresh token will
+    # be invalid after the new one is created.
+    ROTATE_REFRESH_TOKENS: bool = False
+    #
     # Number of login attempts until user is banned
     LOGIN_ATTEMPTS: int = 10
     #
-    # List of expected JWT content
+    # List of expected custom JWT claims
     EXPECTED_CLAIMS: List[str] = []
     #
     # Email sender. Default is settings.DEFAULT_FROM_EMAIL
@@ -91,9 +99,6 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # When True (default), OPTIONS requests can be made to the endpoint without token for schema access
     OPTIONS_SCHEMA_ACCESS: bool = True
-    #
-    # If True, Refresh view sould return both the access token, and the refresh token
-    REFRESH_VIEW_BOTH_TOKENS: bool = False
     #
     # Function to load JWT signing key.
     # Takes no arguments. Returns the Ed25519PrivateKey-object used to check the JWT signature.
@@ -159,6 +164,7 @@ REMOVED_SETTINGS: Set[str] = {
     "LOGIN_CALLBACK",
     "BLOCKING_HANDLER",
     "LOGIN_BLOCKER_CALLBACK",
+    "REFRESH_VIEW_BOTH_TOKENS",
 }
 
 

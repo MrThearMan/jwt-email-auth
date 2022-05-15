@@ -18,16 +18,20 @@
 
 3. Refresh access token from the *refresh token* endpoint (from `RefreshTokenView` class).
 
-| Request                                                     | Response                   |
-|-------------------------------------------------------------|----------------------------|
-| POST [Refresh Token URI] <br>Content-Type: application/json | HTTP 200 OK                |
-| {<br>  "token":"..."<br>}                                   | {<br>  "access":"..."<br>} |
+| Request                                                     | Response                                        |
+|-------------------------------------------------------------|-------------------------------------------------|
+| POST [Refresh Token URI] <br>Content-Type: application/json | HTTP 200 OK                                     |
+| {<br>  "token":"..."<br>}                                   | {<br>  "access":"..."<br>  "refresh":"..."<br>} |
+
+> If `ROTATE_REFRESH_TOKENS` is in use, the given refresh token will be a new refresh token,
+> and the old refresh token will no longer be valid. Otherwise, the token will be the same
+> same token used on the endpoint.
 
 
 ## Authentication and Permission classes
 
-Add the `JWTAuthentication` or `HasValidJWT`
-to Rest framework's settings or or to the classe's authentication or permission classes
+Add the `JWTAuthentication` or `HasValidJWT` to Rest framework's settings,
+or to the class's `authentication_classes` or `permission_classes`
 
 ```python
 from rest_framework.views import APIView

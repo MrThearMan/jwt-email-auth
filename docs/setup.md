@@ -49,35 +49,35 @@ JWT_EMAIL_AUTH = {
     "CODE_SEND_COOLDOWN": timedelta(minutes=1),
     "LOGIN_VALIDATION_AND_DATA_CALLBACK": "path.to.module.function",
 }
-
 ```
 
 Here are the rest of the settings and what they mean.
 
-| Setting                     | Description                                                                                                                       | Type           |
-|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------|----------------|
-| `SENDING_ON`                | Whether emails<br>should be sent or not.<br>When off, login code is<br>logged instead<br>(for development).                       | bool           |
-| `SKIP_CODE_CHECKS`          | When True, any<br>code will work in login.                                                                                        | bool           |
-| `ACCESS_TOKEN_LIFETIME`     | How long an access<br>token is valid for.                                                                                         | timedelta      |
-| `REFRESH_TOKEN_LIFETIME`    | How long a refresh<br>token is valid for.                                                                                         | timedelta      |
-| `LOGIN_CODE_LIFETIME`       | How long a login<br>code is stored in cache.                                                                                      | timedelta      |
-| `LOGIN_COOLDOWN`            | After user has<br>exceeded defined number<br>of login attemprs,<br>this is the cooldown<br>until they can attempt<br>login again. | timedelta      |
-| `CODE_SEND_COOLDOWN`        | After a user has<br>sent a login code,<br>this is the cooldown<br>until they can send<br>one again.                               | timedelta      |
-| `LOGIN_ATTEMPTS`            | Number of login<br>attempts until user<br>is banned.                                                                              | int            |
-| `EXPECTED_CLAIMS`           | List of expected JWT<br>content.                                                                                                  | list[str]      |
-| `LOGIN_SENDING_EMAIL`       | Email sender.                                                                                                                     | str            |
-| `LOGIN_SUBJECT_LINE`        | Email subject line.                                                                                                               | str            |
-| `LOGIN_EMAIL_MESSAGE`       | Message to send in<br>email. Must have<br>{code} and {valid}!                                                                     | str            |
-| `LOGIN_EMAIL_HTML_TEMPLATE` | Path to html_message<br>template. Context<br>must have {{ code }}<br>and {{ valid }}!                                             | Path           |
-| `CACHE_PREFIX`              | Cache prefix.                                                                                                                     | str            |
-| `OPTIONS_SCHEMA_ACCESS`     | When True (default),<br>OPTIONS requests can<br>be made to the endpoint<br>without token for schema<br>access.                    | bool           |
-| `REFRESH_VIEW_BOTH_TOKENS`  | If True, Refresh view<br>sould return both<br>the access token, and<br>the refresh token.                                         | bool           |
-| `ISSUER`                    | Issuer of the JWT.                                                                                                                | str            |
-| `AUDIENCE`                  | Intended recipient<br>of the JWT.                                                                                                 | str            |
-| `LEEWAY`                    | A time margin in<br>seconds for the<br>expiration check.                                                                          | int            |
-| `ALGORITHM`                 | Algorithm to sign<br>and decrypt the<br>token with.                                                                               | str            |
-| `HEADER_PREFIX`             | Authorization scheme<br>used in Authorization header,<br>as in `HEADER_PREFIX token`.                                             | str            |
-| `EXTRA_HEADERS`             | Additional JWT header<br>fields.                                                                                                  | dict[str, str] |
+| Setting                     | Description                                                                                                                                                                         | Type           |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------|
+| `SENDING_ON`                | Whether emails<br>should be sent or not.<br>When off, login code is<br>logged instead<br>(for development).                                                                         | bool           |
+| `SKIP_CODE_CHECKS`          | When True, any<br>code will work in login.                                                                                                                                          | bool           |
+| `ACCESS_TOKEN_LIFETIME`     | How long an access<br>token is valid for.                                                                                                                                           | timedelta      |
+| `REFRESH_TOKEN_LIFETIME`    | How long a refresh<br>token is valid for.                                                                                                                                           | timedelta      |
+| `LOGIN_CODE_LIFETIME`       | How long a login<br>code is stored in cache.                                                                                                                                        | timedelta      |
+| `LOGIN_COOLDOWN`            | After user has<br>exceeded defined number<br>of login attemprs,<br>this is the cooldown<br>until they can attempt<br>login again.                                                   | timedelta      |
+| `CODE_SEND_COOLDOWN`        | After a user has<br>sent a login code,<br>this is the cooldown<br>until they can send<br>one again.                                                                                 | timedelta      |
+| `NOT_BEFORE_TIME`           | How long after the<br>creation of the<br>JWT token does it<br>become valid.                                                                                                         | timedelta      |
+| `ROTATE_REFRESH_TOKENS`     | If True, return a<br>new refresh token<br>when requesting a new<br>access token from<br>RefreshTokenView. The old<br>refresh token will be invalid<br>after the new one is created. | bool           |
+| `LOGIN_ATTEMPTS`            | Number of login<br>attempts until user<br>is banned.                                                                                                                                | int            |
+| `EXPECTED_CLAIMS`           | List of expected JWT<br>content.                                                                                                                                                    | list[str]      |
+| `LOGIN_SENDING_EMAIL`       | Email sender.                                                                                                                                                                       | str            |
+| `LOGIN_SUBJECT_LINE`        | Email subject line.                                                                                                                                                                 | str            |
+| `LOGIN_EMAIL_MESSAGE`       | Message to send in<br>email. Must have<br>{code} and {valid}!                                                                                                                       | str            |
+| `LOGIN_EMAIL_HTML_TEMPLATE` | Path to html_message<br>template. Context<br>must have {{ code }}<br>and {{ valid }}!                                                                                               | Path           |
+| `CACHE_PREFIX`              | Cache prefix.                                                                                                                                                                       | str            |
+| `OPTIONS_SCHEMA_ACCESS`     | When True (default),<br>OPTIONS requests can<br>be made to the endpoint<br>without token for schema<br>access.                                                                      | bool           |
+| `ISSUER`                    | Issuer of the JWT.                                                                                                                                                                  | str            |
+| `AUDIENCE`                  | Intended recipient<br>of the JWT.                                                                                                                                                   | str            |
+| `LEEWAY`                    | A time margin in<br>seconds for the<br>expiration check.                                                                                                                            | int            |
+| `ALGORITHM`                 | Algorithm to sign<br>and decrypt the<br>token with.                                                                                                                                 | str            |
+| `HEADER_PREFIX`             | Authorization scheme<br>used in Authorization header,<br>as in `HEADER_PREFIX token`.                                                                                               | str            |
+| `EXTRA_HEADERS`             | Additional JWT header<br>fields.                                                                                                                                                    | dict[str, str] |
 
 These settings should be specified in "dot import notation" to a function, which will be imported as the value for the setting.
 
@@ -110,7 +110,7 @@ If you do not want to use environment variables, override the `SIGNING_KEY` sett
 > but this should be changed in production environments.
 
 
-④ Configure Django's email [email settings][email_settings] (if using django's email sending).
+④ Configure Django's email [email settings][email_settings] (if using django's email sending):
 
 ```python
 # Not all of these may be required
@@ -128,7 +128,7 @@ SERVER_EMAIL = ...
 ```
 
 
-⑤ (Optional) Add custom authentication classes to Rest framework settings.
+⑤ (Optional) Add default `authentication_classes` or `permission_classes`:
 
 ```python
 REST_FRAMEWORK = {
@@ -143,7 +143,27 @@ REST_FRAMEWORK = {
 }
 ```
 
+
+⑥ (Optional) To use [rotated refresh tokens][jwt-rotation]:
+
+```python
+INSTALLED_APPS = [
+    ...
+    "jwt_email_auth.rotation",
+    ...
+]
+
+...
+
+JWT_EMAIL_AUTH = {
+    ...
+    "ROTATE_REFRESH_TOKENS": True,
+    ...
+}
+```
+
 [pk]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
 [ed25519]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
 [email_settings]: https://docs.djangoproject.com/en/3.2/topics/email/#quick-example
 [IP spoofing]: https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users
+[jwt-rotation]: https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation

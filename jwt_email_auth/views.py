@@ -14,14 +14,7 @@ from rest_framework.views import APIView
 
 from .exceptions import CorruptedDataException, SendCodeCooldown, ServerException
 from .schema import JWTEmailAuthSchema
-from .serializers import (
-    LoginOutputSerializer,
-    LoginSerializer,
-    RefreshTokenOutputOneSerializer,
-    RefreshTokenOutputTwoSerializer,
-    RefreshTokenSerializer,
-    SendLoginCodeSerializer,
-)
+from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer, TokenOutputSerializer
 from .settings import auth_settings
 from .tokens import RefreshToken
 from .utils import generate_cache_key, user_is_blocked
@@ -128,7 +121,7 @@ class LoginView(BaseAuthView):
 
     schema = JWTEmailAuthSchema(
         responses={
-            200: LoginOutputSerializer,
+            200: TokenOutputSerializer,
             400: "Missing data or invalid types.",
             401: "Given login code was incorrect, or user has been blocked after too many attemps at login.",
             404: "No data found for login code.",
@@ -169,6 +162,9 @@ class LoginView(BaseAuthView):
             raise CorruptedDataException(_("Data was corrupted. Try to send another login code.")) from error
 
         refresh = RefreshToken()
+        if auth_settings.ROTATE_REFRESH_TOKENS:
+            refresh.add_to_log()
+
         refresh.update(claim_data)
         access = refresh.new_access_token(sync=True)
         data = {"access": str(access), "refresh": str(refresh)}
@@ -185,11 +181,7 @@ class RefreshTokenView(BaseAuthView):
 
     schema = JWTEmailAuthSchema(
         responses={
-            200: (
-                RefreshTokenOutputTwoSerializer
-                if auth_settings.REFRESH_VIEW_BOTH_TOKENS
-                else RefreshTokenOutputOneSerializer
-            ),
+            200: TokenOutputSerializer,
             400: "Missing data or invalid types",
             401: "Refresh token has expired or is invalid.",
         }
@@ -200,11 +192,10 @@ class RefreshTokenView(BaseAuthView):
         token.is_valid(raise_exception=True)
         data = token.data
 
-        refresh = RefreshToken(data["token"])
-        access = refresh.new_access_token()
-        data = {"access": str(access)}
+        refresh = RefreshToken(token=data["token"])
+        if auth_settings.ROTATE_REFRESH_TOKENS:
+            refresh = refresh.rotate()
 
-        if auth_settings.REFRESH_VIEW_BOTH_TOKENS:
-            data["refresh"] = str(refresh)
-
+        access = refresh.new_access_token(sync=auth_settings.ROTATE_REFRESH_TOKENS)
+        data = {"access": str(access), "refresh": str(refresh)}
         return Response(data=data, status=status.HTTP_200_OK)
