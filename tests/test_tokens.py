@@ -398,7 +398,23 @@ def test_refresh_token__missing_jti(settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    with pytest.raises(AuthenticationFailed, match="Missing jti claim."):
+    with pytest.raises(AuthenticationFailed, match='Token is missing the "jti" claim'):
+        RefreshToken(token=str(token))
+
+
+@pytest.mark.django_db
+def test_refresh_token__missing_sub(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    token = RefreshToken()
+    token["jti"] = 1
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    with pytest.raises(AuthenticationFailed, match='Token is missing the "sub" claim'):
         RefreshToken(token=str(token))
 
 

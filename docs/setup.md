@@ -110,7 +110,7 @@ If you do not want to use environment variables, override the `SIGNING_KEY` sett
 > but this should be changed in production environments.
 
 
-④ Configure Django's email [email settings][email_settings] (if using django's email sending):
+④ Configure Django's [email settings][email_settings] (if using django's email sending):
 
 ```python
 # Not all of these may be required

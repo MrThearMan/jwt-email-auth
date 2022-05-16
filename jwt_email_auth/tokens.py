@@ -49,7 +49,7 @@ class AccessToken:
                     jwt=token,
                     key=auth_settings.SIGNING_KEY,
                     options={
-                        "require": ["jti"] if rotate else [],
+                        "require": ["jti", "sub"] if rotate else [],
                         "verify_exp": True,
                         "verify_iat": True,
                         "verify_nbf": auth_settings.NOT_BEFORE_TIME is not None,
@@ -64,7 +64,7 @@ class AccessToken:
 
             except jwt.MissingRequiredClaimError as error:
                 logger.info(error)
-                raise AuthenticationFailed("Missing jti claim.", code="missing_jti") from error
+                raise AuthenticationFailed(str(error), code="missing_rotation_claim") from error
 
             except jwt.ExpiredSignatureError as error:
                 logger.info(error)
@@ -152,7 +152,7 @@ class AccessToken:
         return self.payload.get(key, default)
 
     def update(self, data: Dict[str, Any] = None, **kwargs: Any) -> None:
-        """Update payload. Note that this will change the encoded token so be sure to save it!"""
+        """Update payload."""
         self.payload.update({} if data is None else data, **kwargs)
 
     def verify_payload(self) -> None:
@@ -170,9 +170,7 @@ class AccessToken:
             raise AuthenticationFailed(_("Invalid token type."), code="invalid_type")
 
     def sync_with(self, token: Token) -> None:
-        """Sync this token with the other token, as if they were created at the same time.
-        Changes this token's "exp" and "iat" claims and thus the encoded token so be sure to save it!
-        """
+        """Sync this token with the other token, as if they were created at the same time."""
         self.payload["exp"] = token["iat"] + self.lifetime
         self.payload["iat"] = token["iat"]
         if auth_settings.NOT_BEFORE_TIME is not None:
@@ -181,7 +179,7 @@ class AccessToken:
     def copy_claims(self, token: Token) -> None:
         """Copy claims from token."""
         for claim, value in token.payload.items():
-            if claim in ("exp", "iat", "nbf", "aud", "iss", "jti", "type"):
+            if claim in ("exp", "iat", "nbf", "aud", "iss", "jti", "sub", "type"):
                 continue
             self[claim] = value
 
@@ -195,7 +193,6 @@ class RefreshToken(AccessToken):
         """Create a new access token from this refresh token.
 
         :param sync: Sync the two tokens, as if they were created at the same time.
-                     This changes the created access tokens "exp" and "iat" claims.
         """
         access = AccessToken()
         if sync:
@@ -221,7 +218,7 @@ class RefreshToken(AccessToken):
         try:
             log = RefreshTokenRotationLog.objects.get(id=jti)
         except RefreshTokenRotationLog.DoesNotExist as error:  # pylint: disable=no-member
-            RefreshTokenRotationLog.objects.filter(group=sub).delete()
+            RefreshTokenRotationLog.objects.prune_group_and_expired_logs(group=sub)
             raise AuthenticationFailed(_("Token is no longer accepted."), code="unaccepted_token") from error
 
         return log
@@ -238,6 +235,6 @@ class RefreshToken(AccessToken):
             group = uuid.uuid4()
 
         log = RefreshTokenRotationLog.objects.create(group=group, expires_at=self["exp"])
-        RefreshTokenRotationLog.objects.prune_group_and_expired_logs(log)
+        RefreshTokenRotationLog.objects.prune_group_and_expired_logs(group=log.group, id_=log.id)
         self.payload["jti"] = log.id
         self.payload["sub"] = str(group)
