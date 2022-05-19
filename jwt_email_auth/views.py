@@ -80,6 +80,9 @@ class SendLoginCodeView(BaseAuthView):
         data = login_info.data
         value = [value for key, value in data.items()][0]
 
+        if user_is_blocked(request, record_attempt=False):
+            raise SendCodeCooldown()
+
         login_data_cache_key = generate_cache_key(value, extra_prefix="login")
         code_sent_cache_key = generate_cache_key(value, extra_prefix="sendcode")
 

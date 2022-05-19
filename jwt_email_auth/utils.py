@@ -70,13 +70,15 @@ def blocking_cache_key_from_email(request: Request) -> str:
     return generate_cache_key(value, extra_prefix="block")
 
 
-def user_is_blocked(request: Request) -> bool:
+def user_is_blocked(request: Request, record_attempt: bool = True) -> bool:
     cache_key = auth_settings.LOGIN_BLOCKER_CACHE_KEY_CALLBACK(request)
-    attempts = cache.get(cache_key, 0) + 1
-    cache.set(cache_key, attempts, auth_settings.LOGIN_COOLDOWN.total_seconds())
+    attempt = cache.get(cache_key, 0) + 1
 
-    block: bool = attempts > auth_settings.LOGIN_ATTEMPTS
-    wasnt_blocked: bool = attempts - 1 <= auth_settings.LOGIN_ATTEMPTS
+    if record_attempt:
+        cache.set(cache_key, attempt, auth_settings.LOGIN_COOLDOWN.total_seconds())
+
+    block: bool = attempt > auth_settings.LOGIN_ATTEMPTS
+    wasnt_blocked: bool = attempt - 1 <= auth_settings.LOGIN_ATTEMPTS
 
     if block and wasnt_blocked:
         logger.warning(f"Blocked login for {get_ip(request)!r} due to too many attempts.")

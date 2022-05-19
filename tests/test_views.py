@@ -201,6 +201,11 @@ def test_login_endpoint__user_gets_blocked__ip(settings, caplog):
 
     assert message == equals_regex(r"Blocked login for '.+' due to too many attempts\.")
 
+    response3 = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    assert response3.data.get("detail") == "This user is not allowed to send another login code yet."
+    assert response3.status_code == status.HTTP_412_PRECONDITION_FAILED
+
 
 def test_login_endpoint__user_gets_blocked__email(settings, caplog):
     client = APIClient()
@@ -245,6 +250,11 @@ def test_login_endpoint__user_gets_blocked__email(settings, caplog):
     assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
 
     assert message == equals_regex(r"Blocked login for '.+' due to too many attempts\.")
+
+    response3 = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    assert response3.data.get("detail") == "This user is not allowed to send another login code yet."
+    assert response3.status_code == status.HTTP_412_PRECONDITION_FAILED
 
 
 def test_authenticate_endpoint__send_mock_email(settings):
