@@ -197,7 +197,7 @@ def test_login_endpoint__user_gets_blocked__ip(settings, caplog):
     message = caplog.record_tuples[-2][2]
 
     assert response2.data.get("detail") == equals_regex(r"Maximum number of attempts reached. Try again in \d minutes.")
-    assert response2.status_code == status.HTTP_403_FORBIDDEN
+    assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
 
     assert message == equals_regex(r"Blocked login for '.+' due to too many attempts\.")
 
@@ -242,7 +242,7 @@ def test_login_endpoint__user_gets_blocked__email(settings, caplog):
     message = caplog.record_tuples[-2][2]
 
     assert response2.data.get("detail") == equals_regex(r"Maximum number of attempts reached. Try again in \d minutes.")
-    assert response2.status_code == status.HTTP_403_FORBIDDEN
+    assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
 
     assert message == equals_regex(r"Blocked login for '.+' due to too many attempts\.")
 

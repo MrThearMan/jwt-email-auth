@@ -5,14 +5,14 @@ from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed, NotFound, PermissionDenied
+from rest_framework.exceptions import AuthenticationFailed, NotFound
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
-from .exceptions import CorruptedDataException, SendCodeCooldown, ServerException
+from .exceptions import CorruptedDataException, SendCodeCooldown, ServerException, UserBanned
 from .schema import JWTEmailAuthSchema
 from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer, TokenOutputSerializer
 from .settings import auth_settings
@@ -123,9 +123,10 @@ class LoginView(BaseAuthView):
         responses={
             200: TokenOutputSerializer,
             400: "Missing data or invalid types.",
-            401: "Given login code was incorrect, or user has been blocked after too many attemps at login.",
-            404: "No data found for login code.",
+            403: "Given login code was incorrect.",
+            404: "Authorization not attempted, or login code expired.",
             410: "Login data was corrupted.",
+            412: "User has been blocked after too many attemps at login.",
         }
     )
 
@@ -136,10 +137,7 @@ class LoginView(BaseAuthView):
         value = [value for key, value in data.items() if key != "code"][0]
 
         if user_is_blocked(request):
-            raise PermissionDenied(
-                _("Maximum number of attempts reached. Try again in %(x)s minutes.")
-                % {"x": int(auth_settings.LOGIN_COOLDOWN.total_seconds() // 60)}
-            )
+            raise UserBanned(cooldown=int(auth_settings.LOGIN_COOLDOWN.total_seconds() // 60))
 
         login_data_cache_key = generate_cache_key(value, extra_prefix="login")
         code_sent_cache_key = generate_cache_key(value, extra_prefix="sendcode")
@@ -183,7 +181,7 @@ class RefreshTokenView(BaseAuthView):
         responses={
             200: TokenOutputSerializer,
             400: "Missing data or invalid types",
-            401: "Refresh token has expired or is invalid.",
+            403: "Refresh token has expired or is invalid.",
         }
     )
 

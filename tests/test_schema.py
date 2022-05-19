@@ -337,7 +337,7 @@ def test_login_schema__get_responses(drf_request):
             },
             "description": "Missing data or invalid types.",
         },
-        "401": {
+        "403": {
             "content": {
                 "application/json": {
                     "schema": {
@@ -351,8 +351,7 @@ def test_login_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Given login code was incorrect, or user has been "
-            "blocked after too many attemps at login.",
+            "description": "Given login code was incorrect.",
         },
         "404": {
             "content": {
@@ -368,7 +367,7 @@ def test_login_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "No data found for login code.",
+            "description": "Authorization not attempted, or login code expired.",
         },
         "410": {
             "content": {
@@ -385,6 +384,22 @@ def test_login_schema__get_responses(drf_request):
                 }
             },
             "description": "Login data was corrupted.",
+        },
+        "412": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "User has been blocked after too many attemps at login.",
         },
     }
 
@@ -422,7 +437,7 @@ def test_refresh_token_schema__get_responses(drf_request):
             },
             "description": "Missing data or invalid types",
         },
-        "401": {
+        "403": {
             "content": {
                 "application/json": {
                     "schema": {
