@@ -25,6 +25,13 @@ from .conftest import equals_regex
 from .helpers import get_login_code_from_message
 
 
+def test_base_auth_view_extra_actions():
+    assert BaseAuthView.get_extra_actions() == []
+
+
+# Authenticate view
+
+
 def test_authenticate_endpoint(caplog):
     client = APIClient()
 
@@ -50,52 +57,6 @@ def test_authenticate_endpoint(caplog):
 
     key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code}
-
-
-def test_login_endpoint(caplog):
-    client = APIClient()
-
-    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
-
-    message = caplog.record_tuples[0][2]
-    code = get_login_code_from_message(message)
-
-    key = generate_cache_key("foo@bar.com", extra_prefix="login")
-    assert cache.get(key) == {"code": code}
-
-    response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
-
-    assert response.data == {"access": equals_regex(r"[a-zA-Z0-9-_.]+"), "refresh": equals_regex(r"[a-zA-Z0-9-_.]+")}
-    assert response.data["access"].count(".") == 2
-    assert response.data["refresh"].count(".") == 2
-    assert response.status_code == status.HTTP_200_OK
-
-    assert cache.get(key) is None
-
-
-def test_refresh_endpoint(caplog):
-    client = APIClient()
-
-    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
-
-    message = caplog.record_tuples[0][2]
-    code = get_login_code_from_message(message)
-
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
-
-    # After some time has passed, the expiry time on the new access token will be different
-    # -> Tokens will be different
-    sleep(2)
-
-    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
-
-    assert response2.data == {
-        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
-        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
-    }
-    assert response2.status_code == status.HTTP_200_OK
-
-    assert response1.data["access"] != response2.data["access"]
 
 
 def test_authenticate_endpoint__login_code_already_exists(caplog):
@@ -156,6 +117,91 @@ def test_authenticate_endpoint__use_email_template(settings, caplog):
     assert re.match(r"\{'code': '\d{6}'}", message)  # noqa
     assert response.data is None
     assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+def test_authenticate_endpoint__send_mock_email(settings):
+    client = APIClient()
+
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": True,
+    }
+
+    with patch("jwt_email_auth.utils.send_mail") as mock:
+        client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    mock.assert_called_once_with(
+        subject=equals_regex(r".+"),
+        message=equals_regex(r".+"),
+        from_email=None,
+        recipient_list=["foo@bar.com"],
+        html_message=None,
+    )
+
+
+def test_authenticate_endpoint__email_sending_fails(settings, caplog):
+    client = APIClient()
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": True,
+    }
+
+    class TestException(Exception):
+        def __init__(self):
+            super().__init__("foo")
+
+    with patch("jwt_email_auth.utils.send_login_email", side_effect=TestException) as mock:
+        response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    log_source, level, message = caplog.record_tuples[0]
+
+    assert log_source == "jwt_email_auth.views"
+    assert level == logging.CRITICAL
+    assert message == "Login code sending failed: TestException('foo')"
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) is None
+
+    assert response.data.get("detail") == "Failed to send login codes. Try again later."
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+
+def test_authenticate_endpoint__validate_email():
+    client = APIClient()
+    response = client.post("/authenticate", {"email": "foobar"}, format="json")
+
+    assert response.data.get("email")[0] == "Enter a valid email address."
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_authenticate_endpoint__email_is_mandatory():
+    client = APIClient()
+    response = client.post("/authenticate", {}, format="json")
+
+    assert response.data.get("email")[0] == "This field is required."
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# Login view
+
+
+def test_login_endpoint(caplog):
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) == {"code": code}
+
+    response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert response.data == {"access": equals_regex(r"[a-zA-Z0-9-_.]+"), "refresh": equals_regex(r"[a-zA-Z0-9-_.]+")}
+    assert response.data["access"].count(".") == 2
+    assert response.data["refresh"].count(".") == 2
+    assert response.status_code == status.HTTP_200_OK
+
+    assert cache.get(key) is None
 
 
 def test_login_endpoint__user_gets_blocked__ip(settings, caplog):
@@ -257,51 +303,6 @@ def test_login_endpoint__user_gets_blocked__email(settings, caplog):
     assert response3.status_code == status.HTTP_412_PRECONDITION_FAILED
 
 
-def test_authenticate_endpoint__send_mock_email(settings):
-    client = APIClient()
-
-    settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": True,
-    }
-
-    with patch("jwt_email_auth.utils.send_mail") as mock:
-        client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
-
-    mock.assert_called_once_with(
-        subject=equals_regex(r".+"),
-        message=equals_regex(r".+"),
-        from_email=None,
-        recipient_list=["foo@bar.com"],
-        html_message=None,
-    )
-
-
-def test_authenticate_endpoint__email_sending_fails(settings, caplog):
-    client = APIClient()
-    settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": True,
-    }
-
-    class TestException(Exception):
-        def __init__(self):
-            super().__init__("foo")
-
-    with patch("jwt_email_auth.utils.send_login_email", side_effect=TestException) as mock:
-        response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
-
-    log_source, level, message = caplog.record_tuples[0]
-
-    assert log_source == "jwt_email_auth.views"
-    assert level == logging.CRITICAL
-    assert message == "Login code sending failed: TestException('foo')"
-
-    key = generate_cache_key("foo@bar.com", extra_prefix="login")
-    assert cache.get(key) is None
-
-    assert response.data.get("detail") == "Failed to send login codes. Try again later."
-    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-
-
 def test_login_endpoint__expected_claims_found(settings, caplog):
     caplog.set_level(logging.DEBUG)
     client = APIClient()
@@ -372,22 +373,6 @@ def test_login_endpoint__login_code_not_found():
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_authenticate_endpoint__validate_email():
-    client = APIClient()
-    response = client.post("/authenticate", {"email": "foobar"}, format="json")
-
-    assert response.data.get("email")[0] == "Enter a valid email address."
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-
-def test_authenticate_endpoint__email_is_mandatory():
-    client = APIClient()
-    response = client.post("/authenticate", {}, format="json")
-
-    assert response.data.get("email")[0] == "This field is required."
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-
 def test_login_endpoint__validate_email():
     client = APIClient()
     response = client.post("/login", {"email": "foobar", "code": 123456}, format="json")
@@ -428,6 +413,34 @@ def test_login_endpoint__login_code_expired(settings, caplog):
 
     assert response.data.get("detail") == "No login code found for 'foo@bar.com'."
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# Refresh view
+
+
+def test_refresh_endpoint(caplog):
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    # After some time has passed, the expiry time on the new access token will be different
+    # -> Tokens will be different
+    sleep(2)
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert response2.data == {
+        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+    }
+    assert response2.status_code == status.HTTP_200_OK
+
+    assert response1.data["access"] != response2.data["access"]
 
 
 def test_refresh_endpoint__refresh_token_expired(caplog):
@@ -552,5 +565,234 @@ def test_refresh_endpoint__rotate(caplog, settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
 
-def test_base_auth_view_extra_actions():
-    assert BaseAuthView.get_extra_actions() == []
+@pytest.mark.django_db
+def test_refresh_endpoint__rotate__using_old_refresh_invalidates_current_one(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response3 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert response3.data == {"detail": "Token is no longer accepted."}
+    assert response3.status_code == status.HTTP_403_FORBIDDEN
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response4 = client.post("/refresh", {"token": response2.data["refresh"]}, format="json")
+
+    assert response4.data == {"detail": "Token is no longer accepted."}
+    assert response4.status_code == status.HTTP_403_FORBIDDEN
+
+
+# Logout
+
+
+@pytest.mark.django_db
+def test_logout_endpoint(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post("/logout", {"token": response1.data["refresh"]}, format="json")
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response3 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert response3.data == {"detail": "Token is no longer accepted."}
+    assert response3.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_logout_endpoint__with_old_token(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response3 = client.post("/logout", {"token": response1.data["refresh"]}, format="json")
+    assert response3.status_code == status.HTTP_204_NO_CONTENT
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response4 = client.post("/refresh", {"token": response2.data["refresh"]}, format="json")
+
+    assert response4.data == {"detail": "Token is no longer accepted."}
+    assert response4.status_code == status.HTTP_403_FORBIDDEN
+
+
+# Update
+
+
+def _data_callback(*args, **kwargs):
+    return {"foo": 0, "bar": False}
+
+
+@pytest.mark.django_db
+def test_update_endpoint(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+        "UPDATEABLE_CLAIMS": ["foo", "bar"],
+        "LOGIN_VALIDATION_AND_DATA_CALLBACK": "tests.test_views._data_callback",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response1.data == {
+        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+    }
+
+    token = AccessToken(str(response1.data["access"]))
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    token = RefreshToken(str(response1.data["refresh"]))
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post(
+        "/update", {"data": {"foo": 1, "bar": True}, "token": response1.data["refresh"]}, format="json"
+    )
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    assert response2.data == {
+        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+    }
+
+    token = AccessToken(str(response2.data["access"]))
+    assert token["foo"] == 1
+    assert token["bar"] is True
+
+    token = RefreshToken(str(response2.data["refresh"]))
+    assert token["foo"] == 1
+    assert token["bar"] is True
+
+    assert response1.data["access"] != response2.data["access"]
+    assert response1.data["refresh"] != response2.data["refresh"]
+
+    response3 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+    assert response3.data == {"detail": "Token is no longer accepted."}
+    assert response3.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_update_endpoint__unexpected_claim(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+        "UPDATEABLE_CLAIMS": ["foo", "bar"],
+        "LOGIN_VALIDATION_AND_DATA_CALLBACK": "tests.test_views._data_callback",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post("/update", {"data": {"fizz": "buzz"}, "token": response1.data["refresh"]}, format="json")
+    assert response2.data == {"detail": "'fizz' not found from the list of expected claims."}
+    assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
+
+
+@pytest.mark.django_db
+def test_update_endpoint__not_allowed_to_update(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+        "UPDATEABLE_CLAIMS": ["foo"],
+        "LOGIN_VALIDATION_AND_DATA_CALLBACK": "tests.test_views._data_callback",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post(
+        "/update", {"data": {"foo": 1, "bar": True}, "token": response1.data["refresh"]}, format="json"
+    )
+    assert response2.data == {"detail": "Not allowed to update claim 'bar'."}
+    assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED

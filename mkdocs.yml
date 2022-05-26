@@ -3,6 +3,7 @@ nav:
   - Home: index.md
   - Setup: setup.md
   - Usage: usage.md
+  - JWT Rotation: rotation.md
 theme:
   name: readthedocs
   highlightjs: true

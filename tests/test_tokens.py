@@ -1,6 +1,6 @@
 import re
 from datetime import timedelta
-from time import perf_counter, sleep
+from time import sleep
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -211,7 +211,7 @@ def test_refresh_token__add_to_log(settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
     token = RefreshToken()
-    token.add_to_log()
+    token.create_log()
 
     assert token["jti"] == 1
     assert len(RefreshTokenRotationLog.objects.all()) == 1
@@ -227,7 +227,7 @@ def test_refresh_token__check_log(settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
     token = RefreshToken()
-    token.add_to_log()
+    token.create_log()
 
     log = token.check_log()
     assert log.id == 1
@@ -248,7 +248,7 @@ def test_refresh_token__rotate(settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
     token = RefreshToken()
-    token.add_to_log()
+    token.create_log()
 
     assert token["jti"] == 1
     assert len(RefreshTokenRotationLog.objects.all()) == 1
@@ -270,7 +270,7 @@ def test_refresh_token__rotate__delete_new_token_when_old_token_used(settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
     old_token = RefreshToken()
-    old_token.add_to_log()
+    old_token.create_log()
 
     log_1 = old_token.check_log()
     assert log_1.id == 1
@@ -296,7 +296,7 @@ def test_refresh_token__rotate__delete_new_token_when_old_token_used(settings):
 
 
 @pytest.mark.django_db
-def test_refresh_token__remove_from_log(settings):
+def test_refresh_token__remove_from_log__by_token_title(settings):
     settings.JWT_EMAIL_AUTH = {
         "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
@@ -305,12 +305,32 @@ def test_refresh_token__remove_from_log(settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
     token = RefreshToken()
-    token.add_to_log()
+    token.create_log()
 
     assert token["jti"] == 1
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
-    RefreshTokenRotationLog.objects.remove_by_jti(str(token))
+    RefreshTokenRotationLog.objects.remove_by_token_title(token=str(token))
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+
+@pytest.mark.django_db
+def test_refresh_token__remove_from_log__by_title(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    token = RefreshToken()
+    token.create_log()
+
+    assert token["jti"] == 1
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    RefreshTokenRotationLog.objects.remove_by_title(title=str(token["sub"]))
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
@@ -344,7 +364,7 @@ def test_refresh_token__expired__rotated(settings):
         return_value=timedelta(seconds=1),
     ):
         token = RefreshToken()
-        token.add_to_log()
+        token.create_log()
 
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
@@ -370,7 +390,7 @@ def test_refresh_token__remove_expired_tokens_from_other_groups(settings):
         return_value=timedelta(seconds=1),
     ):
         old_token = RefreshToken()
-        old_token.add_to_log()
+        old_token.create_log()
 
     logs = list(RefreshTokenRotationLog.objects.all())
     assert len(logs) == 1
@@ -380,7 +400,7 @@ def test_refresh_token__remove_expired_tokens_from_other_groups(settings):
     sleep(2)
 
     new_token = RefreshToken()
-    new_token.add_to_log()
+    new_token.create_log()
 
     logs = list(RefreshTokenRotationLog.objects.all())
     assert len(logs) == 1

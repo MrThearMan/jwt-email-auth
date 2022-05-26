@@ -1,6 +1,6 @@
 # Setup
 
-① Add authentication, login, and token refresh views to urlpatterns.
+① Add authentication, login and refresh views to urlpatterns.
 
 ```python
 from django.urls import path
@@ -11,24 +11,6 @@ urlpatterns = [
     path("authentication/", SendLoginCodeView.as_view(), name="authentication"),
     path("login/", LoginView.as_view(), name="login"),
     path("refresh/", RefreshTokenView.as_view(), name="refresh"),
-    ...
-]
-
-# Or use routers...
-# --------------------------------------------------------------------------------
-
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from jwt_email_auth.views import SendLoginCodeView, LoginView, RefreshTokenView
-
-router = DefaultRouter()
-router.register(r"authentication", SendLoginCodeView, "authentication")
-router.register(r"login", LoginView, "login")
-router.register(r"refresh", RefreshTokenView, "refresh")
-
-urlpatterns = [
-    ...
-    path("", include(router.urls)),
     ...
 ]
 ```
@@ -66,6 +48,7 @@ Here are the rest of the settings and what they mean.
 | `ROTATE_REFRESH_TOKENS`     | If True, return a<br>new refresh token<br>when requesting a new<br>access token from<br>RefreshTokenView. The old<br>refresh token will be invalid<br>after the new one is created. | bool           |
 | `LOGIN_ATTEMPTS`            | Number of login<br>attempts until user<br>is banned.                                                                                                                                | int            |
 | `EXPECTED_CLAIMS`           | List of expected JWT<br>content.                                                                                                                                                    | list[str]      |
+| `UPDATEABLE_CLAIMS`         | Which expected claims<br>can be updated without<br>re-authentication using<br>the `update` view.                                                                                    | list[str]      |
 | `LOGIN_SENDING_EMAIL`       | Email sender.                                                                                                                                                                       | str            |
 | `LOGIN_SUBJECT_LINE`        | Email subject line.                                                                                                                                                                 | str            |
 | `LOGIN_EMAIL_MESSAGE`       | Message to send in<br>email. Must have<br>{code} and {valid}!                                                                                                                       | str            |
@@ -143,27 +126,7 @@ REST_FRAMEWORK = {
 }
 ```
 
-
-⑥ (Optional) To use [rotated refresh tokens][jwt-rotation]:
-
-```python
-INSTALLED_APPS = [
-    ...
-    "jwt_email_auth.rotation",
-    ...
-]
-
-...
-
-JWT_EMAIL_AUTH = {
-    ...
-    "ROTATE_REFRESH_TOKENS": True,
-    ...
-}
-```
-
 [pk]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
 [ed25519]: https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/
 [email_settings]: https://docs.djangoproject.com/en/3.2/topics/email/#quick-example
 [IP spoofing]: https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users
-[jwt-rotation]: https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation

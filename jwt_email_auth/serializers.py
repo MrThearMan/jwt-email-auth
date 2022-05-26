@@ -16,6 +16,8 @@ __all__ = [
     "LoginSerializer",
     "RefreshTokenSerializer",
     "TokenOutputSerializer",
+    "LogoutSerializer",
+    "TokenUpdateSerializer",
 ]
 
 
@@ -36,6 +38,15 @@ class LoginSerializer(serializers.Serializer):  # pylint: disable=W0223
 
 class RefreshTokenSerializer(serializers.Serializer):  # pylint: disable=W0223
     token = serializers.CharField(help_text="Refresh token.")
+
+
+class LogoutSerializer(serializers.Serializer):  # pylint: disable=W0223
+    token = serializers.CharField(help_text="Refresh token.")
+
+
+class TokenUpdateSerializer(serializers.Serializer):  # pylint: disable=W0223
+    token = serializers.CharField(help_text="Refresh token.")
+    data = serializers.DictField(help_text="Claims to update.")
 
 
 # Utility

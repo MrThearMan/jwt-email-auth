@@ -1,3 +1,4 @@
+# pylint: disable=import-outside-toplevel
 import logging
 from typing import Any, List, Type
 
@@ -12,9 +13,23 @@ from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
-from .exceptions import CorruptedDataException, SendCodeCooldown, ServerException, UserBanned
+from .exceptions import (
+    ClaimNotUpdateable,
+    CorruptedDataException,
+    SendCodeCooldown,
+    ServerException,
+    UnexpectedClaim,
+    UserBanned,
+)
 from .schema import JWTEmailAuthSchema
-from .serializers import LoginSerializer, RefreshTokenSerializer, SendLoginCodeSerializer, TokenOutputSerializer
+from .serializers import (
+    LoginSerializer,
+    LogoutSerializer,
+    RefreshTokenSerializer,
+    SendLoginCodeSerializer,
+    TokenOutputSerializer,
+    TokenUpdateSerializer,
+)
 from .settings import auth_settings
 from .tokens import RefreshToken
 from .utils import generate_cache_key, user_is_blocked
@@ -24,6 +39,8 @@ __all__ = [
     "SendLoginCodeView",
     "LoginView",
     "RefreshTokenView",
+    "LogoutView",
+    "UpdateTokenView",
 ]
 
 
@@ -164,7 +181,7 @@ class LoginView(BaseAuthView):
 
         refresh = RefreshToken()
         if auth_settings.ROTATE_REFRESH_TOKENS:
-            refresh.add_to_log()
+            refresh.create_log()
 
         refresh.update(claim_data)
         access = refresh.new_access_token(sync=True)
@@ -183,7 +200,7 @@ class RefreshTokenView(BaseAuthView):
     schema = JWTEmailAuthSchema(
         responses={
             200: TokenOutputSerializer,
-            400: "Missing data or invalid types",
+            400: "Missing data or invalid types.",
             403: "Refresh token has expired or is invalid.",
         }
     )
@@ -200,3 +217,69 @@ class RefreshTokenView(BaseAuthView):
         access = refresh.new_access_token(sync=auth_settings.ROTATE_REFRESH_TOKENS)
         data = {"access": str(access), "refresh": str(refresh)}
         return Response(data=data, status=status.HTTP_200_OK)
+
+
+class LogoutView(BaseAuthView):
+    """Invalidate refresh token when loggin out."""
+
+    serializer_class: Type[BaseSerializer] = LogoutSerializer
+
+    authentication_classes: List[Type[BaseAuthentication]] = []
+    permission_classes: List[Type[BasePermission]] = []
+
+    schema = JWTEmailAuthSchema(
+        responses={
+            204: "Refresh token invalidated.",
+        }
+    )
+
+    def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+        from .rotation.models import RefreshTokenRotationLog
+
+        token = self.serializer_class(data=request.data)
+        token.is_valid(raise_exception=True)
+        data = token.data
+        RefreshTokenRotationLog.objects.remove_by_token_title(token=data["token"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UpdateTokenView(BaseAuthView):
+    """Update token claims. Returned tokens will be different to the given ones."""
+
+    serializer_class: Type[BaseSerializer] = TokenUpdateSerializer
+
+    authentication_classes: List[Type[BaseAuthentication]] = []
+    permission_classes: List[Type[BasePermission]] = []
+
+    schema = JWTEmailAuthSchema(
+        responses={
+            200: TokenOutputSerializer,
+            400: "Missing data or invalid types.",
+            403: "Refresh token has expired or is invalid.",
+            412: "A given claim not found from the list of expected claims, or is not allowed to be updated.",
+        }
+    )
+
+    def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+        token = self.serializer_class(data=request.data)
+        token.is_valid(raise_exception=True)
+        data = token.data
+
+        for claim in data["data"]:
+            if claim not in auth_settings.EXPECTED_CLAIMS:
+                raise UnexpectedClaim(claim=claim)
+            if claim not in auth_settings.UPDATEABLE_CLAIMS:
+                raise ClaimNotUpdateable(claim=claim)
+
+        refresh = RefreshToken(token=data["token"])
+        refresh.update(data["data"])
+        if auth_settings.ROTATE_REFRESH_TOKENS:
+            refresh = refresh.rotate()
+
+        access = refresh.new_access_token(sync=auth_settings.ROTATE_REFRESH_TOKENS)
+        data = {"access": str(access), "refresh": str(refresh)}
+        return Response(data=data, status=status.HTTP_200_OK)
+
+
+# TODO:
+#  HTTPonly Set-Cookie

@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import jwt
-from django.db import transaction
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from rest_framework.authentication import get_authorization_header
@@ -71,7 +70,7 @@ class AccessToken:
                 if rotate:
                     from .rotation.models import RefreshTokenRotationLog
 
-                    RefreshTokenRotationLog.objects.remove_by_jti(token)
+                    RefreshTokenRotationLog.objects.remove_by_token_title(token=token)
 
                 raise AuthenticationFailed(_("Signature has expired."), code="signature_expired") from error
 
@@ -206,35 +205,31 @@ class RefreshToken(AccessToken):
         log = self.check_log()
         refresh = RefreshToken()
         refresh.copy_claims(self)
-        refresh.add_to_log(group=log.group)
+        refresh.create_log(title=log.title)
         return refresh
 
     def check_log(self) -> "RefreshTokenRotationLog":
         """Check if token is in the rotation log."""
         from .rotation.models import RefreshTokenRotationLog
 
-        jti = int(self.payload["jti"])
-        sub = str(self.payload["sub"])
         try:
-            log = RefreshTokenRotationLog.objects.get(id=jti)
+            log = RefreshTokenRotationLog.objects.get(id=int(self.payload["jti"]))
         except RefreshTokenRotationLog.DoesNotExist as error:  # pylint: disable=no-member
-            RefreshTokenRotationLog.objects.prune_group_and_expired_logs(group=sub)
+            RefreshTokenRotationLog.objects.remove_by_title(title=str(self.payload["sub"]))
             raise AuthenticationFailed(_("Token is no longer accepted."), code="unaccepted_token") from error
 
         return log
 
-    @transaction.atomic
-    def add_to_log(self, group: Optional[uuid.UUID] = None) -> None:
+    def create_log(self, title: Optional[uuid.UUID] = None) -> None:
         """
-        Update rotation log for the given group,
+        Update rotation log for the given title,
         and set the "jti" and "sub" claims for this token.
         """
         from .rotation.models import RefreshTokenRotationLog
 
-        if group is None:
-            group = uuid.uuid4()
+        if title is None:
+            title = uuid.uuid4()
 
-        log = RefreshTokenRotationLog.objects.create(group=group, expires_at=self["exp"])
-        RefreshTokenRotationLog.objects.prune_group_and_expired_logs(group=log.group, id_=log.id)
+        log = RefreshTokenRotationLog.objects.pass_title(title=str(title), expires_at=self.payload["exp"])
+        self.payload["sub"] = str(title)
         self.payload["jti"] = log.id
-        self.payload["sub"] = str(group)

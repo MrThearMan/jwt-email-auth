@@ -56,6 +56,9 @@ class JWTEmailAuthSettings(NamedTuple):
     # List of expected custom JWT claims
     EXPECTED_CLAIMS: List[str] = []
     #
+    # Which expected claims can be updated without re-authentication
+    UPDATEABLE_CLAIMS: List[str] = []
+    #
     # Email sender. Default is settings.DEFAULT_FROM_EMAIL
     LOGIN_SENDING_EMAIL: Optional[str] = None
     #

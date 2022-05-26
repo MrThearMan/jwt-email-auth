@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.permissions import HasValidJWT
 from jwt_email_auth.schema import add_unauthenticated_response
-from jwt_email_auth.views import LoginView, RefreshTokenView, SendLoginCodeView
+from jwt_email_auth.views import LoginView, LogoutView, RefreshTokenView, SendLoginCodeView, UpdateTokenView
 
 
 class Schema(AutoSchema):
@@ -67,7 +67,9 @@ class TestView3(APIView):
 urlpatterns = [
     path("authenticate", SendLoginCodeView.as_view(), name="authenticate"),
     path("login", LoginView.as_view(), name="login"),
+    path("logout", LogoutView.as_view(), name="logout"),
     path("refresh", RefreshTokenView.as_view(), name="refresh"),
+    path("update", UpdateTokenView.as_view(), name="update"),
     path("test-auth", TestView1.as_view(), name="test-auth"),
     path("test-perm", TestView2.as_view(), name="test-perm"),
     path("test-both", TestView3.as_view(), name="test-both"),

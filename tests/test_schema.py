@@ -10,7 +10,7 @@ from jwt_email_auth.schema import (
     add_jwt_email_auth_security_scheme,
     add_unauthenticated_response,
 )
-from jwt_email_auth.views import LoginView, RefreshTokenView, SendLoginCodeView
+from jwt_email_auth.views import LoginView, LogoutView, RefreshTokenView, SendLoginCodeView, UpdateTokenView
 
 
 def test_disable_perm_checks():
@@ -237,6 +237,64 @@ def test_refresh_token_schema__get_components(drf_request):
     }
 
 
+def test_logout_schema__get_components(drf_request):
+    view = LogoutView()
+    view.request = drf_request
+    view.request.method = "POST"
+    view.format_kwarg = None
+    components = view.schema.get_components("", "")
+    assert components == {
+        "Logout": {
+            "properties": {
+                "token": {
+                    "description": "Refresh token.",
+                    "type": "string",
+                },
+            },
+            "required": ["token"],
+            "type": "object",
+        },
+    }
+
+
+def test_update_token_schema__get_components(drf_request):
+    view = UpdateTokenView()
+    view.request = drf_request
+    view.request.method = "POST"
+    view.format_kwarg = None
+    components = view.schema.get_components("", "")
+    assert components == {
+        "TokenUpdate": {
+            "properties": {
+                "data": {
+                    "description": "Claims to update.",
+                    "type": "object",
+                },
+                "token": {
+                    "description": "Refresh token.",
+                    "type": "string",
+                },
+            },
+            "required": ["token", "data"],
+            "type": "object",
+        },
+        "TokenOutput": {
+            "properties": {
+                "access": {
+                    "description": "Access token.",
+                    "type": "string",
+                },
+                "refresh": {
+                    "description": "Refresh token.",
+                    "type": "string",
+                },
+            },
+            "required": ["access", "refresh"],
+            "type": "object",
+        },
+    }
+
+
 def test_send_login_code_schema__get_responses(drf_request):
     view = SendLoginCodeView()
     view.request = drf_request
@@ -435,7 +493,7 @@ def test_refresh_token_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types",
+            "description": "Missing data or invalid types.",
         },
         "403": {
             "content": {
@@ -452,5 +510,89 @@ def test_refresh_token_schema__get_responses(drf_request):
                 }
             },
             "description": "Refresh token has expired or is invalid.",
+        },
+    }
+
+
+def test_logout_schema__get_responses(drf_request):
+    view = LogoutView()
+    view.request = drf_request
+    view.request.method = "POST"
+    view.format_kwarg = None
+    components = view.schema.get_responses("", "")
+    assert components == {
+        "204": {
+            "content": {
+                "application/json": {"default": "", "type": "string"},
+            },
+            "description": "Refresh token invalidated.",
+        },
+    }
+
+
+def test_update_token_schema__get_responses(drf_request):
+    view = UpdateTokenView()
+    view.request = drf_request
+    view.request.method = "POST"
+    view.format_kwarg = None
+    components = view.schema.get_responses("", "")
+    assert components == {
+        "200": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/TokenOutput",
+                    },
+                },
+            },
+            "description": "New refresh and access token pair.",
+        },
+        "400": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Missing data or invalid types.",
+        },
+        "403": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Refresh token has expired or is invalid.",
+        },
+        "412": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "A given claim not found from the list of expected claims, or is not allowed to be updated.",
         },
     }
