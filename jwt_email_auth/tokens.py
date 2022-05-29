@@ -5,13 +5,12 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import jwt
-from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
-from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
 
 from .settings import auth_settings
+from .utils import token_from_headers
 
 
 if TYPE_CHECKING:
@@ -104,24 +103,19 @@ class AccessToken:
     def from_request(cls, request: Request) -> "AccessToken":
         """Construct a token from request Authorization header.
 
-        :param request: Request with Authorization header.
-        :raises NotAuthenticated: No token in Authorization header.
-        :raises AuthenticationFailed: Request header or token was invalid.
+        :param request: Request with token in headers/cookies.
+        :raises NotAuthenticated: No token in headers/cookies.
+        :raises AuthenticationFailed: Token was invalid.
         """
 
-        auth_header = get_authorization_header(request)
-        if not auth_header:
-            raise NotAuthenticated(_("No Authorization header found from request."))
+        if auth_settings.USE_COOKIES:
+            token: Optional[str] = request.COOKIES.get(cls.token_type)
+            if token is None:
+                raise NotAuthenticated(_("No token found from request cookies."))
+        else:
+            token: str = token_from_headers(request)
 
-        try:
-            prefix, encoded_token = auth_header.decode().split()
-        except ValueError as error:
-            raise AuthenticationFailed(_("Invalid Authorization header."), code="invalid_header") from error
-
-        if force_str(prefix).lower() != auth_settings.HEADER_PREFIX.lower():
-            raise AuthenticationFailed(_("Invalid prefix."), code="invalid_header_prefix")
-
-        return cls(token=encoded_token)
+        return cls(token=token)
 
     def __repr__(self) -> str:
         return repr(self.payload)

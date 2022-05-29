@@ -12,10 +12,11 @@ from cryptography.hazmat.primitives.serialization import load_ssh_private_key
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from ipware import get_client_ip  # type: ignore
 from rest_framework.authentication import get_authorization_header
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
 
 from .settings import auth_settings
@@ -112,12 +113,23 @@ def send_login_email(email: str, login_data: Dict[str, Any], request: Request) -
 def token_from_headers(request: Request) -> str:
     """Return token from request headers.
 
-    :raises NotAuthenticated: No token in Authorization header.
+    :param request: Request with token in headers/cookies.
+    :raises NotAuthenticated: No token in headers/cookies.
+    :raises AuthenticationFailed: Token was invalid.
     """
     auth_header = get_authorization_header(request)
     if not auth_header:
         raise NotAuthenticated(_("No Authorization header found from request."))
-    return auth_header.split()[1].decode()
+
+    try:
+        prefix, encoded_token = auth_header.decode().split()
+    except ValueError as error:
+        raise AuthenticationFailed(_("Invalid Authorization header."), code="invalid_header") from error
+
+    if force_str(prefix).lower() != auth_settings.HEADER_PREFIX.lower():
+        raise AuthenticationFailed(_("Invalid prefix."), code="invalid_header_prefix")
+
+    return encoded_token
 
 
 def load_example_signing_key() -> Ed25519PrivateKey:

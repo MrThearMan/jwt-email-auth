@@ -22,10 +22,11 @@ class JWTAuthentication(BaseAuthentication):
     def authenticate(self, request: Request) -> Optional[Tuple[StatelessUser, str]]:
         try:
             token = AccessToken.from_request(request)
-            return StatelessUser(token=token), str(token)
         except (AuthenticationFailed, NotAuthenticated) as error:
             logger.debug(error)
             return None
+
+        return StatelessUser(token=token), str(token)
 
     def authenticate_header(self, request: Request) -> str:
         return f'{auth_settings.HEADER_PREFIX} realm="api"'

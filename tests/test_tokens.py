@@ -114,7 +114,7 @@ def test_access_token__sync_with__not_before(settings):
     assert old_token["exp"] == new_token["exp"]
 
 
-def test_access_token__from_request(drf_request):
+def test_access_token__from_request__header(drf_request):
     old_token = AccessToken()
 
     drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {old_token}"
@@ -124,6 +124,50 @@ def test_access_token__from_request(drf_request):
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
     assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
     assert str(token).count(".") == 2
+
+
+def test_access_token__from_request__cookies(settings, drf_request):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+    }
+
+    old_token = AccessToken()
+
+    drf_request.COOKIES["access"] = str(old_token)
+
+    token = AccessToken.from_request(drf_request)
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat"]
+    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
+    assert str(token).count(".") == 2
+
+
+def test_access_token__from_request__cookies__refresh(settings, drf_request):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+    }
+
+    old_token = RefreshToken()
+
+    drf_request.COOKIES["refresh"] = str(old_token)
+
+    token = RefreshToken.from_request(drf_request)
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat"]
+    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
+    assert str(token).count(".") == 2
+
+
+def test_access_token__from_request__cookies__not_found(settings, drf_request):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+    }
+
+    with pytest.raises(NotAuthenticated, match=re.escape("No token found from request cookies")):
+        AccessToken.from_request(drf_request)
+
+    with pytest.raises(NotAuthenticated, match=re.escape("No token found from request cookies")):
+        RefreshToken.from_request(drf_request)
 
 
 def test_access_token__from_request__authorization_header_not_found(drf_request):
@@ -170,7 +214,7 @@ def test_access_token__from_token__expired():
         AccessToken(token=old_token)
 
 
-def test_access_token__from_token__decing_error():
+def test_access_token__from_token__decoding_error():
     with pytest.raises(AuthenticationFailed, match="Error decoding signature."):
         AccessToken(token="foo")
 
