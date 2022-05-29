@@ -1,11 +1,12 @@
-from typing import Any, Dict, Optional, Sequence, Type, Union
+from typing import Any, Dict, Type, Union
 
 from rest_framework import serializers
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 
-from jwt_email_auth.authentication import JWTAuthentication
-from jwt_email_auth.permissions import HasValidJWT
+from .authentication import JWTAuthentication
+from .permissions import HasValidJWT
+from .serializers import TokenOutputSerializer
 
 
 __all__ = [
@@ -13,9 +14,21 @@ __all__ = [
     "add_jwt_email_auth_security_requirement",
     "add_unauthenticated_response",
     "DisablePermChecks",
-    "JWTEmailAuthSchema",
     "JWTEmailAuthSchemaMixin",
+    "SendLoginCodeViewSchemaMixin",
+    "LoginViewSchemaMixin",
+    "RefreshTokenViewSchemaMixin",
+    "LogoutViewSchemaMixin",
+    "UpdateTokenViewSchemaMixin",
+    "SendLoginCodeViewSchema",
+    "LoginViewSchema",
+    "RefreshTokenViewSchema",
+    "LogoutViewSchema",
+    "UpdateTokenViewSchema",
 ]
+
+from .settings import auth_settings
+
 
 NO_CONTENT_SCHEMA = {"type": "string", "default": ""}
 
@@ -121,13 +134,81 @@ class JWTEmailAuthSchemaMixin:
         return data
 
 
-class JWTEmailAuthSchema(JWTEmailAuthSchemaMixin, AutoSchema):
-    def __init__(
-        self,
-        responses: Optional[Dict[int, Union[str, Type[serializers.Serializer]]]] = None,
-        tags: Optional[Sequence[str]] = None,
-        operation_id_base: Optional[str] = None,
-        component_name: Optional[str] = None,
-    ):
-        self.responses = responses or self.responses
-        super().__init__(tags=tags, operation_id_base=operation_id_base, component_name=component_name)
+class SendLoginCodeViewSchemaMixin(JWTEmailAuthSchemaMixin):
+
+    responses = {
+        204: "Authorization successful, login data cached and code sent.",
+        400: "Missing data or invalid types.",
+        412: "This user is not allowed to send another login code yet.",
+        503: "Server could not send login code.",
+    }
+
+
+class SendLoginCodeViewSchema(SendLoginCodeViewSchemaMixin, AutoSchema):
+    pass
+
+
+class LoginViewSchemaMixin(JWTEmailAuthSchemaMixin):
+
+    responses = {
+        400: "Missing data or invalid types.",
+        403: "Given login code was incorrect.",
+        404: "Authorization not attempted, or login code expired.",
+        410: "Login data was corrupted.",
+        412: "User has been blocked after too many attemps at login.",
+    }
+
+    if auth_settings.USE_COOKIES:  # pragma: no cover
+        responses[204] = "New refresh and access token pair returned in cookies."
+    else:
+        responses[200] = TokenOutputSerializer
+
+
+class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
+    pass
+
+
+class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
+
+    responses = {
+        400: "Missing data or invalid types.",
+        403: "Refresh token has expired or is invalid.",
+    }
+
+    if auth_settings.USE_COOKIES:  # pragma: no cover
+        responses[204] = "New refresh and access token pair returned in cookies."
+    else:
+        responses[200] = TokenOutputSerializer
+
+
+class RefreshTokenViewSchema(RefreshTokenViewSchemaMixin, AutoSchema):
+    pass
+
+
+class LogoutViewSchemaMixin(JWTEmailAuthSchemaMixin):
+
+    responses = {
+        204: "Refresh token invalidated.",
+    }
+
+
+class LogoutViewSchema(LogoutViewSchemaMixin, AutoSchema):
+    pass
+
+
+class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
+
+    responses = {
+        400: "Missing data or invalid types.",
+        403: "Refresh token has expired or is invalid.",
+        412: "A given claim not found from the list of expected claims, or is not allowed to be updated.",
+    }
+
+    if auth_settings.USE_COOKIES:  # pragma: no cover
+        responses[204] = "New refresh and access token pair returned in cookies."
+    else:
+        responses[200] = TokenOutputSerializer
+
+
+class UpdateTokenViewSchema(UpdateTokenViewSchemaMixin, AutoSchema):
+    pass

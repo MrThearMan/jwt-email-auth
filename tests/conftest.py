@@ -6,6 +6,7 @@ from django.core.cache import cache
 from django.http import HttpRequest
 from pytest import FixtureRequest, LogCaptureFixture
 from rest_framework.request import Request
+from settings_holder import SettingsWrapper
 
 
 __all__ = [
@@ -16,6 +17,15 @@ __all__ = [
 @pytest.fixture()
 def drf_request() -> Request:
     return Request(HttpRequest())
+
+
+@pytest.fixture()
+def settings():
+    wrapper = SettingsWrapper()
+    try:
+        yield wrapper
+    finally:
+        wrapper.finalize()
 
 
 @pytest.fixture(autouse=True)

@@ -5,7 +5,7 @@ from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.permissions import HasValidJWT
 from jwt_email_auth.schema import (
     DisablePermChecks,
-    JWTEmailAuthSchema,
+    JWTEmailAuthSchemaMixin,
     add_jwt_email_auth_security_requirement,
     add_jwt_email_auth_security_scheme,
     add_unauthenticated_response,
@@ -80,7 +80,7 @@ def test_add_unauthenticated_response__authentication_classes():
     class View(APIView):
         authentication_classes = [JWTAuthentication]
         permission_classes = []
-        schema = type("Schema", (JWTEmailAuthSchema, AutoSchema), {})()
+        schema = type("Schema", (JWTEmailAuthSchemaMixin, AutoSchema), {})()
 
     responses = {}
     add_unauthenticated_response(View().schema, responses)
@@ -108,7 +108,7 @@ def test_add_unauthenticated_response__permission_classes():
     class View(APIView):
         authentication_classes = []
         permission_classes = [HasValidJWT]
-        schema = type("Schema", (JWTEmailAuthSchema, AutoSchema), {})()
+        schema = type("Schema", (JWTEmailAuthSchemaMixin, AutoSchema), {})()
 
     responses = {}
     add_unauthenticated_response(View().schema, responses)
@@ -136,7 +136,7 @@ def test_add_unauthenticated_response__none():
     class View(APIView):
         authentication_classes = []
         permission_classes = []
-        schema = type("Schema", (JWTEmailAuthSchema, AutoSchema), {})()
+        schema = type("Schema", (JWTEmailAuthSchemaMixin, AutoSchema), {})()
 
     responses = {}
     add_unauthenticated_response(View().schema, responses)
@@ -264,20 +264,6 @@ def test_update_token_schema__get_components(drf_request):
     view.format_kwarg = None
     components = view.schema.get_components("", "")
     assert components == {
-        "TokenUpdate": {
-            "properties": {
-                "data": {
-                    "description": "Claims to update.",
-                    "type": "object",
-                },
-                "token": {
-                    "description": "Refresh token.",
-                    "type": "string",
-                },
-            },
-            "required": ["token", "data"],
-            "type": "object",
-        },
         "TokenOutput": {
             "properties": {
                 "access": {
@@ -290,6 +276,20 @@ def test_update_token_schema__get_components(drf_request):
                 },
             },
             "required": ["access", "refresh"],
+            "type": "object",
+        },
+        "TokenUpdate": {
+            "properties": {
+                "data": {
+                    "description": "Claims to update.",
+                    "type": "object",
+                },
+                "token": {
+                    "description": "Refresh token.",
+                    "type": "string",
+                },
+            },
+            "required": ["data", "token"],
             "type": "object",
         },
     }

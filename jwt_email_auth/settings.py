@@ -128,6 +128,31 @@ class JWTEmailAuthSettings(NamedTuple):
     # Arguments: request (Request). Returns None.
     USER_BLOCKED_ADDITIONAL_HANDLER: str = "jwt_email_auth.utils.blocking_handler"
     #
+    # If True, use a cookie instead of response
+    # data to return access and refresh tokens
+    USE_COOKIES: bool = False
+    #
+    # Indicates that the cookie is sent to the server only when
+    # a request is made with the https: scheme (except on localhost),
+    # and therefore, is more resistant to man-in-the-middle attacks.
+    SET_COOKIE_SECURE: bool = True
+    #
+    # Indicates the path that must exist in the requested URL
+    # for the browser to send the Cookie header.
+    SET_COOKIE_PATH: str = "/"
+    #
+    # Defines the host to which the cookie will be sent.
+    # If None, this attribute defaults to the host of the
+    # current document URL, not including subdomains.
+    SET_COOKIE_DOMAIN: Optional[str] = None
+    #
+    # If True, forbids JavaScript from accessing the cookie.
+    SET_COOKIE_HTTPONLY: bool = True
+    #
+    # Controls whether a cookie is sent with cross-origin requests,
+    # providing some protection against cross-site request forgery attacks (CSRF).
+    SET_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
+    #
     # IP address spoofing prevention settings:
     # https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users
     #

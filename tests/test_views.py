@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from copy import deepcopy
 from datetime import timedelta
 from time import sleep
 from unittest.mock import PropertyMock, patch
@@ -415,6 +416,26 @@ def test_login_endpoint__login_code_expired(settings, caplog):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+def test_login_endpoint__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+
+
 # Refresh view
 
 
@@ -602,6 +623,35 @@ def test_refresh_endpoint__rotate__using_old_refresh_invalidates_current_one(cap
     assert response4.status_code == status.HTTP_403_FORBIDDEN
 
 
+def test_refresh_endpoint__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+
+    client.cookies = response1.cookies
+    # token given due to serializer being set at import time, not needed in reality
+    response2 = client.post("/refresh", {"token": "..."}, format="json")
+
+    assert response2.data is None
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+    assert response2.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response2.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+
+
 # Logout
 
 
@@ -669,6 +719,48 @@ def test_logout_endpoint__with_old_token(caplog, settings):
 
     assert response4.data == {"detail": "Token is no longer accepted."}
     assert response4.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_logout_endpoint__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert response1.data is None
+
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    client.cookies = response1.cookies
+    # token given due to serializer being set at import time, not needed in reality
+    response2 = client.post("/logout", {"token": "..."}, format="json")
+    assert response2.data is None
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    # token given due to serializer being set at import time, not needed in reality
+    response3 = client.post("/refresh", {"token": "..."}, format="json")
+
+    assert response3.data == {"detail": "Token is no longer accepted."}
+    assert response3.status_code == status.HTTP_403_FORBIDDEN
 
 
 # Update
@@ -796,3 +888,61 @@ def test_update_endpoint__not_allowed_to_update(caplog, settings):
     )
     assert response2.data == {"detail": "Not allowed to update claim 'bar'."}
     assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
+
+
+@pytest.mark.django_db
+def test_update_endpoint__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": False,
+        "ROTATE_REFRESH_TOKENS": True,
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+        "UPDATEABLE_CLAIMS": ["foo", "bar"],
+        "LOGIN_VALIDATION_AND_DATA_CALLBACK": "tests.test_views._data_callback",
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+
+    token = AccessToken(response1.cookies["access"].value)
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    token = RefreshToken(response1.cookies["refresh"].value)
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    cookies = deepcopy(response1.cookies)
+    client.cookies = cookies
+    # token given due to serializer being set at import time, not needed in reality
+    response2 = client.post("/update", {"data": {"foo": 1, "bar": True}, "token": "..."}, format="json")
+
+    assert response2.data is None
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+    assert response2.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response2.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    token = AccessToken(response2.cookies["access"].value)
+    assert token["foo"] == 1
+    assert token["bar"] is True
+
+    token = RefreshToken(response2.cookies["refresh"].value)
+    assert token["foo"] == 1
+    assert token["bar"] is True

@@ -66,7 +66,7 @@ These settings should be specified in "dot import notation" to a function, which
 
 | Setting                              | Description                                                             | Arguments                          | Returns        |
 |--------------------------------------|-------------------------------------------------------------------------|------------------------------------|----------------|
-| `SIGNING_KEY`                        | Function to load<br>JWT signing key.                                    |                                    |                |
+| `SIGNING_KEY`                        | Function to load<br>JWT signing key.                                    |                                    | ?              |
 | `CODE_GENERATOR`                     | Function to generate<br>a login code.                                   |                                    | str            |
 | `SEND_LOGIN_CODE_CALLBACK`           | Function that sends<br>the login email.                                 | str,<br>dict[str, Any],<br>Request | None           |
 | `LOGIN_VALIDATION_AND_DATA_CALLBACK` | Function to use for<br>validating user and providing<br>login data.     | str                                | dict[str, Any] |
@@ -82,6 +82,17 @@ These settings should be specified in "dot import notation" to a function, which
 | `PROXY_COUNT`          | Number of proxies between<br>the server and internet.                                                  | int                         |
 | `PROXY_TRUSTED_IPS`    | Only these proxy IPs<br>are allowed connections                                                        | List[str]                   |
 | `REQUEST_HEADER_ORDER` | Meta precedence order.                                                                                 | List[str]                   |
+
+Settings when using cookies:
+
+| Setting               | Description                                                                                                                                                                                               | Type                        |
+|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|
+| `USE_COOKIES`         | If True, use a cookie<br>instead of response data<br>to return access and<br>refresh tokens                                                                                                               | bool                        |
+| `SET_COOKIE_SECURE`   | Indicates that the<br>cookie is sent to the server<br>only when a request is<br>made with the https: scheme<br>(except on localhost) and<br>therefore, is more resistant to<br>man-in-the-middle attacks. | bool                        |
+| `SET_COOKIE_PATH`     | Indicates the path<br>that must exist in the requested<br>URL for the browser<br>to send the Cookie header.                                                                                               | str                         |
+| `SET_COOKIE_DOMAIN`   | Defines the host to<br>which the cookie will be sent.<br>If None, this attribute<br>defaults to the host of the<br>current document URL, not<br>including subdomains.                                     | str                         |
+| `SET_COOKIE_HTTPONLY` | If True, forbidsJavaScript<br>from accessing the cookie.                                                                                                                                                  | bool                        |
+| `SET_COOKIE_SAMESITE` | Controls whether a cookie<br>is sent with cross-origin<br>requests, providing some<br>protection against cross-site<br>request forgery attacks (CSRF).                                                    | "lax"<br>"strict"<br>"none" |
 
 
 ③ Add OpenSSH based [ed25519][ed25519] `SIGNING_KEY` (in PEM format) to environment variables.

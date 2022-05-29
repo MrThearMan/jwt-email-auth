@@ -21,17 +21,22 @@ from .exceptions import (
     UnexpectedClaim,
     UserBanned,
 )
-from .schema import JWTEmailAuthSchema
+from .schema import (
+    LoginViewSchema,
+    LogoutViewSchema,
+    RefreshTokenViewSchema,
+    SendLoginCodeViewSchema,
+    UpdateTokenViewSchema,
+)
 from .serializers import (
     LoginSerializer,
     LogoutSerializer,
     RefreshTokenSerializer,
     SendLoginCodeSerializer,
-    TokenOutputSerializer,
     TokenUpdateSerializer,
 )
 from .settings import auth_settings
-from .tokens import RefreshToken
+from .tokens import AccessToken, RefreshToken
 from .utils import generate_cache_key, user_is_blocked
 
 
@@ -73,6 +78,31 @@ class BaseAuthView(APIView):
     def get_extra_actions(cls) -> List[str]:
         return []
 
+    @staticmethod
+    def response_with_cookies(access: AccessToken, refresh: RefreshToken) -> Response:
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        response.set_cookie(
+            key="access",
+            value=str(access),
+            expires=access["exp"],
+            path=auth_settings.SET_COOKIE_PATH,
+            domain=auth_settings.SET_COOKIE_DOMAIN,
+            secure=auth_settings.SET_COOKIE_SECURE,
+            httponly=auth_settings.SET_COOKIE_HTTPONLY,
+            samesite=auth_settings.SET_COOKIE_SAMESITE,
+        )
+        response.set_cookie(
+            key="refresh",
+            value=str(refresh),
+            expires=refresh["exp"],
+            path=auth_settings.SET_COOKIE_PATH,
+            domain=auth_settings.SET_COOKIE_DOMAIN,
+            secure=auth_settings.SET_COOKIE_SECURE,
+            httponly=auth_settings.SET_COOKIE_HTTPONLY,
+            samesite=auth_settings.SET_COOKIE_SAMESITE,
+        )
+        return response
+
 
 class SendLoginCodeView(BaseAuthView):
     """Send a new login code."""
@@ -82,14 +112,7 @@ class SendLoginCodeView(BaseAuthView):
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
 
-    schema = JWTEmailAuthSchema(
-        responses={
-            204: "Authorization successful, login data cached and code sent.",
-            400: "Missing data or invalid types.",
-            412: "This user is not allowed to send another login code yet.",
-            503: "Server could not send login code.",
-        }
-    )
+    schema = SendLoginCodeViewSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
         login_info = self.serializer_class(data=request.data)
@@ -139,16 +162,7 @@ class LoginView(BaseAuthView):
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
 
-    schema = JWTEmailAuthSchema(
-        responses={
-            200: TokenOutputSerializer,
-            400: "Missing data or invalid types.",
-            403: "Given login code was incorrect.",
-            404: "Authorization not attempted, or login code expired.",
-            410: "Login data was corrupted.",
-            412: "User has been blocked after too many attemps at login.",
-        }
-    )
+    schema = LoginViewSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
         login = self.serializer_class(data=request.data)
@@ -185,6 +199,10 @@ class LoginView(BaseAuthView):
 
         refresh.update(claim_data)
         access = refresh.new_access_token(sync=True)
+
+        if auth_settings.USE_COOKIES:
+            return self.response_with_cookies(access, refresh)
+
         data = {"access": str(access), "refresh": str(refresh)}
         return Response(data=data, status=status.HTTP_200_OK)
 
@@ -197,68 +215,55 @@ class RefreshTokenView(BaseAuthView):
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
 
-    schema = JWTEmailAuthSchema(
-        responses={
-            200: TokenOutputSerializer,
-            400: "Missing data or invalid types.",
-            403: "Refresh token has expired or is invalid.",
-        }
-    )
+    schema = RefreshTokenViewSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
-        token = self.serializer_class(data=request.data)
-        token.is_valid(raise_exception=True)
-        data = token.data
+        data = self.serializer_class(data=request.data)
+        data.is_valid(raise_exception=True)
+        token = request.COOKIES["refresh"] if auth_settings.USE_COOKIES else data.data["token"]
 
-        refresh = RefreshToken(token=data["token"])
+        refresh = RefreshToken(token=token)
         if auth_settings.ROTATE_REFRESH_TOKENS:
             refresh = refresh.rotate()
 
         access = refresh.new_access_token(sync=auth_settings.ROTATE_REFRESH_TOKENS)
+
+        if auth_settings.USE_COOKIES:
+            return self.response_with_cookies(access, refresh)
+
         data = {"access": str(access), "refresh": str(refresh)}
         return Response(data=data, status=status.HTTP_200_OK)
 
 
 class LogoutView(BaseAuthView):
-    """Invalidate refresh token when loggin out."""
+    """Invalidate refresh token when logging out."""
 
     serializer_class: Type[BaseSerializer] = LogoutSerializer
 
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
 
-    schema = JWTEmailAuthSchema(
-        responses={
-            204: "Refresh token invalidated.",
-        }
-    )
+    schema = LogoutViewSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
         from .rotation.models import RefreshTokenRotationLog
 
-        token = self.serializer_class(data=request.data)
-        token.is_valid(raise_exception=True)
-        data = token.data
-        RefreshTokenRotationLog.objects.remove_by_token_title(token=data["token"])
+        data = self.serializer_class(data=request.data)
+        data.is_valid(raise_exception=True)
+        token = request.COOKIES["refresh"] if auth_settings.USE_COOKIES else data.data["token"]
+        RefreshTokenRotationLog.objects.remove_by_token_title(token=token)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UpdateTokenView(BaseAuthView):
-    """Update token claims. Returned tokens will be different to the given ones."""
+    """Update token claims. Changes the token signatures."""
 
     serializer_class: Type[BaseSerializer] = TokenUpdateSerializer
 
     authentication_classes: List[Type[BaseAuthentication]] = []
     permission_classes: List[Type[BasePermission]] = []
 
-    schema = JWTEmailAuthSchema(
-        responses={
-            200: TokenOutputSerializer,
-            400: "Missing data or invalid types.",
-            403: "Refresh token has expired or is invalid.",
-            412: "A given claim not found from the list of expected claims, or is not allowed to be updated.",
-        }
-    )
+    schema = UpdateTokenViewSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
         token = self.serializer_class(data=request.data)
@@ -271,12 +276,17 @@ class UpdateTokenView(BaseAuthView):
             if claim not in auth_settings.UPDATEABLE_CLAIMS:
                 raise ClaimNotUpdateable(claim=claim)
 
-        refresh = RefreshToken(token=data["token"])
+        token = request.COOKIES["refresh"] if auth_settings.USE_COOKIES else data["token"]
+        refresh = RefreshToken(token=token)
         refresh.update(data["data"])
         if auth_settings.ROTATE_REFRESH_TOKENS:
             refresh = refresh.rotate()
 
         access = refresh.new_access_token(sync=auth_settings.ROTATE_REFRESH_TOKENS)
+
+        if auth_settings.USE_COOKIES:
+            return self.response_with_cookies(access, refresh)
+
         data = {"access": str(access), "refresh": str(refresh)}
         return Response(data=data, status=status.HTTP_200_OK)
 

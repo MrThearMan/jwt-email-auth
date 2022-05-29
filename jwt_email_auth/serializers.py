@@ -7,6 +7,7 @@ from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.request import Request
 from rest_framework.settings import api_settings
 
+from .settings import auth_settings
 from .tokens import AccessToken
 
 
@@ -37,16 +38,19 @@ class LoginSerializer(serializers.Serializer):  # pylint: disable=W0223
 
 
 class RefreshTokenSerializer(serializers.Serializer):  # pylint: disable=W0223
-    token = serializers.CharField(help_text="Refresh token.")
+    if not auth_settings.USE_COOKIES:
+        token = serializers.CharField(help_text="Refresh token.")
 
 
 class LogoutSerializer(serializers.Serializer):  # pylint: disable=W0223
-    token = serializers.CharField(help_text="Refresh token.")
+    if not auth_settings.USE_COOKIES:
+        token = serializers.CharField(help_text="Refresh token.")
 
 
 class TokenUpdateSerializer(serializers.Serializer):  # pylint: disable=W0223
-    token = serializers.CharField(help_text="Refresh token.")
     data = serializers.DictField(help_text="Claims to update.")
+    if not auth_settings.USE_COOKIES:
+        token = serializers.CharField(help_text="Refresh token.")
 
 
 # Utility
