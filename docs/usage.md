@@ -1,5 +1,7 @@
 # Usage
 
+## Backend
+
 1. Send a login code to the *authentication* endpoint (from `SendLoginCodeView` class).
 
 | Request                                                      | Response            |
@@ -28,7 +30,7 @@
 > same token used on the endpoint.
 
 
-## Authentication and Permission classes
+### Authentication and Permission classes
 
 Add the `JWTAuthentication` or `HasValidJWT` to Rest framework's settings,
 or to the class's `authentication_classes` or `permission_classes`
@@ -47,7 +49,7 @@ class SomeView(APIView):
     ...
 ```
 
-## Base Access Serializer
+### Base Access Serializer
 
 If you need to use claims from the token in you code, you can use the `BaseAccessSerializer`.
 
@@ -90,3 +92,98 @@ class SomeView(APIView):
         ...
 ```
 
+
+## Frontend
+
+To implement authentication with this library in the frontend,
+you'll need a way to call the `SendLoginCodeView` and `LoginView`
+for authentication, and then implement a way to automatically
+call `RefreshTokenView` when your access token expires or is about
+to expire. You'll also need to implement views/logic for all the
+possible error responses from each of these views.
+
+`SendLoginCodeView`
+- 400: Input is incorrect
+- 412: User is blocked from login due to too many attempts
+- 503: Could not send login code
+
+`LoginView`
+- 400: Input is incorrect
+- 403: Given login code was incorrect
+- 404: No login code has been sent for this user, or the code has expired
+- 410: Login data was corrupted
+- 412: User has been blocked due to too many attempts
+
+`RefreshTokenView`
+- 400: Input is incorrect
+- 403: Refresh token expired, or otherwise invalid
+
+When using the JWT token in views using the `JWTAuthentication` and `HasValidJWT`
+authentication and permission classes, you need to always listen for 403
+responses, and try to call `RefreshTokenView` in case the access token has
+expired. In case `RefreshTokenView` also returns 403, this usually means
+that the refresh token has also expired, and the user should be asked
+to re-authorize.
+
+In case you are using [JWT rotation][jwt-rotation], when you call
+`RefreshTokenView`, the returned refresh token will also need to be saved,
+as the old one is invalidated. Using JWT rotation can save your users from
+having to reauthorize when their initial refresh token expires.
+
+
+## Non-email authentication
+
+Even though "email" is in the name of the library, it can be used
+to authenticate via other means, e.g., SMS. The library tries
+not to refer to email specifically, so that all documentation is still
+relevant if the authentication method is something other than email.
+
+All you'll need to do is create new serializers for `SendLoginCodeView`
+and `LoginView` which replace the "email" field with something else.
+Then, you can implement `SEND_LOGIN_CODE_CALLBACK` using that field's
+value. Here is an example using phone number for SMS authentication:
+
+```python
+# myapp/views.py
+from rest_framework import serializers
+from jwt_email_auth import views as jwt_views
+
+# Should have one field of any type
+class SendLoginCodeSerializer(serializers.Serializer):
+    phone = serializers.CharField(help_text="Phone number to send the code to.")
+
+# Should have "code" char-type field + one more field of any type
+class LoginSerializer(serializers.Serializer):
+    code = serializers.CharField(help_text="Login code.")
+    phone = serializers.CharField(help_text="Phone number the code was sent to.")
+
+class SendLoginCodeView(jwt_views.SendLoginCodeView):
+    serializer_class = SendLoginCodeSerializer
+
+class LoginView(jwt_views.LoginView):
+    serializer_class = LoginSerializer
+```
+
+```python
+# myapp/utils.py
+from typing import Any
+from rest_framework.request import Request
+
+def send_login_code_via_sms(
+    phone: str,
+    login_data: dict[str, Any],
+    request: Request,
+) -> None:
+    ...
+```
+
+```python
+# myproject/settings.py
+JWT_EMAIL_AUTH = {
+    ...
+    "SEND_LOGIN_CODE_CALLBACK": "myapp.utils.send_login_code_via_sms",
+    ...
+}
+```
+
+[jwt-rotation]: https://mrthearman.github.io/jwt-email-auth/rotation/
