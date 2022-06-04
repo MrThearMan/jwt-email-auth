@@ -10,11 +10,13 @@ import pytest
 from django.core.cache import cache
 from django.template.loader import render_to_string
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.test import APIClient
 
 from jwt_email_auth.rotation.models import RefreshTokenRotationLog
 from jwt_email_auth.tokens import AccessToken, RefreshToken
 from jwt_email_auth.utils import (
+    TOKEN_PATTERN,
     blocking_handler,
     generate_cache_key,
     random_code,
@@ -197,9 +199,10 @@ def test_login_endpoint(caplog):
 
     response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
 
-    assert response.data == {"access": equals_regex(r"[a-zA-Z0-9-_.]+"), "refresh": equals_regex(r"[a-zA-Z0-9-_.]+")}
-    assert response.data["access"].count(".") == 2
-    assert response.data["refresh"].count(".") == 2
+    access = response.data["access"]
+    refresh = response.data["refresh"]
+    assert TOKEN_PATTERN.match(access) is not None
+    assert TOKEN_PATTERN.match(refresh) is not None
     assert response.status_code == status.HTTP_200_OK
 
     assert cache.get(key) is None
@@ -209,7 +212,6 @@ def test_login_endpoint__user_gets_blocked__ip(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "LOGIN_ATTEMPTS": 1,
     }
 
@@ -258,7 +260,6 @@ def test_login_endpoint__user_gets_blocked__email(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "LOGIN_ATTEMPTS": 1,
         "LOGIN_BLOCKER_CACHE_KEY_CALLBACK": "jwt_email_auth.utils.blocking_cache_key_from_email",
     }
@@ -309,7 +310,6 @@ def test_login_endpoint__expected_claims_found(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
@@ -317,7 +317,6 @@ def test_login_endpoint__expected_claims_found(settings, caplog):
         return {"foo": 123, "bar": "true"}
 
     str_1 = "jwt_email_auth.utils.validate_login_and_provide_login_data"
-
     with patch(str_1, side_effect=custom_login_data_function) as mock:
         client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
 
@@ -338,7 +337,6 @@ def test_login_endpoint__expected_claims_not_found(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
@@ -395,7 +393,6 @@ def test_login_endpoint__login_code_expired(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "LOGIN_CODE_LIFETIME": timedelta(seconds=1),
     }
     key = generate_cache_key("foo@bar.com", extra_prefix="login")
@@ -432,8 +429,115 @@ def test_login_endpoint__use_cookies(caplog, settings):
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
-    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
-    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+
+
+def test_login_endpoint__cipher(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) == {"code": code}
+
+    response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response.status_code == status.HTTP_200_OK
+
+    access = response.data["access"]
+    refresh = response.data["refresh"]
+
+    # Should be encoded
+    assert TOKEN_PATTERN.match(access) is None
+    assert TOKEN_PATTERN.match(refresh) is None
+
+    access_token = AccessToken(access)
+    assert access_token.payload["type"] == "access"
+    refresh_token = RefreshToken(refresh)
+    assert refresh_token.payload["type"] == "refresh"
+
+    assert cache.get(key) is None
+
+
+def test_login_endpoint__cipher__changed(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) == {"code": code}
+
+    response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response.status_code == status.HTTP_200_OK
+
+    access = response.data["access"]
+    refresh = response.data["refresh"]
+
+    # Should be encoded
+    assert TOKEN_PATTERN.match(access) is None
+    assert TOKEN_PATTERN.match(refresh) is None
+
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "hh0NVjHB4SuIn5RzoamdJbjtm55I4g8i5T3yBznnvko=",
+    }
+
+    with pytest.raises(AuthenticationFailed, match=re.escape("Wrong cipher key.")):
+        AccessToken(access)
+
+    with pytest.raises(AuthenticationFailed, match=re.escape("Wrong cipher key.")):
+        RefreshToken(refresh)
+
+    assert cache.get(key) is None
+
+
+def test_login_endpoint__cipher__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) == {"code": code}
+
+    response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert response.data is None
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    access = response.cookies["access"].value
+    refresh = response.cookies["refresh"].value
+
+    # Should be encoded
+    assert TOKEN_PATTERN.match(access) is None
+    assert TOKEN_PATTERN.match(refresh) is None
+
+    access_token = AccessToken(access)
+    assert access_token.payload["type"] == "access"
+    refresh_token = RefreshToken(refresh)
+    assert refresh_token.payload["type"] == "refresh"
+
+    assert cache.get(key) is None
 
 
 # Refresh view
@@ -456,8 +560,8 @@ def test_refresh_endpoint(caplog):
     response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
 
     assert response2.data == {
-        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
-        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "access": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+        "refresh": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
     }
     assert response2.status_code == status.HTTP_200_OK
 
@@ -511,7 +615,10 @@ def test_refresh_endpoint__expected_claims_found(settings, caplog):
 
     response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
 
-    assert response2.data == {"access": equals_regex(r".+"), "refresh": equals_regex(r"[a-zA-Z0-9-_.]+")}
+    assert response2.data == {
+        "access": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+        "refresh": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+    }
     assert response2.status_code == status.HTTP_200_OK
 
 
@@ -519,7 +626,6 @@ def test_refresh_endpoint__expected_claims_not_found(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo"],
     }
 
@@ -537,7 +643,6 @@ def test_refresh_endpoint__expected_claims_not_found(settings, caplog):
     response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
 
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
@@ -558,7 +663,6 @@ def test_refresh_endpoint__token_is_mandatory():
 @pytest.mark.django_db
 def test_refresh_endpoint__rotate(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -578,8 +682,8 @@ def test_refresh_endpoint__rotate(caplog, settings):
     response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
 
     assert response2.data == {
-        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
-        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "access": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+        "refresh": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
     }
     assert response2.status_code == status.HTTP_200_OK
 
@@ -589,7 +693,6 @@ def test_refresh_endpoint__rotate(caplog, settings):
 @pytest.mark.django_db
 def test_refresh_endpoint__rotate__using_old_refresh_invalidates_current_one(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -639,17 +742,112 @@ def test_refresh_endpoint__use_cookies(caplog, settings):
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
-    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
-    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
     client.cookies = response1.cookies
-    # token given due to serializer being set at import time, not needed in reality
-    response2 = client.post("/refresh", {"token": "..."}, format="json")
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.post("/refresh", {"token": str(RefreshToken())}, format="json")
 
     assert response2.data is None
     assert response2.status_code == status.HTTP_204_NO_CONTENT
-    assert response2.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
-    assert response2.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response2.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response2.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+
+
+def test_refresh_endpoint__cipher(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    # After some time has passed, the expiry time on the new access token will be different
+    # -> Tokens will be different
+    sleep(2)
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    access = response2.data["access"]
+    refresh = response2.data["refresh"]
+
+    # Should be encoded
+    assert TOKEN_PATTERN.match(access) is None
+    assert TOKEN_PATTERN.match(refresh) is None
+
+    access_token = AccessToken(access)
+    assert access_token.payload["type"] == "access"
+    refresh_token = RefreshToken(refresh)
+    assert refresh_token.payload["type"] == "refresh"
+
+    assert response2.status_code == status.HTTP_200_OK
+
+    assert response1.data["access"] != response2.data["access"]
+
+
+def test_refresh_endpoint__cipher__changed(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "hh0NVjHB4SuIn5RzoamdJbjtm55I4g8i5T3yBznnvko=",
+    }
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+    assert response2.data == {"token": ["JWT decrypt failed."]}
+    assert response2.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_refresh_endpoint__cipher__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    client.cookies = response1.cookies
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.post("/refresh", {"token": str(RefreshToken())}, format="json")
+
+    assert response2.data is None
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+
+    access = response2.cookies["access"].value
+    refresh = response2.cookies["refresh"].value
+
+    # Should be encoded
+    assert TOKEN_PATTERN.match(access) is None
+    assert TOKEN_PATTERN.match(refresh) is None
+
+    access_token = AccessToken(access)
+    assert access_token.payload["type"] == "access"
+    refresh_token = RefreshToken(refresh)
+    assert refresh_token.payload["type"] == "refresh"
 
 
 # Logout
@@ -658,7 +856,6 @@ def test_refresh_endpoint__use_cookies(caplog, settings):
 @pytest.mark.django_db
 def test_logout_endpoint(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -689,7 +886,6 @@ def test_logout_endpoint(caplog, settings):
 @pytest.mark.django_db
 def test_logout_endpoint__with_old_token(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -722,9 +918,72 @@ def test_logout_endpoint__with_old_token(caplog, settings):
 
 
 @pytest.mark.django_db
+def test_logout_endpoint__cipher(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post("/logout", {"token": response1.data["refresh"]}, format="json")
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response3 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert response3.data == {"detail": "Token is no longer accepted."}
+    assert response3.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_logout_endpoint__cipher__changed(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "CIPHER_KEY": "hh0NVjHB4SuIn5RzoamdJbjtm55I4g8i5T3yBznnvko=",
+    }
+
+    response2 = client.post("/logout", {"token": response1.data["refresh"]}, format="json")
+    assert response2.data == {"token": ["JWT decrypt failed."]}
+    assert response2.status_code == status.HTTP_400_BAD_REQUEST
+
+    # Cannot delete log due to decrypt failure!
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+
+@pytest.mark.django_db
 def test_logout_endpoint__use_cookies(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
         "USE_COOKIES": True,
     }
@@ -741,23 +1000,58 @@ def test_logout_endpoint__use_cookies(caplog, settings):
     response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
 
     assert response1.data is None
-
     assert response1.status_code == status.HTTP_204_NO_CONTENT
-    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
-    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
 
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     client.cookies = response1.cookies
-    # token given due to serializer being set at import time, not needed in reality
-    response2 = client.post("/logout", {"token": "..."}, format="json")
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.post("/logout", {"token": str(RefreshToken())}, format="json")
     assert response2.data is None
     assert response2.status_code == status.HTTP_204_NO_CONTENT
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    # token given due to serializer being set at import time, not needed in reality
-    response3 = client.post("/refresh", {"token": "..."}, format="json")
+    # token given due to serializer being set at import time, not used in reality
+    response3 = client.post("/refresh", {"token": str(RefreshToken())}, format="json")
+
+    assert response3.data == {"detail": "Token is no longer accepted."}
+    assert response3.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_logout_endpoint__cipher__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "USE_COOKIES": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    client.cookies = response1.cookies
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.post("/logout", {"token": str(RefreshToken())}, format="json")
+    assert response2.data is None
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    # token given due to serializer being set at import time, not used in reality
+    response3 = client.post("/refresh", {"token": str(RefreshToken())}, format="json")
 
     assert response3.data == {"detail": "Token is no longer accepted."}
     assert response3.status_code == status.HTTP_403_FORBIDDEN
@@ -773,7 +1067,6 @@ def _data_callback(*args, **kwargs):
 @pytest.mark.django_db
 def test_update_endpoint(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
         "EXPECTED_CLAIMS": ["foo", "bar"],
         "UPDATEABLE_CLAIMS": ["foo", "bar"],
@@ -791,8 +1084,8 @@ def test_update_endpoint(caplog, settings):
 
     response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
     assert response1.data == {
-        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
-        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "access": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+        "refresh": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
     }
 
     token = AccessToken(str(response1.data["access"]))
@@ -812,8 +1105,8 @@ def test_update_endpoint(caplog, settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     assert response2.data == {
-        "access": equals_regex(r"[a-zA-Z0-9-_.]+"),
-        "refresh": equals_regex(r"[a-zA-Z0-9-_.]+"),
+        "access": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+        "refresh": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
     }
 
     token = AccessToken(str(response2.data["access"]))
@@ -835,7 +1128,6 @@ def test_update_endpoint(caplog, settings):
 @pytest.mark.django_db
 def test_update_endpoint__unexpected_claim(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
         "EXPECTED_CLAIMS": ["foo", "bar"],
         "UPDATEABLE_CLAIMS": ["foo", "bar"],
@@ -863,7 +1155,6 @@ def test_update_endpoint__unexpected_claim(caplog, settings):
 @pytest.mark.django_db
 def test_update_endpoint__not_allowed_to_update(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
         "EXPECTED_CLAIMS": ["foo", "bar"],
         "UPDATEABLE_CLAIMS": ["foo"],
@@ -893,7 +1184,6 @@ def test_update_endpoint__not_allowed_to_update(caplog, settings):
 @pytest.mark.django_db
 def test_update_endpoint__use_cookies(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
         "EXPECTED_CLAIMS": ["foo", "bar"],
         "UPDATEABLE_CLAIMS": ["foo", "bar"],
@@ -914,8 +1204,8 @@ def test_update_endpoint__use_cookies(caplog, settings):
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
-    assert response1.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
-    assert response1.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
     token = AccessToken(response1.cookies["access"].value)
     assert token["foo"] == 0
@@ -929,13 +1219,13 @@ def test_update_endpoint__use_cookies(caplog, settings):
 
     cookies = deepcopy(response1.cookies)
     client.cookies = cookies
-    # token given due to serializer being set at import time, not needed in reality
-    response2 = client.post("/update", {"data": {"foo": 1, "bar": True}, "token": "..."}, format="json")
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.post("/update", {"data": {"foo": 1, "bar": True}, "token": str(RefreshToken())}, format="json")
 
     assert response2.data is None
     assert response2.status_code == status.HTTP_204_NO_CONTENT
-    assert response2.cookies["access"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
-    assert response2.cookies["refresh"].value == equals_regex(r"[a-zA-Z0-9-_.]+")
+    assert response2.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response2.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
@@ -946,3 +1236,292 @@ def test_update_endpoint__use_cookies(caplog, settings):
     token = RefreshToken(response2.cookies["refresh"].value)
     assert token["foo"] == 1
     assert token["bar"] is True
+
+
+@pytest.mark.django_db
+def test_update_endpoint__cipher(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+        "UPDATEABLE_CLAIMS": ["foo", "bar"],
+        "LOGIN_VALIDATION_AND_DATA_CALLBACK": "tests.test_views._data_callback",
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response1.status_code == status.HTTP_200_OK
+
+    token = AccessToken(str(response1.data["access"]))
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    token = RefreshToken(str(response1.data["refresh"]))
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    response2 = client.post(
+        "/update", {"data": {"foo": 1, "bar": True}, "token": response1.data["refresh"]}, format="json"
+    )
+    assert response2.status_code == status.HTTP_200_OK
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    token = AccessToken(str(response2.data["access"]))
+    assert token["foo"] == 1
+    assert token["bar"] is True
+
+    token = RefreshToken(str(response2.data["refresh"]))
+    assert token["foo"] == 1
+    assert token["bar"] is True
+
+    assert response1.data["access"] != response2.data["access"]
+    assert response1.data["refresh"] != response2.data["refresh"]
+
+    response3 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+    assert response3.data == {"detail": "Token is no longer accepted."}
+    assert response3.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_update_endpoint__cipher__changed(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+        "UPDATEABLE_CLAIMS": ["foo", "bar"],
+        "LOGIN_VALIDATION_AND_DATA_CALLBACK": "tests.test_views._data_callback",
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response1.status_code == status.HTTP_200_OK
+
+    token = AccessToken(str(response1.data["access"]))
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    token = RefreshToken(str(response1.data["refresh"]))
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "hh0NVjHB4SuIn5RzoamdJbjtm55I4g8i5T3yBznnvko=",
+    }
+
+    response2 = client.post(
+        "/update", {"data": {"foo": 1, "bar": True}, "token": response1.data["refresh"]}, format="json"
+    )
+    assert response2.data == {"token": ["JWT decrypt failed."]}
+    assert response2.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_update_endpoint__cipher__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+        "UPDATEABLE_CLAIMS": ["foo", "bar"],
+        "LOGIN_VALIDATION_AND_DATA_CALLBACK": "tests.test_views._data_callback",
+        "USE_COOKIES": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+
+    token = AccessToken(response1.cookies["access"].value)
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    token = RefreshToken(response1.cookies["refresh"].value)
+    assert token["foo"] == 0
+    assert token["bar"] is False
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    cookies = deepcopy(response1.cookies)
+    client.cookies = cookies
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.post("/update", {"data": {"foo": 1, "bar": True}, "token": str(RefreshToken())}, format="json")
+    assert response2.data is None
+    assert response2.status_code == status.HTTP_204_NO_CONTENT
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    token = AccessToken(response2.cookies["access"].value)
+    assert token["foo"] == 1
+    assert token["bar"] is True
+
+    token = RefreshToken(response2.cookies["refresh"].value)
+    assert token["foo"] == 1
+    assert token["bar"] is True
+
+
+# Token claims
+
+
+def test_token_claim_endpoint(caplog):
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    response2 = client.get("/claims", HTTP_AUTHORIZATION=f"Bearer {response1.data['access']}", format="json")
+    assert response2.status_code == status.HTTP_200_OK
+    assert response2.data == {"type": "access", "exp": equals_regex(r"\d+"), "iat": equals_regex(r"\d+")}
+
+
+def test_token_claim_endpoint__expected_claims(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "EXPECTED_CLAIMS": ["foo", "bar"],
+    }
+
+    def custom_login_data_function(email: str):
+        return {"foo": 123, "bar": "true"}
+
+    client = APIClient()
+
+    str_1 = "jwt_email_auth.utils.validate_login_and_provide_login_data"
+    with patch(str_1, side_effect=custom_login_data_function) as mock:
+        client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    mock.assert_called_once()
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    response2 = client.get("/claims", HTTP_AUTHORIZATION=f"Bearer {response1.data['access']}", format="json")
+    assert response2.status_code == status.HTTP_200_OK
+    assert response2.data == {
+        "foo": 123,
+        "bar": "true",
+        "type": "access",
+        "exp": equals_regex(r"\d+"),
+        "iat": equals_regex(r"\d+"),
+    }
+
+
+def test_token_claim_endpoint__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+
+    client.cookies = response1.cookies
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.get("/claims", format="json")
+    assert response2.status_code == status.HTTP_200_OK
+    assert response2.data == {"type": "access", "exp": equals_regex(r"\d+"), "iat": equals_regex(r"\d+")}
+
+
+def test_token_claim_endpoint__cipher(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    response2 = client.get("/claims", HTTP_AUTHORIZATION=f"Bearer {response1.data['access']}", format="json")
+    assert response2.status_code == status.HTTP_200_OK
+    assert response2.data == {"type": "access", "exp": equals_regex(r"\d+"), "iat": equals_regex(r"\d+")}
+
+
+def test_token_claim_endpoint__cipher__changed(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    settings.JWT_EMAIL_AUTH = {
+        "CIPHER_KEY": "hh0NVjHB4SuIn5RzoamdJbjtm55I4g8i5T3yBznnvko=",
+    }
+
+    response2 = client.get("/claims", HTTP_AUTHORIZATION=f"Bearer {response1.data['access']}", format="json")
+    assert response2.data == {"detail": "Authentication credentials were not provided."}
+    assert response2.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_token_claim_endpoint__cipher__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+
+    client.cookies = response1.cookies
+    # token given due to serializer being set at import time, not used in reality
+    response2 = client.get("/claims", format="json")
+    assert response2.status_code == status.HTTP_200_OK
+    assert response2.data == {"type": "access", "exp": equals_regex(r"\d+"), "iat": equals_regex(r"\d+")}

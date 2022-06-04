@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from .authentication import JWTAuthentication
 from .permissions import HasValidJWT
-from .serializers import TokenOutputSerializer
+from .serializers import TokenClaimOutputSerializer, TokenOutputSerializer
 
 
 __all__ = [
@@ -85,7 +85,7 @@ class DisablePermChecks:
     `permission_classes` are shown in the schema.
     """
 
-    def has_view_permissions(self, path, method, view) -> bool:  # pylint: disable=W0613,R0201
+    def has_view_permissions(self, path, method, view) -> bool:  # pylint: disable=W0613
         return True
 
 
@@ -211,4 +211,17 @@ class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
 
 class UpdateTokenViewSchema(UpdateTokenViewSchemaMixin, AutoSchema):
+    pass
+
+
+class TokenClaimViewSchemaMixin(JWTEmailAuthSchemaMixin):
+
+    responses = {
+        200: TokenClaimOutputSerializer,
+        400: "Missing data or invalid types.",
+        403: "Access token has expired or is invalid.",
+    }
+
+
+class TokenClaimViewSchema(TokenClaimViewSchemaMixin, AutoSchema):
     pass

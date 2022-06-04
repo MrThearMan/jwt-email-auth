@@ -2,15 +2,23 @@ from typing import Any, Optional
 
 from django.utils.functional import cached_property
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
-from rest_framework.fields import HiddenField, empty
+from rest_framework.fields import CharField, HiddenField, empty
 from rest_framework.request import Request
 
 from .tokens import AccessToken
+from .utils import valid_jwt_format
 
 
 __all__ = [
+    "TokenField",
     "AutoTokenField",
 ]
+
+
+class TokenField(CharField):
+    """Validates incoming tokens are in the correct format."""
+
+    default_validators = [valid_jwt_format]
 
 
 class AutoTokenField(HiddenField):

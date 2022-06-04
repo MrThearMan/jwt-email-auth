@@ -1,22 +1,25 @@
 import logging
+import re
+from base64 import b64decode, b64encode
 from hashlib import md5
 from inspect import cleandoc
-from os import getenv
+from os import getenv, urandom
 from random import randint
-from typing import Any, Dict
+from typing import Any, Dict, Union
 from warnings import warn
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.serialization import load_ssh_private_key
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
-from ipware import get_client_ip  # type: ignore
+from ipware import get_client_ip
 from rest_framework.authentication import get_authorization_header
-from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
+from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
 from rest_framework.request import Request
 
 from .settings import auth_settings
@@ -27,10 +30,16 @@ __all__ = [
     "send_login_email",
     "token_from_headers",
     "user_is_blocked",
+    "valid_jwt_format",
+    "encrypt_with_cipher",
+    "decrypt_with_cipher",
+    "TOKEN_PATTERN",
 ]
 
 
 logger = logging.getLogger(__name__)
+
+TOKEN_PATTERN = re.compile(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
 def random_code() -> str:
@@ -126,14 +135,26 @@ def token_from_headers(request: Request) -> str:
     except ValueError as error:
         raise AuthenticationFailed(_("Invalid Authorization header."), code="invalid_header") from error
 
-    if force_str(prefix).lower() != auth_settings.HEADER_PREFIX.lower():
+    if prefix.lower() != auth_settings.HEADER_PREFIX.lower():
         raise AuthenticationFailed(_("Invalid prefix."), code="invalid_header_prefix")
 
     return encoded_token
 
 
+def valid_jwt_format(token: str) -> None:
+    if auth_settings.CIPHER_KEY is not None:
+        try:
+            token = decrypt_with_cipher(token)
+        except Exception as error:
+            raise ValidationError(_("JWT decrypt failed."), code="jwt_decrypt_failed") from error
+
+    match = TOKEN_PATTERN.match(token)
+    if match is None:
+        raise ValidationError(_("Invalid JWT format."), code="invalid_jwt_format")
+
+
 def load_example_signing_key() -> Ed25519PrivateKey:
-    """Loads an example signing key for signing and checking the signature of JWT tokens.
+    """Loads an example signing key for signing and checking the signature of JWTs.
     You should set 'SIGNING_KEY' to your environment variables, or change this callback
     with the JWT_EMAIL_AUTH["SIGNING_KEY"] setting before going to production.
     """
@@ -158,3 +179,38 @@ def load_example_signing_key() -> Ed25519PrivateKey:
         )
     key = "\n".join(key.split("|"))
     return load_ssh_private_key(key.encode(), password=None, backend=default_backend())  # type: ignore
+
+
+def encrypt_with_cipher(string: str) -> str:
+    try:
+        key = b64decode(auth_settings.CIPHER_KEY)
+    except TypeError as error:
+        raise RuntimeError(_("Cipher key not set.")) from error
+    except Exception as error:
+        raise RuntimeError(_("Invalid cipher key.")) from error
+
+    nonce = urandom(12)
+    cipher = AESGCM(key)
+    encrypted_token = cipher.encrypt(nonce, string.encode(encoding="utf-8"), None)
+    return b64encode(nonce + encrypted_token).decode()
+
+
+def decrypt_with_cipher(string: Union[str, bytes]) -> str:
+    try:
+        key = b64decode(auth_settings.CIPHER_KEY)
+    except TypeError as error:
+        raise RuntimeError(_("Cipher key not set.")) from error
+    except Exception as error:
+        raise RuntimeError(_("Invalid cipher key.")) from error
+
+    string = b64decode(string)
+    nonce = string[:12]
+    data = string[12:]
+    cipher = AESGCM(key=key)
+
+    try:
+        decrypted_token = cipher.decrypt(nonce, data, None)
+    except InvalidTag as error:
+        raise RuntimeError(_("Wrong cipher key.")) from error
+
+    return decrypted_token.decode()

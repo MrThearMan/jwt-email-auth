@@ -7,6 +7,7 @@ from rest_framework.exceptions import ErrorDetail, ValidationError
 from rest_framework.request import Request
 from rest_framework.settings import api_settings
 
+from .fields import TokenField
 from .settings import auth_settings
 from .tokens import AccessToken
 
@@ -16,9 +17,11 @@ __all__ = [
     "SendLoginCodeSerializer",
     "LoginSerializer",
     "RefreshTokenSerializer",
-    "TokenOutputSerializer",
     "LogoutSerializer",
     "TokenUpdateSerializer",
+    "TokenClaimSerializer",
+    "TokenOutputSerializer",
+    "TokenClaimOutputSerializer",
 ]
 
 
@@ -39,18 +42,22 @@ class LoginSerializer(serializers.Serializer):  # pylint: disable=W0223
 
 class RefreshTokenSerializer(serializers.Serializer):  # pylint: disable=W0223
     if not auth_settings.USE_COOKIES:
-        token = serializers.CharField(help_text="Refresh token.")
+        token = TokenField(help_text="Refresh token.")
 
 
 class LogoutSerializer(serializers.Serializer):  # pylint: disable=W0223
     if not auth_settings.USE_COOKIES:
-        token = serializers.CharField(help_text="Refresh token.")
+        token = TokenField(help_text="Refresh token.")
 
 
 class TokenUpdateSerializer(serializers.Serializer):  # pylint: disable=W0223
     data = serializers.DictField(help_text="Claims to update.")
     if not auth_settings.USE_COOKIES:
-        token = serializers.CharField(help_text="Refresh token.")
+        token = TokenField(help_text="Refresh token.")
+
+
+class TokenClaimSerializer(serializers.Serializer):  # pylint: disable=W0223
+    pass
 
 
 # Utility
@@ -113,5 +120,9 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
 class TokenOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
     """New refresh and access token pair."""
 
-    access = serializers.CharField(help_text="Access token.")
-    refresh = serializers.CharField(help_text="Refresh token.")
+    access = TokenField(help_text="Access token.")
+    refresh = TokenField(help_text="Refresh token.")
+
+
+class TokenClaimOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+    """Token claims."""

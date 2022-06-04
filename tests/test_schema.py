@@ -10,7 +10,14 @@ from jwt_email_auth.schema import (
     add_jwt_email_auth_security_scheme,
     add_unauthenticated_response,
 )
-from jwt_email_auth.views import LoginView, LogoutView, RefreshTokenView, SendLoginCodeView, UpdateTokenView
+from jwt_email_auth.views import (
+    LoginView,
+    LogoutView,
+    RefreshTokenView,
+    SendLoginCodeView,
+    TokenClaimView,
+    UpdateTokenView,
+)
 
 
 def test_disable_perm_checks():
@@ -290,6 +297,24 @@ def test_update_token_schema__get_components(drf_request):
                 },
             },
             "required": ["data", "token"],
+            "type": "object",
+        },
+    }
+
+
+def test_token_claim_schema__get_components(drf_request):
+    view = TokenClaimView()
+    view.request = drf_request
+    view.request.method = "GET"
+    view.format_kwarg = None
+    components = view.schema.get_components("", "")
+    assert components == {
+        "TokenClaim": {
+            "properties": {},
+            "type": "object",
+        },
+        "TokenClaimOutput": {
+            "properties": {},
             "type": "object",
         },
     }
@@ -594,5 +619,57 @@ def test_update_token_schema__get_responses(drf_request):
                 }
             },
             "description": "A given claim not found from the list of expected claims, or is not allowed to be updated.",
+        },
+    }
+
+
+def test_token_claim_schema__get_responses(drf_request):
+    view = TokenClaimView()
+    view.request = drf_request
+    view.request.method = "GET"
+    view.format_kwarg = None
+    components = view.schema.get_responses("", "")
+    assert components == {
+        "200": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "$ref": "#/components/schemas/TokenClaimOutput",
+                    },
+                },
+            },
+            "description": "Token claims.",
+        },
+        "400": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Missing data or invalid types.",
+        },
+        "403": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Access token has expired or is invalid.",
         },
     }

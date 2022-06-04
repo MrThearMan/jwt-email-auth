@@ -42,7 +42,7 @@ class JWTEmailAuthSettings(NamedTuple):
     # they can send one again.
     CODE_SEND_COOLDOWN: timedelta = timedelta(minutes=1)
     #
-    # How long after the creation of the JWT token does it become valid.
+    # How long after the creation of the JWT does it become valid.
     NOT_BEFORE_TIME: Optional[timedelta] = None
     #
     # If True, return a new refresh token when requesting a new
@@ -108,6 +108,10 @@ class JWTEmailAuthSettings(NamedTuple):
     # Default function loads an example key, DO NOT USE IT IN PRODUCTION!
     SIGNING_KEY: str = "jwt_email_auth.utils.load_example_signing_key"
     #
+    # If set, JWT will be encrypted with AES in GCM-mode using this as the secret key.
+    # Should be either 16, 24, or 32 bytes, encoded to base64, e.g., `b64encode(urandom(32)).decode()`
+    CIPHER_KEY: Optional[str] = None
+    #
     # Function to generate a login code.
     # Takes no arguments. Returns a login code (str).
     CODE_GENERATOR: str = "jwt_email_auth.utils.random_code"
@@ -138,8 +142,12 @@ class JWTEmailAuthSettings(NamedTuple):
     SET_COOKIE_SECURE: bool = True
     #
     # Indicates the path that must exist in the requested URL
-    # for the browser to send the Cookie header.
-    SET_COOKIE_PATH: str = "/"
+    # for the browser to send the access token cookie.
+    SET_COOKIE_ACCESS_PATH: str = "/"
+    #
+    # Indicates the path that must exist in the requested URL
+    # for the browser to send the refresh token cookie.
+    SET_COOKIE_REFRESH_PATH: str = "/"
     #
     # Defines the host to which the cookie will be sent.
     # If None, this attribute defaults to the host of the
@@ -193,6 +201,7 @@ REMOVED_SETTINGS: Set[str] = {
     "BLOCKING_HANDLER",
     "LOGIN_BLOCKER_CALLBACK",
     "REFRESH_VIEW_BOTH_TOKENS",
+    "SET_COOKIE_PATH",
 }
 
 

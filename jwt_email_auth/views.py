@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
+from .authentication import JWTAuthentication
 from .exceptions import (
     ClaimNotUpdateable,
     CorruptedDataException,
@@ -21,11 +22,13 @@ from .exceptions import (
     UnexpectedClaim,
     UserBanned,
 )
+from .permissions import HasValidJWT
 from .schema import (
     LoginViewSchema,
     LogoutViewSchema,
     RefreshTokenViewSchema,
     SendLoginCodeViewSchema,
+    TokenClaimViewSchema,
     UpdateTokenViewSchema,
 )
 from .serializers import (
@@ -33,6 +36,7 @@ from .serializers import (
     LogoutSerializer,
     RefreshTokenSerializer,
     SendLoginCodeSerializer,
+    TokenClaimSerializer,
     TokenUpdateSerializer,
 )
 from .settings import auth_settings
@@ -85,7 +89,7 @@ class BaseAuthView(APIView):
             key="access",
             value=str(access),
             expires=access["exp"],
-            path=auth_settings.SET_COOKIE_PATH,
+            path=auth_settings.SET_COOKIE_ACCESS_PATH,
             domain=auth_settings.SET_COOKIE_DOMAIN,
             secure=auth_settings.SET_COOKIE_SECURE,
             httponly=auth_settings.SET_COOKIE_HTTPONLY,
@@ -95,7 +99,7 @@ class BaseAuthView(APIView):
             key="refresh",
             value=str(refresh),
             expires=refresh["exp"],
-            path=auth_settings.SET_COOKIE_PATH,
+            path=auth_settings.SET_COOKIE_REFRESH_PATH,
             domain=auth_settings.SET_COOKIE_DOMAIN,
             secure=auth_settings.SET_COOKIE_SECURE,
             httponly=auth_settings.SET_COOKIE_HTTPONLY,
@@ -291,5 +295,16 @@ class UpdateTokenView(BaseAuthView):
         return Response(data=data, status=status.HTTP_200_OK)
 
 
-# TODO:
-#  HTTPonly Set-Cookie
+class TokenClaimView(BaseAuthView):
+    """Extract token claims."""
+
+    serializer_class: Type[BaseSerializer] = TokenClaimSerializer
+
+    authentication_classes: List[Type[BaseAuthentication]] = [JWTAuthentication]
+    permission_classes: List[Type[BasePermission]] = [HasValidJWT]
+
+    schema = TokenClaimViewSchema()
+
+    def get(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+        access = AccessToken.from_request(request)
+        return Response(data=access.payload, status=status.HTTP_200_OK)

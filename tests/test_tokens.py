@@ -16,8 +16,7 @@ def test_access_token():
     token = AccessToken()
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
+    assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
 def test_access_token__get_claim():
@@ -122,8 +121,7 @@ def test_access_token__from_request__header(drf_request):
     token = AccessToken.from_request(drf_request)
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
+    assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
 def test_access_token__from_request__cookies(settings, drf_request):
@@ -138,8 +136,7 @@ def test_access_token__from_request__cookies(settings, drf_request):
     token = AccessToken.from_request(drf_request)
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
+    assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
 def test_access_token__from_request__cookies__refresh(settings, drf_request):
@@ -154,8 +151,7 @@ def test_access_token__from_request__cookies__refresh(settings, drf_request):
     token = RefreshToken.from_request(drf_request)
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
+    assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
 def test_access_token__from_request__cookies__not_found(settings, drf_request):
@@ -195,8 +191,7 @@ def test_access_token__from_token():
     token = AccessToken(token=str(AccessToken()))
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
+    assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
 def test_access_token__from_token__expired():
@@ -241,14 +236,12 @@ def test_refresh_token():
     token = RefreshToken()
 
     assert list(token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(token) == equals_regex("[a-zA-Z0-9-_.]+")
-    assert str(token).count(".") == 2
+    assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
 @pytest.mark.django_db
 def test_refresh_token__add_to_log(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -264,7 +257,6 @@ def test_refresh_token__add_to_log(settings):
 @pytest.mark.django_db
 def test_refresh_token__check_log(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -285,7 +277,6 @@ def test_refresh_token__check_log(settings):
 @pytest.mark.django_db
 def test_refresh_token__rotate(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -307,7 +298,6 @@ def test_refresh_token__rotate(settings):
 @pytest.mark.django_db
 def test_refresh_token__rotate__delete_new_token_when_old_token_used(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -342,7 +332,6 @@ def test_refresh_token__rotate__delete_new_token_when_old_token_used(settings):
 @pytest.mark.django_db
 def test_refresh_token__remove_from_log__by_token_title(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -362,7 +351,6 @@ def test_refresh_token__remove_from_log__by_token_title(settings):
 @pytest.mark.django_db
 def test_refresh_token__remove_from_log__by_title(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -398,7 +386,6 @@ def test_refresh_token__expired():
 @pytest.mark.django_db
 def test_refresh_token__expired__rotated(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -424,7 +411,6 @@ def test_refresh_token__expired__rotated(settings):
 @pytest.mark.django_db
 def test_refresh_token__remove_expired_tokens_from_other_groups(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -454,7 +440,6 @@ def test_refresh_token__remove_expired_tokens_from_other_groups(settings):
 @pytest.mark.django_db
 def test_refresh_token__missing_jti(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -469,7 +454,6 @@ def test_refresh_token__missing_jti(settings):
 @pytest.mark.django_db
 def test_refresh_token__missing_sub(settings):
     settings.JWT_EMAIL_AUTH = {
-        "SENDING_ON": False,
         "ROTATE_REFRESH_TOKENS": True,
     }
 
@@ -488,7 +472,7 @@ def test_refresh_token__new_access_token(sync: bool):
     access_token = token.new_access_token(sync=sync)
 
     assert list(access_token.payload.keys()) == ["type", "exp", "iat"]
-    assert str(access_token) == equals_regex("[a-zA-Z0-9-_.]+")
+    assert str(access_token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
     assert str(access_token).count(".") == 2
 
     if sync:

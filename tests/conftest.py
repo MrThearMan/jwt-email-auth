@@ -52,7 +52,7 @@ class equals_regex:  # noqa
 
     def __eq__(self, actual: str):
         try:
-            return bool(self._regex.match(actual))
+            return bool(self._regex.match(str(actual)))
         except TypeError:
             return False
 

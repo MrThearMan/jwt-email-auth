@@ -1,4 +1,4 @@
-# pylint: disable=import-outside-toplevel
+# pylint: disable=import-outside-toplevel, too-many-branches
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -10,7 +10,7 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
 
 from .settings import auth_settings
-from .utils import token_from_headers
+from .utils import decrypt_with_cipher, encrypt_with_cipher, token_from_headers
 
 
 if TYPE_CHECKING:
@@ -42,6 +42,13 @@ class AccessToken:
         rotate = auth_settings.ROTATE_REFRESH_TOKENS and self.token_type == "refresh"
 
         if token is not None:
+            if auth_settings.CIPHER_KEY is not None:
+                try:
+                    token = decrypt_with_cipher(token)
+                except RuntimeError as error:
+                    logger.info(error)
+                    raise AuthenticationFailed(str(error), code="decrypt_error") from error
+
             try:
                 self.payload = jwt.decode(
                     jwt=token,
@@ -121,12 +128,16 @@ class AccessToken:
         return repr(self.payload)
 
     def __str__(self) -> str:
-        return jwt.encode(
+        token = jwt.encode(
             payload=self.payload,
             key=auth_settings.SIGNING_KEY,
             algorithm=auth_settings.ALGORITHM,
             headers=auth_settings.EXTRA_HEADERS,
         )
+        if auth_settings.CIPHER_KEY is not None:
+            token = encrypt_with_cipher(token)
+
+        return token
 
     def __getitem__(self, key: str) -> Any:
         return self.payload[key]

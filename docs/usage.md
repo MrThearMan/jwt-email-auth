@@ -118,7 +118,7 @@ possible error responses from each of these views.
 - 400: Input is incorrect
 - 403: Refresh token expired, or otherwise invalid
 
-When using the JWT token in views using the `JWTAuthentication` and `HasValidJWT`
+When using the JWT in views using the `JWTAuthentication` and `HasValidJWT`
 authentication and permission classes, you need to always listen for 403
 responses, and try to call `RefreshTokenView` in case the access token has
 expired. In case `RefreshTokenView` also returns 403, this usually means
