@@ -349,6 +349,54 @@ def test_refresh_token__remove_from_log__by_token_title(settings):
 
 
 @pytest.mark.django_db
+def test_refresh_token__remove_from_log__by_token_title__cipher(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    token = RefreshToken()
+    token.create_log()
+
+    assert token["jti"] == 1
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    RefreshTokenRotationLog.objects.remove_by_token_title(token=str(token))
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+
+@pytest.mark.django_db
+def test_refresh_token__remove_from_log__by_token_title__cipher__changed(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "CIPHER_KEY": "6uSRBb+rzufBRKv9uQAGVzFMwXqiBq7bmbcPr5QHVPg=",
+    }
+
+    assert len(RefreshTokenRotationLog.objects.all()) == 0
+
+    refresh = RefreshToken()
+    refresh.create_log()
+
+    assert refresh["jti"] == 1
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+    token = str(refresh)
+
+    settings.JWT_EMAIL_AUTH = {
+        "ROTATE_REFRESH_TOKENS": True,
+        "CIPHER_KEY": "hh0NVjHB4SuIn5RzoamdJbjtm55I4g8i5T3yBznnvko=",
+    }
+
+    RefreshTokenRotationLog.objects.remove_by_token_title(token=token)
+
+    # Cannot delete log due to decrypt failure!
+    assert len(RefreshTokenRotationLog.objects.all()) == 1
+
+
+@pytest.mark.django_db
 def test_refresh_token__remove_from_log__by_title(settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
