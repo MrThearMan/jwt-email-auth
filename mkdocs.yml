@@ -1,9 +1,11 @@
 site_name: JWT email authentication
+
 nav:
   - Home: index.md
   - Setup: setup.md
   - Usage: usage.md
   - JWT Rotation: rotation.md
+
 theme:
   name: readthedocs
   highlightjs: true
@@ -11,3 +13,18 @@ theme:
     - python
     - json
     - console
+
+markdown_extensions:
+  pymdownx.superfences:
+    custom_fences:
+      - name: mermaid
+        class: mermaid
+        format: !!python/name:mermaid2.fence_mermaid
+
+plugins:
+  - search:
+  - mermaid2:
+      version: 8.13.3
+
+extra_css:
+  - css/docs.css

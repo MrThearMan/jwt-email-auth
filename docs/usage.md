@@ -102,21 +102,26 @@ call `RefreshTokenView` when your access token expires or is about
 to expire. You'll also need to implement views/logic for all the
 possible error responses from each of these views.
 
-`SendLoginCodeView`
-- 400: Input is incorrect
-- 412: User is blocked from login due to too many attempts
-- 503: Could not send login code
-
-`LoginView`
-- 400: Input is incorrect
-- 403: Given login code was incorrect
-- 404: No login code has been sent for this user, or the code has expired
-- 410: Login data was corrupted
-- 412: User has been blocked due to too many attempts
-
-`RefreshTokenView`
-- 400: Input is incorrect
-- 403: Refresh token expired, or otherwise invalid
+>
+> SendLoginCodeView
+>
+> - 400: Input is incorrect
+> - 412: User is blocked from login due to too many attempts
+> - 503: Could not send login code
+>
+> LoginView
+>
+> - 400: Input is incorrect
+> - 403: Given login code was incorrect
+> - 404: No login code has been sent for this user, or the code has expired
+> - 410: Login data was corrupted
+> - 412: User has been blocked due to too many attempts
+>
+> RefreshTokenView
+>
+> - 400: Input is incorrect
+> - 403: Refresh token expired, or otherwise invalid
+>
 
 When using the JWT in views using the `JWTAuthentication` and `HasValidJWT`
 authentication and permission classes, you need to always listen for 403
@@ -129,6 +134,54 @@ In case you are using [JWT rotation][jwt-rotation], when you call
 `RefreshTokenView`, the returned refresh token will also need to be saved,
 as the old one is invalidated. Using JWT rotation can save your users from
 having to reauthorize when their initial refresh token expires.
+
+```mermaid
+flowchart TB
+    start__enter_email('Enter email')
+    user_blocked{Is user<br>IP blocked?}
+    check_email[Check given email<br>from third party]
+    fail__user_blocked[Error: User cannot<br>send another<br>login code yet]
+    email_found{User with<br>email found}
+    send_login_code[Send login code<br>to given email]
+    fail__email_not_found[Error: Did not<br>find user]
+    start__enter_login_code['Enter login code']
+    fail__block_user[Error: Block user<br>from loggin in<br>for 5 minutes<br>based on IP]
+    fail__re_enter_login_code[Error: Wrong<br>login code]
+    resend_code[Resend code,<br>invalidate previous one]
+    can_resend{Can resend<br>code?}
+    fail__cannot_resend[Error: User cannot<br>send another<br>login code yet]
+    login_code_correct{Valid code?}
+    success__log_in(Log user in)
+    too_many_attemps{Too many<br>attempts?}
+
+
+
+    start__enter_email --> |User enters<br>their email| user_blocked
+    user_blocked --> |no| check_email
+    check_email --> email_found
+    user_blocked --> |yes| fail__user_blocked
+    fail__user_blocked --> start__enter_email
+    email_found --> |yes| send_login_code
+    email_found --> |no| fail__email_not_found
+    fail__email_not_found --> start__enter_email
+    send_login_code --> start__enter_login_code
+    start__enter_login_code --> |Try another<br>email| start__enter_email
+    start__enter_login_code --> |User enters<br>login code| login_code_correct
+    start__enter_login_code --> |Resend code| can_resend
+    can_resend --> |no| fail__cannot_resend
+    can_resend --> |yes| resend_code
+    resend_code --> start__enter_login_code
+    fail__cannot_resend --> start__enter_login_code
+    login_code_correct --> |yes| success__log_in
+    login_code_correct --> |no| too_many_attemps
+    too_many_attemps --> |no| fail__re_enter_login_code
+    too_many_attemps --> |yes| fail__block_user
+    fail__re_enter_login_code --> start__enter_login_code
+    fail__block_user --> start__enter_email
+
+```
+
+A flowchart describing a possible implementation.
 
 
 ## Non-email authentication
