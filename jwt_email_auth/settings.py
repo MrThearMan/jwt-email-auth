@@ -25,6 +25,11 @@ class JWTEmailAuthSettings(NamedTuple):
     # When True, any code will work in login
     SKIP_CODE_CHECKS: bool = False
     #
+    # List of emails for which code checks and email sending are off,
+    # even if SKIP_CODE_CHECKS=False and/or SENDING_ON=True.
+    # Useful for creating review accounts in an otherwise closed system.
+    SKIP_CODE_CHECKS_FOR: List[str] = []
+    #
     # How long an access token is valid for
     ACCESS_TOKEN_LIFETIME: timedelta = timedelta(minutes=5)
     #

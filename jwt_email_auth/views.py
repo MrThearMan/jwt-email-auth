@@ -142,7 +142,7 @@ class SendLoginCodeView(BaseAuthView):
         logger.debug(login_data)
         cache.set(login_data_cache_key, login_data, auth_settings.LOGIN_CODE_LIFETIME.total_seconds())
 
-        if not auth_settings.SENDING_ON:
+        if not auth_settings.SENDING_ON or value in auth_settings.SKIP_CODE_CHECKS_FOR:
             logger.info(f"Login code: '{login_data['code']}'")
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -185,7 +185,7 @@ class LoginView(BaseAuthView):
             raise NotFound(_("No login code found for '%(value)s'.") % {"value": value})
 
         login_code = login_data.pop("code", None)
-        if not auth_settings.SKIP_CODE_CHECKS:
+        if not auth_settings.SKIP_CODE_CHECKS and value not in auth_settings.SKIP_CODE_CHECKS_FOR:
             if login_code != data["code"]:
                 raise AuthenticationFailed(_("Incorrect login code."))
 

@@ -183,6 +183,25 @@ def test_authenticate_endpoint__email_is_mandatory():
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+def test_authenticate_endpoint__skip_code_checks_for(settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": True,
+        "SKIP_CODE_CHECKS_FOR": ["foo@bar.com"],
+    }
+
+    client = APIClient()
+
+    with patch("jwt_email_auth.utils.send_mail") as mock:
+        response = client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    mock.assert_not_called()
+    assert response.data is None
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) is not None
+
+
 # Login view
 
 
@@ -387,6 +406,30 @@ def test_login_endpoint__email_and_code_are_mandatory():
     assert response.data.get("email")[0] == "This field is required."
     assert response.data.get("code")[0] == "This field is required."
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_login_endpoint__skip_code_checks_for(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "SENDING_ON": True,
+        "SKIP_CODE_CHECKS": False,
+        "SKIP_CODE_CHECKS_FOR": ["foo@bar.com"],
+    }
+
+    client = APIClient()
+
+    with patch("jwt_email_auth.utils.send_mail") as mock:
+        client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    mock.assert_not_called()
+
+    # Code doesn't matter if user in SKIP_CODE_CHECKS_FOR
+    response = client.post("/login", {"email": "foo@bar.com", "code": "..."}, format="json")
+
+    access = response.data["access"]
+    refresh = response.data["refresh"]
+    assert TOKEN_PATTERN.match(access) is not None
+    assert TOKEN_PATTERN.match(refresh) is not None
+    assert response.status_code == status.HTTP_200_OK
 
 
 def test_login_endpoint__login_code_expired(settings, caplog):

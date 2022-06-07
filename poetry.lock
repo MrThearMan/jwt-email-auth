@@ -475,7 +475,7 @@ i18n = ["babel (>=2.9.0)"]
 
 [[package]]
 name = "mkdocs-material"
-version = "8.3.1"
+version = "8.3.2"
 description = "Documentation that simply works"
 category = "dev"
 optional = false
@@ -639,7 +639,7 @@ tests = ["pytest (>=6.0.0,<7.0.0)", "coverage[toml] (==5.0.4)"]
 
 [[package]]
 name = "pymdown-extensions"
-version = "9.4"
+version = "9.5"
 description = "Extension pack for Python Markdown."
 category = "dev"
 optional = false
@@ -952,7 +952,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<4"
-content-hash = "236a43a047b8dc57ea074187b1153dea58a71c8e9d6916a6cef2c69cc52886ae"
+content-hash = "00babbaf95a8bf93aef6c546ee9c3e55d5509cbce8d917c14800ff99ad54b519"
 
 [metadata.files]
 asgiref = [
@@ -1273,8 +1273,8 @@ mkdocs = [
     {file = "mkdocs-1.3.0.tar.gz", hash = "sha256:b504405b04da38795fec9b2e5e28f6aa3a73bb0960cb6d5d27ead28952bd35ea"},
 ]
 mkdocs-material = [
-    {file = "mkdocs-material-8.3.1.tar.gz", hash = "sha256:b14578a37c90daff0a901eb8253582c011533ddd971d2e045ecd592bd3046cba"},
-    {file = "mkdocs_material-8.3.1-py2.py3-none-any.whl", hash = "sha256:167e044e466c44153f6344c412b0419257fa9026a5256aa631b9a54d434e1f4b"},
+    {file = "mkdocs-material-8.3.2.tar.gz", hash = "sha256:d203ba166063ccd0ff83893a54f46d98e2fb3961babd7c0176cb3f95ac62df20"},
+    {file = "mkdocs_material-8.3.2-py2.py3-none-any.whl", hash = "sha256:57d910ccb6d98d0d1281cbb34a9c8ae6d820b2f5caad1d1246d8ed49eec10a50"},
 ]
 mkdocs-material-extensions = [
     {file = "mkdocs-material-extensions-1.0.3.tar.gz", hash = "sha256:bfd24dfdef7b41c312ede42648f9eb83476ea168ec163b613f9abd12bbfddba2"},
@@ -1350,8 +1350,8 @@ pyjwt = [
     {file = "PyJWT-2.4.0.tar.gz", hash = "sha256:d42908208c699b3b973cbeb01a969ba6a96c821eefb1c5bfe4c390c01d67abba"},
 ]
 pymdown-extensions = [
-    {file = "pymdown_extensions-9.4-py3-none-any.whl", hash = "sha256:5b7432456bf555ce2b0ab3c2439401084cda8110f24f6b3ecef952b8313dfa1b"},
-    {file = "pymdown_extensions-9.4.tar.gz", hash = "sha256:1baa22a60550f731630474cad28feb0405c8101f1a7ddc3ec0ed86ee510bcc43"},
+    {file = "pymdown_extensions-9.5-py3-none-any.whl", hash = "sha256:ec141c0f4983755349f0c8710416348d1a13753976c028186ed14f190c8061c4"},
+    {file = "pymdown_extensions-9.5.tar.gz", hash = "sha256:3ef2d998c0d5fa7eb09291926d90d69391283561cf6306f85cd588a5eb5befa0"},
 ]
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
