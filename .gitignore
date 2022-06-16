@@ -1,1 +1,2 @@
-/.gitignore
+.tox
+.venv
