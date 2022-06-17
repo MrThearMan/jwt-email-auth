@@ -25,7 +25,7 @@ class StatelessUser(AnonymousUser):  # pylint: disable=W0223
         self.token = token if token is not None else {}
 
     @cached_property
-    def id(self) -> str:  # pylint: disable=C0103,R0201
+    def id(self) -> str:  # pylint: disable=C0103
         return str(uuid4())
 
     @cached_property
