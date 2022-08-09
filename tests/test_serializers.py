@@ -1,5 +1,3 @@
-import logging
-import re
 from unittest.mock import patch
 
 import pytest
@@ -21,6 +19,19 @@ def test_base_access_serializer__validated_data(drf_request):
     assert serializer.validated_data == {"type": "access"}
 
 
+def test_base_access_serializer__validated_data__headers(drf_request):
+    token = AccessToken()
+    drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+    drf_request.META["HTTP_CACHE_CONTROL"] = "no-cache"
+
+    class TestSerializer(BaseAccessSerializer):
+        take_from_headers = ["Cache-Control"]
+
+    serializer = TestSerializer(data={}, context={"request": drf_request})
+    serializer.is_valid(raise_exception=True)
+    assert serializer.validated_data == {"cache_control": "no-cache"}
+
+
 def test_base_access_serializer__data(drf_request):
     token = AccessToken()
     drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
@@ -31,6 +42,19 @@ def test_base_access_serializer__data(drf_request):
     serializer = TestSerializer(data={}, context={"request": drf_request})
     serializer.is_valid(raise_exception=True)
     assert serializer.data == {"type": "access"}
+
+
+def test_base_access_serializer__data__headers(drf_request):
+    token = AccessToken()
+    drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+    drf_request.META["HTTP_CACHE_CONTROL"] = "no-cache"
+
+    class TestSerializer(BaseAccessSerializer):
+        take_from_headers = ["Cache-Control"]
+
+    serializer = TestSerializer(data={}, context={"request": drf_request})
+    serializer.is_valid(raise_exception=True)
+    assert serializer.data == {"cache_control": "no-cache"}
 
 
 def test_base_access_serializer__context_not_included():

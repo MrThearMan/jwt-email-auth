@@ -74,18 +74,15 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
     A ValidationError will be raised if token doesn't have all of these claims.
     """
 
+    take_from_headers: List[str] = []
+    """Headers to take values from.
+    Header names should be in Capitalized-Kebab-Case, but
+    keys in the serializer data will be in snake_case.
+    """
+
     @cached_property
     def token_claims(self) -> Dict[str, Any]:
-        request: Optional[Request] = self.context.get("request")
-        if request is None or not isinstance(request, Request):
-            raise ValidationError(
-                {
-                    api_settings.NON_FIELD_ERRORS_KEY: ErrorDetail(
-                        string="Must include a Request object in the context of the Serializer.",
-                        code="request_missing",
-                    )
-                }
-            )
+        request = self.request_from_context
 
         data = {}
         token = AccessToken.from_request(request)
@@ -101,17 +98,44 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
             )
         return data
 
+    @cached_property
+    def header_values(self) -> Dict[str, Any]:
+        request = self.request_from_context
+        return {key.replace("-", "_").lower(): request.headers.get(key, None) for key in self.take_from_headers}
+
+    @cached_property
+    def request_from_context(self) -> Request:
+        request: Optional[Request] = self.context.get("request")
+        if request is None or not isinstance(request, Request):
+            raise ValidationError(
+                {
+                    api_settings.NON_FIELD_ERRORS_KEY: ErrorDetail(
+                        string="Must include a Request object in the context of the Serializer.",
+                        code="request_missing",
+                    )
+                }
+            )
+        return request
+
+    def add_headers(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        data.update(self.header_values)
+        return data
+
     def add_token_claims(self, data: Dict[str, Any]) -> Dict[str, Any]:
         data.update(self.token_claims)
         return data
 
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         ret = super().to_internal_value(data)
-        return self.add_token_claims(ret)
+        ret = self.add_token_claims(ret)
+        ret = self.add_headers(ret)
+        return ret
 
     def to_representation(self, instance) -> Dict[str, Any]:
         ret = super().to_representation(instance)
-        return self.add_token_claims(ret)
+        ret = self.add_token_claims(ret)
+        ret = self.add_headers(ret)
+        return ret
 
 
 # Output (for schema)
