@@ -63,7 +63,7 @@ from jwt_email_auth.permissions import HasValidJWT
 
 class SomeSerializer(BaseAccessSerializer):
 
-    take_form_token = ["example", "values"]
+    take_from_token = ["example", "values"]
 
     some = serializers.CharField()
     data = serializers.CharField()

@@ -12,7 +12,7 @@ def test_base_access_serializer__validated_data(drf_request):
     drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
 
     class TestSerializer(BaseAccessSerializer):
-        take_form_token = ["type"]
+        take_from_token = ["type"]
 
     serializer = TestSerializer(data={}, context={"request": drf_request})
     serializer.is_valid(raise_exception=True)
@@ -37,7 +37,7 @@ def test_base_access_serializer__data(drf_request):
     drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
 
     class TestSerializer(BaseAccessSerializer):
-        take_form_token = ["type"]
+        take_from_token = ["type"]
 
     serializer = TestSerializer(data={}, context={"request": drf_request})
     serializer.is_valid(raise_exception=True)
@@ -59,7 +59,7 @@ def test_base_access_serializer__data__headers(drf_request):
 
 def test_base_access_serializer__context_not_included():
     class TestSerializer(BaseAccessSerializer):
-        take_form_token = ["type"]
+        take_from_token = ["type"]
 
     serializer = TestSerializer(data={})
 
@@ -69,7 +69,7 @@ def test_base_access_serializer__context_not_included():
 
 def test_base_access_serializer__request_not_included():
     class TestSerializer(BaseAccessSerializer):
-        take_form_token = ["type"]
+        take_from_token = ["type"]
 
     serializer = TestSerializer(data={}, context={})
 
@@ -79,7 +79,7 @@ def test_base_access_serializer__request_not_included():
 
 def test_base_access_serializer__request_not_correct_type():
     class TestSerializer(BaseAccessSerializer):
-        take_form_token = ["type"]
+        take_from_token = ["type"]
 
     serializer = TestSerializer(data={}, context={"request": "foo"})
 
@@ -92,7 +92,7 @@ def test_base_access_serializer__missing_claim(drf_request):
     drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
 
     class TestSerializer(BaseAccessSerializer):
-        take_form_token = ["type", "foo"]
+        take_from_token = ["type", "foo"]
 
     serializer = TestSerializer(data={}, context={"request": drf_request})
 
@@ -107,7 +107,7 @@ def test_base_access_serializer__missing_multiple_claims(drf_request):
     drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
 
     class TestSerializer(BaseAccessSerializer):
-        take_form_token = ["type", "foo", "bar"]
+        take_from_token = ["type", "foo", "bar"]
 
     serializer = TestSerializer(data={}, context={"request": drf_request})
 
@@ -125,7 +125,7 @@ def test_base_access_serializer__claims_are_cached(drf_request):
     with patch("jwt_email_auth.serializers.AccessToken.from_request", side_effect=AccessToken.from_request) as mock:
 
         class TestSerializer(BaseAccessSerializer):
-            take_form_token = ["type", "foo", "bar"]
+            take_from_token = ["type", "foo", "bar"]
 
         serializer = TestSerializer(data={}, context={"request": drf_request})
         serializer.is_valid(raise_exception=True)

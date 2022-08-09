@@ -68,7 +68,7 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
     Serializer must have the incoming request object in its context dictionary.
     """
 
-    take_form_token: List[str] = []
+    take_from_token: List[str] = []
     """List of keys to take from token claims and pass to bound method.
     Claims can be anything specified in JWT_EMAIL_AUTH["EXPECTED_CLAIMS"] django setting.
     A ValidationError will be raised if token doesn't have all of these claims.
@@ -87,7 +87,7 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
         data = {}
         token = AccessToken.from_request(request)
         missing: List[str] = []
-        for key in self.take_form_token:
+        for key in self.take_from_token:
             try:
                 data[key] = token[key]
             except KeyError:
