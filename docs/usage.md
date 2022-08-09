@@ -121,6 +121,7 @@ possible error responses from each of these views.
 >
 > - 400: Input is incorrect
 > - 403: Refresh token expired, or otherwise invalid
+> - 404: Refresh token user no longer exists (requires "user_check=True" in refresh view)
 >
 
 When using the JWT in views using the `JWTAuthentication` and `HasValidJWT`

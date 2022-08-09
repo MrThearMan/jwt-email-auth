@@ -215,6 +215,7 @@ class RefreshToken(AccessToken):
 
     def check_log(self) -> "RefreshTokenRotationLog":
         """Check if token is in the rotation log."""
+        # Import is here so that jwt rotation remains optional
         from .rotation.models import RefreshTokenRotationLog
 
         try:
@@ -230,6 +231,7 @@ class RefreshToken(AccessToken):
         Update rotation log for the given title,
         and set the "jti" and "sub" claims for this token.
         """
+        # Import is here so that jwt rotation remains optional
         from .rotation.models import RefreshTokenRotationLog
 
         if title is None:

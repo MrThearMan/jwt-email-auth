@@ -173,6 +173,7 @@ class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
     responses = {
         400: "Missing data or invalid types.",
         403: "Refresh token has expired or is invalid.",
+        404: "Refresh token user no longer exists.",
     }
 
     if auth_settings.USE_COOKIES:  # pragma: no cover

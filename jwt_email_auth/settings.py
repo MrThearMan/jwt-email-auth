@@ -137,6 +137,10 @@ class JWTEmailAuthSettings(NamedTuple):
     # Arguments: request (Request). Returns None.
     USER_BLOCKED_ADDITIONAL_HANDLER: str = "jwt_email_auth.utils.blocking_handler"
     #
+    # Function to check if token user still exists in refresh view.
+    # Arguments: refresh (RefreshToken). Returns None or raises `rest_framework.exceptions.NotFound`.
+    USER_CHECK_CALLBACK: str = "jwt_email_auth.utils.user_check_callback"
+    #
     # If True, use a cookie instead of response
     # data to return access and refresh tokens
     USE_COOKIES: bool = False
@@ -195,6 +199,7 @@ IMPORT_STRINGS: Set[Union[bytes, str]] = {
     "LOGIN_VALIDATION_AND_DATA_CALLBACK",
     "LOGIN_BLOCKER_CACHE_KEY_CALLBACK",
     "USER_BLOCKED_ADDITIONAL_HANDLER",
+    "USER_CHECK_CALLBACK",
 }
 
 REMOVED_SETTINGS: Set[str] = {

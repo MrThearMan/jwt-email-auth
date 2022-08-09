@@ -10,7 +10,7 @@ import pytest
 from django.core.cache import cache
 from django.template.loader import render_to_string
 from rest_framework import status
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, NotFound
 from rest_framework.test import APIClient
 
 from jwt_email_auth.rotation.models import RefreshTokenRotationLog
@@ -701,6 +701,65 @@ def test_refresh_endpoint__token_is_mandatory():
 
     assert response.data.get("token")[0] == "This field is required."
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_refresh_endpoint__check_user_still_exists(settings, caplog):
+    client = APIClient()
+
+    str_1 = "jwt_email_auth.utils.user_check_callback"
+
+    settings.JWT_EMAIL_AUTH = {
+        "USER_CHECK_CALLBACK": str_1,
+    }
+
+    def custom_user_check_callback(refresh: RefreshToken):
+        return
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    with patch(str_1, side_effect=custom_user_check_callback) as user_check:
+        response2 = client.post("/refresh", {"token": response1.data["refresh"], "user_check": True}, format="json")
+
+    user_check.assert_called_once()
+
+    assert response2.data == {
+        "access": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+        "refresh": equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$"),
+    }
+    assert response2.status_code == status.HTTP_200_OK
+
+
+def test_refresh_endpoint__check_user_still_exists__not_found(settings, caplog):
+    client = APIClient()
+
+    str_1 = "jwt_email_auth.utils.user_check_callback"
+
+    settings.JWT_EMAIL_AUTH = {
+        "USER_CHECK_CALLBACK": str_1,
+    }
+
+    def custom_user_check_callback(refresh: RefreshToken):
+        raise NotFound("User not found.")
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    with patch(str_1, side_effect=custom_user_check_callback) as user_check:
+        response2 = client.post("/refresh", {"token": response1.data["refresh"], "user_check": True}, format="json")
+
+    user_check.assert_called_once()
+
+    assert response2.status_code == status.HTTP_404_NOT_FOUND
+    assert response2.data == {"detail": "User not found."}
 
 
 @pytest.mark.django_db

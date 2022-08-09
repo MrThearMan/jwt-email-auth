@@ -223,6 +223,11 @@ def test_refresh_token_schema__get_components(drf_request):
                     "description": "Refresh token.",
                     "type": "string",
                 },
+                "user_check": {
+                    "default": False,
+                    "description": "Check that user for token still exists.",
+                    "type": "boolean",
+                },
             },
             "required": ["token"],
             "type": "object",
@@ -535,6 +540,22 @@ def test_refresh_token_schema__get_responses(drf_request):
                 }
             },
             "description": "Refresh token has expired or is invalid.",
+        },
+        "404": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Refresh token user no longer exists.",
         },
     }
 

@@ -1,6 +1,6 @@
 # pylint: disable=import-outside-toplevel
 import logging
-from typing import Any, List, Type
+from typing import Any, Dict, List, Type
 
 from django.core.cache import cache
 from django.utils.translation import gettext_lazy as _
@@ -122,7 +122,7 @@ class SendLoginCodeView(BaseAuthView):
         login_info = self.serializer_class(data=request.data)
         login_info.is_valid(raise_exception=True)
         data = login_info.data
-        value = [value for key, value in data.items()][0]
+        value = self._get_id_value(data)
 
         if user_is_blocked(request, record_attempt=False):
             raise SendCodeCooldown()
@@ -130,13 +130,7 @@ class SendLoginCodeView(BaseAuthView):
         login_data_cache_key = generate_cache_key(value, extra_prefix="login")
         code_sent_cache_key = generate_cache_key(value, extra_prefix="sendcode")
 
-        login_data = cache.get(login_data_cache_key, None)
-        if login_data is None:
-            login_data = auth_settings.LOGIN_VALIDATION_AND_DATA_CALLBACK(value)
-        else:
-            code_sent = cache.get(code_sent_cache_key, None)
-            if code_sent is not None:
-                raise SendCodeCooldown()
+        login_data = self._get_login_data(code_sent_cache_key, login_data_cache_key, value)
 
         login_data["code"] = auth_settings.CODE_GENERATOR()
         logger.debug(login_data)
@@ -157,6 +151,19 @@ class SendLoginCodeView(BaseAuthView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def _get_id_value(self, data: Dict[str, Any]) -> Any:
+        return [value for key, value in data.items()][0]
+
+    def _get_login_data(self, code_sent_cache_key: str, login_data_cache_key: str, value: Any) -> Dict[str, Any]:
+        login_data = cache.get(login_data_cache_key)
+        if login_data is None:
+            login_data = auth_settings.LOGIN_VALIDATION_AND_DATA_CALLBACK(value)
+        else:
+            code_sent = cache.get(code_sent_cache_key)
+            if code_sent is not None:
+                raise SendCodeCooldown()
+        return login_data
+
 
 class LoginView(BaseAuthView):
     """Get new refresh and access token pair."""
@@ -172,7 +179,7 @@ class LoginView(BaseAuthView):
         login = self.serializer_class(data=request.data)
         login.is_valid(raise_exception=True)
         data = login.data
-        value = [value for key, value in data.items() if key != "code"][0]
+        value = self._get_id_value(data)
 
         if user_is_blocked(request):
             raise UserBanned(cooldown=int(auth_settings.LOGIN_COOLDOWN.total_seconds() // 60))
@@ -192,10 +199,7 @@ class LoginView(BaseAuthView):
         cache.delete(code_sent_cache_key)
         cache.delete(login_data_cache_key)
 
-        try:
-            claim_data = {key: login_data[key] for key in auth_settings.EXPECTED_CLAIMS}
-        except KeyError as error:
-            raise CorruptedDataException(_("Data was corrupted. Try to send another login code.")) from error
+        claim_data = self._get_claims(login_data)
 
         refresh = RefreshToken()
         if auth_settings.ROTATE_REFRESH_TOKENS:
@@ -209,6 +213,15 @@ class LoginView(BaseAuthView):
 
         data = {"access": str(access), "refresh": str(refresh)}
         return Response(data=data, status=status.HTTP_200_OK)
+
+    def _get_id_value(self, data: Dict[str, Any]) -> Any:
+        return [value for key, value in data.items() if key != "code"][0]
+
+    def _get_claims(self, login_data: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            return {key: login_data[key] for key in auth_settings.EXPECTED_CLAIMS}
+        except KeyError as error:
+            raise CorruptedDataException(_("Data was corrupted. Try to send another login code.")) from error
 
 
 class RefreshTokenView(BaseAuthView):
@@ -227,6 +240,11 @@ class RefreshTokenView(BaseAuthView):
         token = request.COOKIES["refresh"] if auth_settings.USE_COOKIES else data.data["token"]
 
         refresh = RefreshToken(token=token)
+
+        user_check = data.data.get("user_check", False)
+        if user_check:
+            auth_settings.USER_CHECK_CALLBACK(refresh)
+
         if auth_settings.ROTATE_REFRESH_TOKENS:
             refresh = refresh.rotate()
 
@@ -250,6 +268,7 @@ class LogoutView(BaseAuthView):
     schema = LogoutViewSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+        # Import is here so that jwt rotation remains optional
         from .rotation.models import RefreshTokenRotationLog
 
         data = self.serializer_class(data=request.data)

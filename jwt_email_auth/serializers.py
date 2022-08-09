@@ -44,6 +44,8 @@ class RefreshTokenSerializer(serializers.Serializer):  # pylint: disable=W0223
     if not auth_settings.USE_COOKIES:
         token = TokenField(help_text="Refresh token.")
 
+    user_check = serializers.BooleanField(default=False, help_text="Check that user for token still exists.")
+
 
 class LogoutSerializer(serializers.Serializer):  # pylint: disable=W0223
     if not auth_settings.USE_COOKIES:

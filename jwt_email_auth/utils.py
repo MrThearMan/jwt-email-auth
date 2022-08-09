@@ -5,7 +5,7 @@ from hashlib import md5
 from inspect import cleandoc
 from os import getenv, urandom
 from random import randint
-from typing import Any, Dict, Union
+from typing import TYPE_CHECKING, Any, Dict, Union
 from warnings import warn
 
 from cryptography.exceptions import InvalidTag
@@ -23,6 +23,10 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, Va
 from rest_framework.request import Request
 
 from .settings import auth_settings
+
+
+if TYPE_CHECKING:
+    from .tokens import RefreshToken
 
 
 __all__ = [
@@ -214,3 +218,8 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
         raise RuntimeError(_("Wrong cipher key.")) from error
 
     return decrypted_token.decode()
+
+
+def user_check_callback(refresh: "RefreshToken") -> None:  # pylint: disable=W0613
+    """Default function to check if token user still exists."""
+    return  # pragma: no cover
