@@ -41,7 +41,7 @@ and then the cached information is obtained using the code that was sent to the 
 [downloads-badge]: https://img.shields.io/pypi/dm/jwt-email-auth
 
 [coverage]: https://coveralls.io/github/MrThearMan/jwt-email-auth?branch=main
-[status]: https://github.com/MrThearMan/jwt-email-auth/actions/workflows/main.yml
+[status]: https://github.com/MrThearMan/jwt-email-auth/actions/workflows/test.yml
 [pypi]: https://pypi.org/project/jwt-email-auth
 [licence]: https://github.com/MrThearMan/jwt-email-auth/blob/main/LICENSE
 [repo]: https://github.com/MrThearMan/jwt-email-auth/commits/main
