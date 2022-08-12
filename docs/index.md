@@ -6,9 +6,11 @@
 [![GitHub][licence-badge]][licence]
 [![GitHub Last Commit][repo-badge]][repo]
 [![GitHub Issues][issues-badge]][issues]
-[![Lines of Code][loc-badge]][repo]
 [![Downloads][downloads-badge]][pypi]
+
 [![Python Version][version-badge]][pypi]
+[![Django Version][django-badge]][pypi]
+[![DRF Version][drf-badge]][pypi]
 
 ```shell
 pip install jwt-email-auth
@@ -37,8 +39,9 @@ and then the cached information is obtained using the code that was sent to the 
 [repo-badge]: https://img.shields.io/github/last-commit/MrThearMan/jwt-email-auth
 [issues-badge]: https://img.shields.io/github/issues-raw/MrThearMan/jwt-email-auth
 [version-badge]: https://img.shields.io/pypi/pyversions/jwt-email-auth
-[loc-badge]: https://img.shields.io/tokei/lines/github.com/MrThearMan/jwt-email-auth
 [downloads-badge]: https://img.shields.io/pypi/dm/jwt-email-auth
+[django-badge]: https://img.shields.io/pypi/djversions/jwt-email-auth
+[drf-badge]: https://img.shields.io/badge/drf%20versions-3.12.0%20--%203.13.0-blue
 
 [coverage]: https://coveralls.io/github/MrThearMan/jwt-email-auth?branch=main
 [status]: https://github.com/MrThearMan/jwt-email-auth/actions/workflows/test.yml

@@ -35,6 +35,7 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Framework :: Django :: 3.2",
     "Framework :: Django :: 4.0",
+    "Framework :: Django :: 4.1",
     "Intended Audience :: Developers",
     "Natural Language :: English",
 ]
@@ -139,7 +140,7 @@ django_settings_module = "tests.django.settings"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{38, 39, 310, 311}-django{32, 40}
+envlist = py{38, 39, 310, 311}-django{32, 40, 41}
 isolated_build = true
 
 [gh-actions]
@@ -157,9 +158,11 @@ setenv =
 deps =
     django32: Django>=3.2,<4.0
     django40: Django>=4.0,<4.1
+    django41: Django>=4.1,<4.2
 
     django32: djangorestframework>=3.12.0,<3.13.0
     django40: djangorestframework>=3.13.0,<3.14.0
+    django41: djangorestframework>=3.13.0,<3.14.0
 
     django-ipware>=4.0.0
     django-settings-holder>=0.0.4
