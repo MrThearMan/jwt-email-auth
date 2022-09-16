@@ -2,11 +2,12 @@ import logging
 from datetime import timedelta
 from inspect import cleandoc
 from pathlib import Path
-from typing import Any, Dict, List, Literal, NamedTuple, Optional, Set, Union
 
 from django.conf import settings
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
+
+from .typing import Any, Dict, List, Literal, NamedTuple, Optional, Set, Union
 
 
 __all__ = [
@@ -39,7 +40,7 @@ class JWTEmailAuthSettings(NamedTuple):
     # How long a login code is stored in cache
     LOGIN_CODE_LIFETIME: timedelta = timedelta(minutes=5)
     #
-    # After user has exceeded defined number of login attemprs,
+    # After user has exceeded defined number of login attempts,
     # this is the cooldown until they can attempt login again.
     LOGIN_COOLDOWN: timedelta = timedelta(minutes=5)
     #
@@ -141,9 +142,19 @@ class JWTEmailAuthSettings(NamedTuple):
     # Arguments: refresh (RefreshToken). Returns None or raises `rest_framework.exceptions.NotFound`.
     USER_CHECK_CALLBACK: str = "jwt_email_auth.utils.user_check_callback"
     #
-    # If True, use a cookie instead of response
-    # data to return access and refresh tokens
+    # If True, can authenticate with tokens in Authorization header.
+    # Set this to False and `USE_COOKIES` to True to only allow cookie authentication.
+    USE_TOKENS: bool = True
+    #
+    # If True, can authenticate with tokens in HttpOnly headers.
+    # Cookies will be checked before Authorization headers if they are enabled.
     USE_COOKIES: bool = False
+    #
+    # Cookie key to use for the access token
+    ACCESS_TOKEN_KEY: str = "access"
+    #
+    # Cookie key to use for the refresh token
+    REFRESH_TOKEN_KEY: str = "refresh"
     #
     # Indicates that the cookie is sent to the server only when
     # a request is made with the https: scheme (except on localhost),

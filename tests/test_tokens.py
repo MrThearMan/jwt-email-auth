@@ -157,12 +157,13 @@ def test_access_token__from_request__cookies__refresh(settings, drf_request):
 def test_access_token__from_request__cookies__not_found(settings, drf_request):
     settings.JWT_EMAIL_AUTH = {
         "USE_COOKIES": True,
+        "USE_TOKENS": False,
     }
 
-    with pytest.raises(NotAuthenticated, match=re.escape("No token found from request cookies")):
+    with pytest.raises(NotAuthenticated, match=re.escape("Token not found from request.")):
         AccessToken.from_request(drf_request)
 
-    with pytest.raises(NotAuthenticated, match=re.escape("No token found from request cookies")):
+    with pytest.raises(NotAuthenticated, match=re.escape("Token not found from request.")):
         RefreshToken.from_request(drf_request)
 
 

@@ -1,18 +1,21 @@
-from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from django.contrib.auth.models import AnonymousUser
 from django.utils.functional import cached_property
+
+from .typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
     from .tokens import AccessToken
 
 
-__all__ = ["StatelessUser"]
+__all__ = [
+    "StatelessUser",
+]
 
 
-class StatelessUser(AnonymousUser):  # pylint: disable=W0223
+class StatelessUser(AnonymousUser):
     """
     User that is not actually logged in, but enables
     authentication and permission checks.
@@ -25,15 +28,15 @@ class StatelessUser(AnonymousUser):  # pylint: disable=W0223
         self.token = token if token is not None else {}
 
     @cached_property
-    def id(self) -> str:  # pylint: disable=C0103
+    def id(self) -> str:
         return str(uuid4())
 
     @cached_property
-    def pk(self) -> str:  # pylint: disable=C0103
+    def pk(self) -> str:
         return self.id
 
     @property
-    def is_authenticated(self) -> bool:  # type: ignore
+    def is_authenticated(self) -> bool:
         return True
 
     def __str__(self) -> str:

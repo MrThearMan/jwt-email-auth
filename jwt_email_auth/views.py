@@ -1,12 +1,11 @@
-# pylint: disable=import-outside-toplevel
 import logging
-from typing import Any, Dict, List, Type
 
 from django.core.cache import cache
-from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.translation import gettext_lazy
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed, NotFound
+from rest_framework.exceptions import APIException, AuthenticationFailed, NotFound
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -40,15 +39,17 @@ from .serializers import (
     TokenUpdateSerializer,
 )
 from .settings import auth_settings
-from .tokens import AccessToken, RefreshToken
+from .tokens import AccessToken, RefreshToken, TokenType
+from .typing import Any, Dict, List, LoginMethod, Tuple, Type
 from .utils import generate_cache_key, user_is_blocked
 
 
 __all__ = [
-    "SendLoginCodeView",
     "LoginView",
-    "RefreshTokenView",
     "LogoutView",
+    "RefreshTokenView",
+    "SendLoginCodeView",
+    "TokenClaimView",
     "UpdateTokenView",
 ]
 
@@ -82,11 +83,24 @@ class BaseAuthView(APIView):
     def get_extra_actions(cls) -> List[str]:
         return []
 
+    def make_response(self, method: str, access: AccessToken, refresh: RefreshToken) -> Response:
+        if method == LoginMethod.COOKIES and auth_settings.USE_COOKIES:
+            return self.response_with_cookies(access, refresh)
+        if method == LoginMethod.TOKEN and auth_settings.USE_TOKENS:
+            return self.response_with_data(access, refresh)
+
+        raise ImproperlyConfigured(f"Method {method!r} is not available.")  # pragma: no cover
+
+    @staticmethod
+    def response_with_data(access: AccessToken, refresh: RefreshToken) -> Response:
+        data = {"access": str(access), "refresh": str(refresh)}
+        return Response(data=data, status=status.HTTP_200_OK)
+
     @staticmethod
     def response_with_cookies(access: AccessToken, refresh: RefreshToken) -> Response:
         response = Response(status=status.HTTP_204_NO_CONTENT)
         response.set_cookie(
-            key="access",
+            key=TokenType.access,
             value=str(access),
             expires=access["exp"],
             path=auth_settings.SET_COOKIE_ACCESS_PATH,
@@ -96,7 +110,7 @@ class BaseAuthView(APIView):
             samesite=auth_settings.SET_COOKIE_SAMESITE,
         )
         response.set_cookie(
-            key="refresh",
+            key=TokenType.refresh,
             value=str(refresh),
             expires=refresh["exp"],
             path=auth_settings.SET_COOKIE_REFRESH_PATH,
@@ -106,6 +120,26 @@ class BaseAuthView(APIView):
             samesite=auth_settings.SET_COOKIE_SAMESITE,
         )
         return response
+
+    @staticmethod
+    def _get_refresh_token(cookies: Dict[str, str], data: Dict[str, Any]) -> Tuple[str, str]:
+        token_from_cookies = cookies.get(TokenType.refresh)
+        if auth_settings.USE_COOKIES and token_from_cookies is not None:
+            return LoginMethod.COOKIES, token_from_cookies
+
+        token_from_data = data.get("token")
+        if auth_settings.USE_TOKENS and token_from_data is not None:
+            return LoginMethod.TOKEN, token_from_data
+
+        msg = "Could not find refresh token."
+
+        if auth_settings.USE_COOKIES and not auth_settings.USE_TOKENS:
+            raise APIException(f"{msg} Only cookie authentication is available.")
+
+        if auth_settings.USE_TOKENS and not auth_settings.USE_COOKIES:
+            raise APIException(f"{msg} Only token authentication is available.")
+
+        raise APIException(f"{msg} Neither token or cookie authentication configured.")
 
 
 class SendLoginCodeView(BaseAuthView):
@@ -118,7 +152,7 @@ class SendLoginCodeView(BaseAuthView):
 
     schema = SendLoginCodeViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+    def post(self, request: Request, *args, **kwargs) -> Response:
         login_info = self.serializer_class(data=request.data)
         login_info.is_valid(raise_exception=True)
         data = login_info.data
@@ -147,7 +181,7 @@ class SendLoginCodeView(BaseAuthView):
         except Exception as error:
             cache.delete(login_data_cache_key)
             logger.critical(f"Login code sending failed: {type(error).__name__}('{error}')")
-            raise ServerException(_("Failed to send login codes. Try again later.")) from error
+            raise ServerException(gettext_lazy("Failed to send login codes. Try again later.")) from error
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -175,7 +209,7 @@ class LoginView(BaseAuthView):
 
     schema = LoginViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+    def post(self, request: Request, *args, **kwargs) -> Response:
         login = self.serializer_class(data=request.data)
         login.is_valid(raise_exception=True)
         data = login.data
@@ -189,12 +223,12 @@ class LoginView(BaseAuthView):
 
         login_data = cache.get(login_data_cache_key, None)
         if login_data is None:
-            raise NotFound(_("No login code found for '%(value)s'.") % {"value": value})
+            raise NotFound(gettext_lazy("No login code found for '%(value)s'.") % {"value": value})
 
         login_code = login_data.pop("code", None)
         if not auth_settings.SKIP_CODE_CHECKS and value not in auth_settings.SKIP_CODE_CHECKS_FOR:
             if login_code != data["code"]:
-                raise AuthenticationFailed(_("Incorrect login code."))
+                raise AuthenticationFailed(gettext_lazy("Incorrect login code."))
 
         cache.delete(code_sent_cache_key)
         cache.delete(login_data_cache_key)
@@ -208,20 +242,16 @@ class LoginView(BaseAuthView):
         refresh.update(claim_data)
         access = refresh.new_access_token(sync=True)
 
-        if auth_settings.USE_COOKIES:
-            return self.response_with_cookies(access, refresh)
-
-        data = {"access": str(access), "refresh": str(refresh)}
-        return Response(data=data, status=status.HTTP_200_OK)
+        return self.make_response(data["method"], access, refresh)
 
     def _get_id_value(self, data: Dict[str, Any]) -> Any:
-        return [value for key, value in data.items() if key != "code"][0]
+        return [value for key, value in data.items() if key not in ("code", "method")][0]
 
     def _get_claims(self, login_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             return {key: login_data[key] for key in auth_settings.EXPECTED_CLAIMS}
         except KeyError as error:
-            raise CorruptedDataException(_("Data was corrupted. Try to send another login code.")) from error
+            raise CorruptedDataException(gettext_lazy("Data was corrupted. Try to send another login code.")) from error
 
 
 class RefreshTokenView(BaseAuthView):
@@ -234,11 +264,11 @@ class RefreshTokenView(BaseAuthView):
 
     schema = RefreshTokenViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+    def post(self, request: Request, *args, **kwargs) -> Response:
         data = self.serializer_class(data=request.data)
         data.is_valid(raise_exception=True)
-        token = request.COOKIES["refresh"] if auth_settings.USE_COOKIES else data.data["token"]
 
+        method, token = self._get_refresh_token(request.COOKIES, data.data)
         refresh = RefreshToken(token=token)
 
         user_check = data.data.get("user_check", False)
@@ -250,11 +280,7 @@ class RefreshTokenView(BaseAuthView):
 
         access = refresh.new_access_token(sync=auth_settings.ROTATE_REFRESH_TOKENS)
 
-        if auth_settings.USE_COOKIES:
-            return self.response_with_cookies(access, refresh)
-
-        data = {"access": str(access), "refresh": str(refresh)}
-        return Response(data=data, status=status.HTTP_200_OK)
+        return self.make_response(method, access, refresh)
 
 
 class LogoutView(BaseAuthView):
@@ -267,13 +293,13 @@ class LogoutView(BaseAuthView):
 
     schema = LogoutViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+    def post(self, request: Request, *args, **kwargs) -> Response:
         # Import is here so that jwt rotation remains optional
         from .rotation.models import RefreshTokenRotationLog
 
         data = self.serializer_class(data=request.data)
         data.is_valid(raise_exception=True)
-        token = request.COOKIES["refresh"] if auth_settings.USE_COOKIES else data.data["token"]
+        _, token = self._get_refresh_token(request.COOKIES, data.data)
         RefreshTokenRotationLog.objects.remove_by_token_title(token=token)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -288,7 +314,7 @@ class UpdateTokenView(BaseAuthView):
 
     schema = UpdateTokenViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+    def post(self, request: Request, *args, **kwargs) -> Response:
         token = self.serializer_class(data=request.data)
         token.is_valid(raise_exception=True)
         data = token.data
@@ -299,7 +325,7 @@ class UpdateTokenView(BaseAuthView):
             if claim not in auth_settings.UPDATEABLE_CLAIMS:
                 raise ClaimNotUpdateable(claim=claim)
 
-        token = request.COOKIES["refresh"] if auth_settings.USE_COOKIES else data["token"]
+        method, token = self._get_refresh_token(request.COOKIES, data)
         refresh = RefreshToken(token=token)
         refresh.update(data["data"])
         if auth_settings.ROTATE_REFRESH_TOKENS:
@@ -307,11 +333,7 @@ class UpdateTokenView(BaseAuthView):
 
         access = refresh.new_access_token(sync=auth_settings.ROTATE_REFRESH_TOKENS)
 
-        if auth_settings.USE_COOKIES:
-            return self.response_with_cookies(access, refresh)
-
-        data = {"access": str(access), "refresh": str(refresh)}
-        return Response(data=data, status=status.HTTP_200_OK)
+        return self.make_response(method, access, refresh)
 
 
 class TokenClaimView(BaseAuthView):
@@ -324,6 +346,6 @@ class TokenClaimView(BaseAuthView):
 
     schema = TokenClaimViewSchema()
 
-    def get(self, request: Request, *args, **kwargs) -> Response:  # pylint: disable=W0613
+    def get(self, request: Request, *args, **kwargs) -> Response:
         access = AccessToken.from_request(request)
         return Response(data=access.payload, status=status.HTTP_200_OK)

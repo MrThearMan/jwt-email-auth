@@ -1,5 +1,4 @@
 import logging
-from typing import Any, Dict, List, Optional
 
 from django.utils.functional import cached_property
 from rest_framework import serializers
@@ -10,18 +9,21 @@ from rest_framework.settings import api_settings
 from .fields import TokenField
 from .settings import auth_settings
 from .tokens import AccessToken
+from .typing import Any, Dict, List, LoginMethod, Optional
 
 
 __all__ = [
     "BaseAccessSerializer",
-    "SendLoginCodeSerializer",
+    "BaseLoginSerializer",
+    "BaseSendLoginCodeSerializer",
     "LoginSerializer",
-    "RefreshTokenSerializer",
     "LogoutSerializer",
-    "TokenUpdateSerializer",
+    "RefreshTokenSerializer",
+    "SendLoginCodeSerializer",
+    "TokenClaimOutputSerializer",
     "TokenClaimSerializer",
     "TokenOutputSerializer",
-    "TokenClaimOutputSerializer",
+    "TokenUpdateSerializer",
 ]
 
 
@@ -31,41 +33,61 @@ logger = logging.getLogger(__name__)
 # Input
 
 
-class SendLoginCodeSerializer(serializers.Serializer):  # pylint: disable=W0223
+class BaseSendLoginCodeSerializer(serializers.Serializer):
+    pass
+
+
+class SendLoginCodeSerializer(BaseSendLoginCodeSerializer):
     email = serializers.EmailField(help_text="Email address to send the code to.")
 
 
-class LoginSerializer(serializers.Serializer):  # pylint: disable=W0223
+class BaseLoginSerializer(serializers.Serializer):
     code = serializers.CharField(help_text="Login code.")
+    method = serializers.ChoiceField(
+        help_text="Login method to use.",
+        choices=LoginMethod.choices,
+        default=LoginMethod.COOKIES.value if auth_settings.USE_COOKIES else LoginMethod.TOKEN.value,
+    )
+
+    def validate_method(self, value: str) -> str:
+        if value == LoginMethod.COOKIES and not auth_settings.USE_COOKIES:
+            raise ValidationError("Cookie-based authentication not configured.")
+        if value == LoginMethod.TOKEN and not auth_settings.USE_TOKENS:
+            raise ValidationError("Token-based authentication not configured.")
+
+        return value
+
+
+class LoginSerializer(BaseLoginSerializer):
     email = serializers.EmailField(help_text="Email address the code was sent to.")
 
 
-class RefreshTokenSerializer(serializers.Serializer):  # pylint: disable=W0223
+class RefreshTokenSerializer(serializers.Serializer):
     if not auth_settings.USE_COOKIES:
         token = TokenField(help_text="Refresh token.")
 
     user_check = serializers.BooleanField(default=False, help_text="Check that user for token still exists.")
 
 
-class LogoutSerializer(serializers.Serializer):  # pylint: disable=W0223
+class LogoutSerializer(serializers.Serializer):
     if not auth_settings.USE_COOKIES:
         token = TokenField(help_text="Refresh token.")
 
 
-class TokenUpdateSerializer(serializers.Serializer):  # pylint: disable=W0223
+class TokenUpdateSerializer(serializers.Serializer):
     data = serializers.DictField(help_text="Claims to update.")
     if not auth_settings.USE_COOKIES:
         token = TokenField(help_text="Refresh token.")
 
 
-class TokenClaimSerializer(serializers.Serializer):  # pylint: disable=W0223
+class TokenClaimSerializer(serializers.Serializer):
     pass
 
 
 # Utility
 
 
-class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
+class BaseAccessSerializer(serializers.Serializer):
     """Serializer that takes specified claims from request JWT and adds them to the serializer data.
     Serializer must have the incoming request object in its context dictionary.
     """
@@ -143,12 +165,12 @@ class BaseAccessSerializer(serializers.Serializer):  # pylint: disable=W0223
 # Output (for schema)
 
 
-class TokenOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+class TokenOutputSerializer(serializers.Serializer):
     """New refresh and access token pair."""
 
     access = TokenField(help_text="Access token.")
     refresh = TokenField(help_text="Refresh token.")
 
 
-class TokenClaimOutputSerializer(serializers.Serializer):  # pylint: disable=W0223
+class TokenClaimOutputSerializer(serializers.Serializer):
     """Token claims."""

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jwt-email-auth"
-version = "0.10.1"
+version = "0.11.0"
 description = "JWT authentication from email login codes."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
@@ -57,6 +57,7 @@ Django = ">=3.2"
 djangorestframework = ">=3.12.0"
 django-ipware = ">=4.0.0"
 django-settings-holder = ">=0.0.4"
+magic-specs = ">=0.0.4"
 cryptography = ">=36.0.0"
 PyJWT = ">=2.3.0"
 cffi = ">=1.15.0"
@@ -107,6 +108,9 @@ disable = [
     "import-error",
     "logging-fstring-interpolation",
     "too-few-public-methods",
+    "abstract-method",
+    "unused-argument",
+    "import-outside-toplevel",
 ]
 
 [tool.pylint.format]
@@ -117,6 +121,18 @@ notes = [
     "BUG",
     "REFACTOR",
     "CHECK",
+]
+
+[tool.pylint.BASIC]
+good-names = [
+    "T",
+    "P",
+    "f",
+    "i",
+    "pk",
+    "id",
+    "ip",
+    "0001_initial",
 ]
 
 [tool.mypy]

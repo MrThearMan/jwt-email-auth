@@ -189,6 +189,12 @@ def test_login_schema__get_components(drf_request):
                     "format": "email",
                     "type": "string",
                 },
+                "method": {
+                    "default": "token",
+                    "description": "Login method to use.",
+                    "enum": ["token", "cookies"],
+                    "type": "string",
+                },
             },
             "required": ["code", "email"],
             "type": "object",
@@ -523,7 +529,7 @@ def test_refresh_token_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data, invalid types, or could not find refresh token based on settings.",
         },
         "403": {
             "content": {
@@ -573,6 +579,22 @@ def test_logout_schema__get_responses(drf_request):
             },
             "description": "Refresh token invalidated.",
         },
+        "400": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Missing data, invalid types, or could not find refresh token based on settings.",
+        },
     }
 
 
@@ -607,7 +629,7 @@ def test_update_token_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data, invalid types, or could not find refresh token based on settings.",
         },
         "403": {
             "content": {

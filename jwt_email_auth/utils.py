@@ -5,7 +5,6 @@ from hashlib import md5
 from inspect import cleandoc
 from os import getenv, urandom
 from random import randint
-from typing import TYPE_CHECKING, Any, Dict, Union
 from warnings import warn
 
 from cryptography.exceptions import InvalidTag
@@ -23,6 +22,7 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, Va
 from rest_framework.request import Request
 
 from .settings import auth_settings
+from .typing import TYPE_CHECKING, Any, Dict, Union
 
 
 if TYPE_CHECKING:
@@ -30,14 +30,14 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "decrypt_with_cipher",
+    "encrypt_with_cipher",
     "generate_cache_key",
     "send_login_email",
     "token_from_headers",
+    "TOKEN_PATTERN",
     "user_is_blocked",
     "valid_jwt_format",
-    "encrypt_with_cipher",
-    "decrypt_with_cipher",
-    "TOKEN_PATTERN",
 ]
 
 
@@ -51,7 +51,7 @@ def random_code() -> str:
 
 
 def get_ip(request: Request) -> str:
-    ip, is_routable = get_client_ip(  # pylint: disable=C0103,W0612
+    ip, _ = get_client_ip(
         request=request,
         proxy_order=auth_settings.PROXY_ORDER,
         proxy_count=auth_settings.PROXY_COUNT,
@@ -66,12 +66,12 @@ def generate_cache_key(content: str, /, extra_prefix: str) -> str:
     return f"{auth_settings.CACHE_PREFIX}-{extra_prefix}-{md5(content.encode()).hexdigest()}"
 
 
-def validate_login_and_provide_login_data(email: str) -> Dict[str, Any]:  # pylint: disable=W0613
+def validate_login_and_provide_login_data(email: str) -> Dict[str, Any]:
     """Default function to validate login and provide login data. It is meant to be overriden in Django settings."""
     return {}
 
 
-def blocking_handler(request: Request) -> None:  # pylint: disable=W0613
+def blocking_handler(request: Request) -> None:
     return
 
 
@@ -220,6 +220,6 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
     return decrypted_token.decode()
 
 
-def user_check_callback(refresh: "RefreshToken") -> None:  # pylint: disable=W0613
+def user_check_callback(refresh: "RefreshToken") -> None:
     """Default function to check if token user still exists."""
     return  # pragma: no cover

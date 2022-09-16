@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 
 from jwt_email_auth.rotation.models import RefreshTokenRotationLog
 from jwt_email_auth.tokens import AccessToken, RefreshToken
+from jwt_email_auth.typing import LoginMethod
 from jwt_email_auth.utils import (
     TOKEN_PATTERN,
     blocking_handler,
@@ -456,6 +457,50 @@ def test_login_endpoint__login_code_expired(settings, caplog):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+def test_login_endpoint__no_token_login(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": False,
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) == {"code": code}
+
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.TOKEN}
+    response = client.post("/login", data, format="json")
+
+    assert response.data == {"method": ["Token-based authentication not configured."]}
+
+
+def test_login_endpoint__no_cookie_login(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
+        "USE_COOKIES": False,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    key = generate_cache_key("foo@bar.com", extra_prefix="login")
+    assert cache.get(key) == {"code": code}
+
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response = client.post("/login", data, format="json")
+
+    assert response.data == {"method": ["Cookie-based authentication not configured."]}
+
+
 def test_login_endpoint__use_cookies(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "USE_COOKIES": True,
@@ -468,7 +513,8 @@ def test_login_endpoint__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -563,7 +609,8 @@ def test_login_endpoint__cipher__use_cookies(caplog, settings):
     key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code}
 
-    response = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response = client.post("/login", data, format="json")
 
     assert response.data is None
     assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -762,6 +809,96 @@ def test_refresh_endpoint__check_user_still_exists__not_found(settings, caplog):
     assert response2.data == {"detail": "User not found."}
 
 
+def test_refresh_endpoint__cannot_find_refresh_token(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
+        "USE_COOKIES": False,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": False,
+        "USE_COOKIES": False,
+    }
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert response2.data == {
+        "detail": "Could not find refresh token. Neither token or cookie authentication configured."
+    }
+
+
+def test_refresh_endpoint__cannot_find_refresh_token__should_use_cookie_auth(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
+        "USE_COOKIES": False,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": False,
+        "USE_COOKIES": True,
+    }
+
+    response2 = client.post("/refresh", {"token": response1.data["refresh"]}, format="json")
+
+    assert response2.data == {"detail": "Could not find refresh token. Only cookie authentication is available."}
+
+
+def test_refresh_endpoint__cannot_find_refresh_token__should_use_token_auth(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": False,
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
+
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
+        "USE_COOKIES": False,
+    }
+
+    client.cookies = response1.cookies
+
+    # patch the request data contents when they are given to BaseAuthView._get_refresh_token
+    with patch("rest_framework.serializers.Serializer.data", new_callable=PropertyMock, return_value={}) as patched:
+        # token given due to serializer being set at import time, not used in reality
+        response2 = client.post("/refresh", {"token": str(RefreshToken())}, format="json")
+
+    assert patched.call_count == 1
+
+    assert response2.data == {"detail": "Could not find refresh token. Only token authentication is available."}
+
+
 @pytest.mark.django_db
 def test_refresh_endpoint__rotate(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
@@ -840,7 +977,8 @@ def test_refresh_endpoint__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -930,7 +1068,8 @@ def test_refresh_endpoint__cipher__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
 
     client.cookies = response1.cookies
     # token given due to serializer being set at import time, not used in reality
@@ -1099,7 +1238,8 @@ def test_logout_endpoint__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -1138,7 +1278,8 @@ def test_logout_endpoint__cipher__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 
@@ -1302,7 +1443,8 @@ def test_update_endpoint__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -1458,7 +1600,8 @@ def test_update_endpoint__cipher__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 
@@ -1552,7 +1695,8 @@ def test_token_claim_endpoint__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 
@@ -1618,7 +1762,8 @@ def test_token_claim_endpoint__cipher__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    response1 = client.post("/login", {"email": "foo@bar.com", "code": code}, format="json")
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 

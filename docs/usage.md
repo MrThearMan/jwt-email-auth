@@ -200,15 +200,15 @@ value. Here is an example using phone number for SMS authentication:
 ```python
 # myapp/views.py
 from rest_framework import serializers
+from jwt_email_auth.serializers import BaseSendLoginCodeSerializer, BaseLoginSerializer
 from jwt_email_auth import views as jwt_views
 
 # Should have one field of any type
-class SendLoginCodeSerializer(serializers.Serializer):
+class SendLoginCodeSerializer(BaseSendLoginCodeSerializer):
     phone = serializers.CharField(help_text="Phone number to send the code to.")
 
-# Should have "code" char-type field + one more field of any type
-class LoginSerializer(serializers.Serializer):
-    code = serializers.CharField(help_text="Login code.")
+# Should have one field of any type
+class LoginSerializer(BaseLoginSerializer):
     phone = serializers.CharField(help_text="Phone number the code was sent to.")
 
 class SendLoginCodeView(jwt_views.SendLoginCodeView):

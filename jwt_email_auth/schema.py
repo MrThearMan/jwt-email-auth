@@ -1,5 +1,3 @@
-from typing import Any, Dict, Type, Union
-
 from rest_framework import serializers
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
@@ -7,24 +5,26 @@ from rest_framework.views import APIView
 from .authentication import JWTAuthentication
 from .permissions import HasValidJWT
 from .serializers import TokenClaimOutputSerializer, TokenOutputSerializer
+from .typing import Any, Dict, Type, Union
 
 
 __all__ = [
-    "add_jwt_email_auth_security_scheme",
     "add_jwt_email_auth_security_requirement",
+    "add_jwt_email_auth_security_scheme",
     "add_unauthenticated_response",
     "DisablePermChecks",
     "JWTEmailAuthSchemaMixin",
-    "SendLoginCodeViewSchemaMixin",
-    "LoginViewSchemaMixin",
-    "RefreshTokenViewSchemaMixin",
-    "LogoutViewSchemaMixin",
-    "UpdateTokenViewSchemaMixin",
-    "SendLoginCodeViewSchema",
     "LoginViewSchema",
-    "RefreshTokenViewSchema",
+    "LoginViewSchemaMixin",
     "LogoutViewSchema",
+    "LogoutViewSchemaMixin",
+    "RefreshTokenViewSchema",
+    "RefreshTokenViewSchemaMixin",
+    "SendLoginCodeViewSchema",
+    "SendLoginCodeViewSchemaMixin",
+    "TokenClaimViewSchema",
     "UpdateTokenViewSchema",
+    "UpdateTokenViewSchemaMixin",
 ]
 
 from .settings import auth_settings
@@ -85,7 +85,7 @@ class DisablePermChecks:
     `permission_classes` are shown in the schema.
     """
 
-    def has_view_permissions(self, path, method, view) -> bool:  # pylint: disable=W0613
+    def has_view_permissions(self, path, method, view) -> bool:
         return True
 
 
@@ -110,7 +110,7 @@ class JWTEmailAuthSchemaMixin:
 
         return components
 
-    def get_responses(self, path, method) -> Dict[str, Any]:  # pylint: disable=W0613
+    def get_responses(self, path, method) -> Dict[str, Any]:
         data = {}
         response_media_types = self.map_renderers(path, method)
 
@@ -171,7 +171,7 @@ class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
 class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
-        400: "Missing data or invalid types.",
+        400: "Missing data, invalid types, or could not find refresh token based on settings.",
         403: "Refresh token has expired or is invalid.",
         404: "Refresh token user no longer exists.",
     }
@@ -190,6 +190,7 @@ class LogoutViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
         204: "Refresh token invalidated.",
+        400: "Missing data, invalid types, or could not find refresh token based on settings.",
     }
 
 
@@ -200,7 +201,7 @@ class LogoutViewSchema(LogoutViewSchemaMixin, AutoSchema):
 class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
-        400: "Missing data or invalid types.",
+        400: "Missing data, invalid types, or could not find refresh token based on settings.",
         403: "Refresh token has expired or is invalid.",
         412: "A given claim not found from the list of expected claims, or is not allowed to be updated.",
     }

@@ -1,15 +1,15 @@
-# pylint: disable=import-outside-toplevel, too-many-branches
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import jwt
 from django.utils.translation import gettext_lazy as _
+from magic_specs import Definition
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
 
 from .settings import auth_settings
+from .typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from .utils import decrypt_with_cipher, encrypt_with_cipher, token_from_headers
 
 
@@ -20,20 +20,27 @@ if TYPE_CHECKING:
 __all__ = [
     "AccessToken",
     "RefreshToken",
+    "TokenType",
 ]
 
-
-Token = Union["AccessToken", "RefreshToken"]
 
 logger = logging.getLogger(__name__)
 
 
+Token = Union["AccessToken", "RefreshToken"]
+
+
+class TokenType(Definition):
+    access = auth_settings.ACCESS_TOKEN_KEY
+    refresh = auth_settings.REFRESH_TOKEN_KEY
+
+
 class AccessToken:
 
-    token_type = "access"
+    token_type = TokenType(TokenType.access)
     lifetime = auth_settings.ACCESS_TOKEN_LIFETIME
 
-    def __init__(self, token: Optional[str] = None) -> None:
+    def __init__(self, token: Optional[str] = None) -> None:  # pylint:disable=too-many-branches
         """Create a new token or construct one from encoded string.
 
         :param token: Encoded token without prefix.
@@ -108,19 +115,22 @@ class AccessToken:
 
     @classmethod
     def from_request(cls, request: Request) -> "AccessToken":
-        """Construct a token from request Authorization header.
+        """Construct a token from request.
 
         :param request: Request with token in headers/cookies.
         :raises NotAuthenticated: No token in headers/cookies.
         :raises AuthenticationFailed: Token was invalid.
         """
+        token: Optional[str] = None
 
-        if auth_settings.USE_COOKIES:
-            token: Optional[str] = request.COOKIES.get(cls.token_type)
-            if token is None:
-                raise NotAuthenticated(_("No token found from request cookies."))
-        else:
-            token: str = token_from_headers(request)
+        if token is None and auth_settings.USE_COOKIES:
+            token = request.COOKIES.get(cls.token_type)
+
+        if token is None and auth_settings.USE_TOKENS:
+            token = token_from_headers(request)
+
+        if token is None:
+            raise NotAuthenticated(_("Token not found from request."))
 
         return cls(token=token)
 
@@ -190,7 +200,7 @@ class AccessToken:
 
 class RefreshToken(AccessToken):
 
-    token_type = "refresh"
+    token_type = TokenType(TokenType.refresh)
     lifetime = auth_settings.REFRESH_TOKEN_LIFETIME
 
     def new_access_token(self, sync: bool = False) -> "AccessToken":
@@ -220,7 +230,7 @@ class RefreshToken(AccessToken):
 
         try:
             log = RefreshTokenRotationLog.objects.get(id=int(self.payload["jti"]))
-        except RefreshTokenRotationLog.DoesNotExist as error:  # pylint: disable=no-member
+        except RefreshTokenRotationLog.DoesNotExist as error:
             RefreshTokenRotationLog.objects.remove_by_title(title=str(self.payload["sub"]))
             raise AuthenticationFailed(_("Token is no longer accepted."), code="unaccepted_token") from error
 

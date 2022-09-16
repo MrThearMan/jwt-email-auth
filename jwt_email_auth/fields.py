@@ -1,17 +1,16 @@
-from typing import Any, Optional
-
 from django.utils.functional import cached_property
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
 from rest_framework.fields import CharField, HiddenField, empty
 from rest_framework.request import Request
 
 from .tokens import AccessToken
+from .typing import Any, Optional
 from .utils import valid_jwt_format
 
 
 __all__ = [
-    "TokenField",
     "AutoTokenField",
+    "TokenField",
 ]
 
 

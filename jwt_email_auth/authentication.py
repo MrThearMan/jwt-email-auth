@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Tuple
 
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
@@ -8,6 +7,7 @@ from rest_framework.request import Request
 from .models import StatelessUser
 from .settings import auth_settings
 from .tokens import AccessToken
+from .typing import Optional, Tuple
 
 
 __all__ = [
