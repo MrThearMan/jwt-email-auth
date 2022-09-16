@@ -1,4 +1,4 @@
-# JSON Web Token Email Authentiation
+# JSON Web Token Email Authentication
 
 [![Coverage Status][coverage-badge]][coverage]
 [![GitHub Workflow Status][status-badge]][status]

@@ -1,4 +1,4 @@
-site_name: JWT email authentication
+site_name: JWT Email Authentication
 
 nav:
   - Home: index.md

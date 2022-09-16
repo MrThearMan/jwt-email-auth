@@ -74,7 +74,7 @@ These settings should be specified in "dot import notation" to a function, which
 | `LOGIN_VALIDATION_AND_DATA_CALLBACK` | Function to use for<br>validating user and providing<br>login data.     | str                                | dict[str, Any] |
 | `LOGIN_BLOCKER_CACHE_KEY_CALLBACK`   | Function to generate<br>cache key for storing user's<br>login attempts. | Request                            | str            |
 | `USER_BLOCKED_ADDITIONAL_HANDLER`    | Function for additional<br>handling for blocked users.                  | Request                            | None           |
-| `USER_CHECK_CALLBACK`                | Function to check if token user still exists in refresh view.           | RefreshToken                       | None           |
+| `USER_CHECK_CALLBACK`                | Function to check if token<br>user still exists in<br>refresh view.     | RefreshToken                       | None           |
 
 
 [IP address spoofing][IP spoofing] prevention settings:
