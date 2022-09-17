@@ -48,10 +48,10 @@ test:
 translations:
 	@echo ""
 	@echo Making translations...
-	@poetry run python manage.py makemessages -l fi --ignore=.venv/* --ignore=.tox/*
+	@poetry run python manage.py makemessages -l fi -i ".venv*" -i ".tox*"
 	@echo ""
 	@echo Compiling...
-	@poetry run python manage.py compilemessages --ignore=.venv/* --ignore=.tox/*
+	@poetry run python manage.py compilemessages -i ".tox*" -i ".venv*"
 	@echo ""
 	@echo Done!
 

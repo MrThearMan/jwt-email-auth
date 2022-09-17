@@ -23,15 +23,16 @@ class TokenField(CharField):
 class AutoTokenField(HiddenField):
     """A field that automatically populates from the parent serializers context.
     The context dictionary's must include a Request object, and that Request object
-    must have an 'Authorization' header, from which the JWT is created.
-    If any of these are missing, or the created JWT is not valid, an error will be raised.
+    must have the authorization token, either in its cookies or the 'Authorization' header
+    depending on settings, from which the JWT is created. If any of these are missing,
+    or the created JWT is not valid, an error will be raised.
 
     Parent serializers 'validated_data' attribute will contain an 'AccessToken' object.
     Parent serializers 'data' attribute will contain the encoded token as a string.
 
     AutoTokenField is not shown in the generated schema (due to sublassing HiddenField),
-    since the purpose for this field is to accept the token from the Authorization header
-    and not from user input.
+    since the purpose for this field is to accept the token from the request and not
+    from user input.
     """
 
     def __init__(self, **kwargs):

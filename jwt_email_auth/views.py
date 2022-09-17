@@ -41,7 +41,12 @@ from .serializers import (
 from .settings import auth_settings
 from .tokens import AccessToken, RefreshToken, TokenType
 from .typing import Any, Dict, List, LoginMethod, Tuple, Type
-from .utils import generate_cache_key, user_is_blocked
+from .utils import (
+    generate_code_sent_cache_key,
+    generate_login_data_cache_key,
+    get_id_value_from_request_data,
+    user_is_blocked,
+)
 
 
 __all__ = [
@@ -161,8 +166,8 @@ class SendLoginCodeView(BaseAuthView):
         if user_is_blocked(request, record_attempt=False):
             raise SendCodeCooldown()
 
-        login_data_cache_key = generate_cache_key(value, extra_prefix="login")
-        code_sent_cache_key = generate_cache_key(value, extra_prefix="sendcode")
+        login_data_cache_key = generate_login_data_cache_key(value)
+        code_sent_cache_key = generate_code_sent_cache_key(value)
 
         login_data = self._get_login_data(code_sent_cache_key, login_data_cache_key, value)
 
@@ -186,7 +191,7 @@ class SendLoginCodeView(BaseAuthView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _get_id_value(self, data: Dict[str, Any]) -> Any:
-        return [value for key, value in data.items()][0]
+        return get_id_value_from_request_data(data)
 
     def _get_login_data(self, code_sent_cache_key: str, login_data_cache_key: str, value: Any) -> Dict[str, Any]:
         login_data = cache.get(login_data_cache_key)
@@ -218,10 +223,10 @@ class LoginView(BaseAuthView):
         if user_is_blocked(request):
             raise UserBanned(cooldown=int(auth_settings.LOGIN_COOLDOWN.total_seconds() // 60))
 
-        login_data_cache_key = generate_cache_key(value, extra_prefix="login")
-        code_sent_cache_key = generate_cache_key(value, extra_prefix="sendcode")
+        login_data_cache_key = generate_login_data_cache_key(value)
+        code_sent_cache_key = generate_code_sent_cache_key(value)
 
-        login_data = cache.get(login_data_cache_key, None)
+        login_data = cache.get(login_data_cache_key)
         if login_data is None:
             raise NotFound(gettext_lazy("No login code found for '%(value)s'.") % {"value": value})
 
@@ -245,7 +250,7 @@ class LoginView(BaseAuthView):
         return self.make_response(data["method"], access, refresh)
 
     def _get_id_value(self, data: Dict[str, Any]) -> Any:
-        return [value for key, value in data.items() if key not in ("code", "method")][0]
+        return get_id_value_from_request_data(data)
 
     def _get_claims(self, login_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -265,13 +270,14 @@ class RefreshTokenView(BaseAuthView):
     schema = RefreshTokenViewSchema()
 
     def post(self, request: Request, *args, **kwargs) -> Response:
-        data = self.serializer_class(data=request.data)
-        data.is_valid(raise_exception=True)
+        token = self.serializer_class(data=request.data)
+        token.is_valid(raise_exception=True)
+        data = token.data
 
-        method, token = self._get_refresh_token(request.COOKIES, data.data)
-        refresh = RefreshToken(token=token)
+        method, token_string = self._get_refresh_token(request.COOKIES, data)
+        refresh = RefreshToken(token=token_string)
 
-        user_check = data.data.get("user_check", False)
+        user_check = data.get("user_check", False)
         if user_check:
             auth_settings.USER_CHECK_CALLBACK(refresh)
 
@@ -297,10 +303,11 @@ class LogoutView(BaseAuthView):
         # Import is here so that jwt rotation remains optional
         from .rotation.models import RefreshTokenRotationLog
 
-        data = self.serializer_class(data=request.data)
-        data.is_valid(raise_exception=True)
-        _, token = self._get_refresh_token(request.COOKIES, data.data)
-        RefreshTokenRotationLog.objects.remove_by_token_title(token=token)
+        token = self.serializer_class(data=request.data)
+        token.is_valid(raise_exception=True)
+        data = token.data
+        _, token_string = self._get_refresh_token(request.COOKIES, data)
+        RefreshTokenRotationLog.objects.remove_by_token_title(token=token_string)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -325,8 +332,8 @@ class UpdateTokenView(BaseAuthView):
             if claim not in auth_settings.UPDATEABLE_CLAIMS:
                 raise ClaimNotUpdateable(claim=claim)
 
-        method, token = self._get_refresh_token(request.COOKIES, data)
-        refresh = RefreshToken(token=token)
+        method, token_string = self._get_refresh_token(request.COOKIES, data)
+        refresh = RefreshToken(token=token_string)
         refresh.update(data["data"])
         if auth_settings.ROTATE_REFRESH_TOKENS:
             refresh = refresh.rotate()

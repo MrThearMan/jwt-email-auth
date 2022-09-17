@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 import jwt
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy
 from magic_specs import Definition
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
@@ -85,19 +85,19 @@ class AccessToken:
 
                     RefreshTokenRotationLog.objects.remove_by_token_title(token=token)
 
-                raise AuthenticationFailed(_("Signature has expired."), code="signature_expired") from error
+                raise AuthenticationFailed(gettext_lazy("Signature has expired."), code="signature_expired") from error
 
             except jwt.DecodeError as error:
                 logger.info(error)
-                raise AuthenticationFailed(_("Error decoding signature."), code="decoding_error") from error
+                raise AuthenticationFailed(gettext_lazy("Error decoding signature."), code="decoding_error") from error
 
             except jwt.InvalidTokenError as error:
                 logger.info(error)
-                raise AuthenticationFailed(_("Invalid token."), code="invalid_token") from error
+                raise AuthenticationFailed(gettext_lazy("Invalid token."), code="invalid_token") from error
 
             except Exception as error:  # pragma: no cover
                 logger.info(error)
-                raise AuthenticationFailed(_("Unexpected error."), code="unexpected_error") from error
+                raise AuthenticationFailed(gettext_lazy("Unexpected error."), code="unexpected_error") from error
 
             self.verify_token_type()
             self.verify_payload()
@@ -130,7 +130,7 @@ class AccessToken:
             token = token_from_headers(request)
 
         if token is None:
-            raise NotAuthenticated(_("Token not found from request."))
+            raise NotAuthenticated(gettext_lazy("Token not found from request."))
 
         return cls(token=token)
 
@@ -181,7 +181,7 @@ class AccessToken:
     def verify_token_type(self) -> None:
         if self.token_type != self.payload.get("type", "notype"):
             logger.info(f"Invalid token type: {self.token_type}")
-            raise AuthenticationFailed(_("Invalid token type."), code="invalid_type")
+            raise AuthenticationFailed(gettext_lazy("Invalid token type."), code="invalid_type")
 
     def sync_with(self, token: Token) -> None:
         """Sync this token with the other token, as if they were created at the same time."""
@@ -232,7 +232,7 @@ class RefreshToken(AccessToken):
             log = RefreshTokenRotationLog.objects.get(id=int(self.payload["jti"]))
         except RefreshTokenRotationLog.DoesNotExist as error:
             RefreshTokenRotationLog.objects.remove_by_title(title=str(self.payload["sub"]))
-            raise AuthenticationFailed(_("Token is no longer accepted."), code="unaccepted_token") from error
+            raise AuthenticationFailed(gettext_lazy("Token is no longer accepted."), code="unaccepted_token") from error
 
         return log
 

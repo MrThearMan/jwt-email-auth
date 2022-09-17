@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.serialization import load_ssh_private_key
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy
 from ipware import get_client_ip
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
@@ -33,6 +33,10 @@ __all__ = [
     "decrypt_with_cipher",
     "encrypt_with_cipher",
     "generate_cache_key",
+    "generate_code_sent_cache_key",
+    "generate_login_data_cache_key",
+    "generate_user_blocking_cache_key",
+    "get_id_value_from_request_data",
     "send_login_email",
     "token_from_headers",
     "TOKEN_PATTERN",
@@ -66,6 +70,18 @@ def generate_cache_key(content: str, /, extra_prefix: str) -> str:
     return f"{auth_settings.CACHE_PREFIX}-{extra_prefix}-{md5(content.encode()).hexdigest()}"
 
 
+def generate_login_data_cache_key(value: str) -> str:
+    return generate_cache_key(value, extra_prefix="login")
+
+
+def generate_code_sent_cache_key(value: str) -> str:
+    return generate_cache_key(value, extra_prefix="sendcode")
+
+
+def generate_user_blocking_cache_key(value: str) -> str:
+    return generate_cache_key(value, extra_prefix="block")
+
+
 def validate_login_and_provide_login_data(email: str) -> Dict[str, Any]:
     """Default function to validate login and provide login data. It is meant to be overriden in Django settings."""
     return {}
@@ -76,12 +92,17 @@ def blocking_handler(request: Request) -> None:
 
 
 def blocking_cache_key_from_ip(request: Request) -> str:
-    return generate_cache_key(get_ip(request), extra_prefix="block")
+    value = get_ip(request)
+    return generate_user_blocking_cache_key(value)
 
 
 def blocking_cache_key_from_email(request: Request) -> str:
-    value = [value for key, value in request.data.items() if key != "code"][0]
-    return generate_cache_key(value, extra_prefix="block")
+    value = get_id_value_from_request_data(request.data)
+    return generate_user_blocking_cache_key(value)
+
+
+def get_id_value_from_request_data(data: Dict[str, Any]) -> str:
+    return [value for key, value in data.items() if key not in ("code", "method")][0]
 
 
 def user_is_blocked(request: Request, record_attempt: bool = True) -> bool:
@@ -130,17 +151,18 @@ def token_from_headers(request: Request) -> str:
     :raises NotAuthenticated: No token in headers/cookies.
     :raises AuthenticationFailed: Token was invalid.
     """
+
     auth_header = get_authorization_header(request)
     if not auth_header:
-        raise NotAuthenticated(_("No Authorization header found from request."))
+        raise NotAuthenticated(gettext_lazy("No Authorization header found from request."))
 
     try:
         prefix, encoded_token = auth_header.decode().split()
     except ValueError as error:
-        raise AuthenticationFailed(_("Invalid Authorization header."), code="invalid_header") from error
+        raise AuthenticationFailed(gettext_lazy("Invalid Authorization header."), code="invalid_header") from error
 
     if prefix.lower() != auth_settings.HEADER_PREFIX.lower():
-        raise AuthenticationFailed(_("Invalid prefix."), code="invalid_header_prefix")
+        raise AuthenticationFailed(gettext_lazy("Invalid prefix."), code="invalid_header_prefix")
 
     return encoded_token
 
@@ -150,11 +172,11 @@ def valid_jwt_format(token: str) -> None:
         try:
             token = decrypt_with_cipher(token)
         except Exception as error:
-            raise ValidationError(_("JWT decrypt failed."), code="jwt_decrypt_failed") from error
+            raise ValidationError(gettext_lazy("JWT decrypt failed."), code="jwt_decrypt_failed") from error
 
     match = TOKEN_PATTERN.match(token)
     if match is None:
-        raise ValidationError(_("Invalid JWT format."), code="invalid_jwt_format")
+        raise ValidationError(gettext_lazy("Invalid JWT format."), code="invalid_jwt_format")
 
 
 def load_example_signing_key() -> Ed25519PrivateKey:
@@ -189,9 +211,9 @@ def encrypt_with_cipher(string: str) -> str:
     try:
         key = b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
-        raise RuntimeError(_("Cipher key not set.")) from error
+        raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
     except Exception as error:
-        raise RuntimeError(_("Invalid cipher key.")) from error
+        raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
     nonce = urandom(12)
     cipher = AESGCM(key)
@@ -203,9 +225,9 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
     try:
         key = b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
-        raise RuntimeError(_("Cipher key not set.")) from error
+        raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
     except Exception as error:
-        raise RuntimeError(_("Invalid cipher key.")) from error
+        raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
     string = b64decode(string)
     nonce = string[:12]
@@ -215,7 +237,7 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
     try:
         decrypted_token = cipher.decrypt(nonce, data, None)
     except InvalidTag as error:
-        raise RuntimeError(_("Wrong cipher key.")) from error
+        raise RuntimeError(gettext_lazy("Wrong cipher key.")) from error
 
     return decrypted_token.decode()
 

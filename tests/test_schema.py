@@ -529,7 +529,7 @@ def test_refresh_token_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data, invalid types, or could not find refresh token based on settings.",
+            "description": "Missing data or invalid types.",
         },
         "403": {
             "content": {
@@ -563,6 +563,22 @@ def test_refresh_token_schema__get_responses(drf_request):
             },
             "description": "Refresh token user no longer exists.",
         },
+        "500": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Could not find refresh token based on settings.",
+        },
     }
 
 
@@ -593,7 +609,23 @@ def test_logout_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data, invalid types, or could not find refresh token based on settings.",
+            "description": "Missing data or invalid types.",
+        },
+        "500": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Could not find refresh token based on settings.",
         },
     }
 
@@ -629,7 +661,7 @@ def test_update_token_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data, invalid types, or could not find refresh token based on settings.",
+            "description": "Missing data or invalid types.",
         },
         "403": {
             "content": {
@@ -662,6 +694,22 @@ def test_update_token_schema__get_responses(drf_request):
                 }
             },
             "description": "A given claim not found from the list of expected claims, or is not allowed to be updated.",
+        },
+        "500": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {
+                            "detail": {
+                                "default": "Error message.",
+                                "type": "string",
+                            },
+                        },
+                        "type": "object",
+                    }
+                }
+            },
+            "description": "Could not find refresh token based on settings.",
         },
     }
 

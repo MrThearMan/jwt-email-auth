@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-06-04 21:43+0300\n"
+"POT-Creation-Date: 2022-09-17 12:10+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\jwt_email_auth\apps.py:7
+msgid "JWT Email Authentication"
+msgstr "JWT-sähköpostin todennus"
 
 #: .\jwt_email_auth\exceptions.py:20
 msgid "Server did not respond."
@@ -47,7 +51,7 @@ msgstr "Ei sallittu päivitystä arvolle '%(claim)s'"
 msgid "Data was corrupted."
 msgstr "Data korruptoitunut."
 
-#: .\jwt_email_auth\permissions.py:22 .\jwt_email_auth\tokens.py:89
+#: .\jwt_email_auth\permissions.py:22 .\jwt_email_auth\tokens.py:96
 msgid "Invalid token."
 msgstr "Virheellinen tokeni."
 
@@ -55,75 +59,75 @@ msgstr "Virheellinen tokeni."
 msgid "JWT rotation"
 msgstr "JWT rotaatio"
 
-#: .\jwt_email_auth\tokens.py:81
+#: .\jwt_email_auth\tokens.py:88
 msgid "Signature has expired."
 msgstr "Allekirjoitus on vahnentunut."
 
-#: .\jwt_email_auth\tokens.py:85
+#: .\jwt_email_auth\tokens.py:92
 msgid "Error decoding signature."
 msgstr "Virhe allekirjoituksen tulkitsemisessa."
 
-#: .\jwt_email_auth\tokens.py:93
+#: .\jwt_email_auth\tokens.py:100
 msgid "Unexpected error."
 msgstr "Odottamaton virhe."
 
-#: .\jwt_email_auth\tokens.py:121
-msgid "No token found from request cookies."
-msgstr "Pyyntöevästeistä ei löytynyt tokenia."
+#: .\jwt_email_auth\tokens.py:133
+msgid "Token not found from request."
+msgstr "Tokenia ei löytynyt."
 
-#: .\jwt_email_auth\tokens.py:174
+#: .\jwt_email_auth\tokens.py:184
 msgid "Invalid token type."
 msgstr "Virheellinen tokenin tyyppi."
 
-#: .\jwt_email_auth\tokens.py:224
+#: .\jwt_email_auth\tokens.py:235
 msgid "Token is no longer accepted."
 msgstr "Tokenia ei enää hyväksytä."
 
-#: .\jwt_email_auth\utils.py:130
+#: .\jwt_email_auth\utils.py:157
 msgid "No Authorization header found from request."
 msgstr "Authorization headeria ei löytynyt."
 
-#: .\jwt_email_auth\utils.py:135
+#: .\jwt_email_auth\utils.py:162
 msgid "Invalid Authorization header."
 msgstr "Virheellinen Authorization header."
 
-#: .\jwt_email_auth\utils.py:138
+#: .\jwt_email_auth\utils.py:165
 msgid "Invalid prefix."
 msgstr "Virheellinen etuliite."
 
-#: .\jwt_email_auth\utils.py:148
+#: .\jwt_email_auth\utils.py:175
 msgid "JWT decrypt failed."
 msgstr "Tokenin salauksen purku epäonnistui"
 
-#: .\jwt_email_auth\utils.py:152
+#: .\jwt_email_auth\utils.py:179
 msgid "Invalid JWT format."
 msgstr "Virheellinen tokenin muoto."
 
-#: .\jwt_email_auth\utils.py:187 .\jwt_email_auth\utils.py:201
+#: .\jwt_email_auth\utils.py:214 .\jwt_email_auth\utils.py:228
 msgid "Cipher key not set."
 msgstr "Salausavainta ei ole asetettu."
 
-#: .\jwt_email_auth\utils.py:189 .\jwt_email_auth\utils.py:203
+#: .\jwt_email_auth\utils.py:216 .\jwt_email_auth\utils.py:230
 msgid "Invalid cipher key."
 msgstr "Virheellinen salausavain."
 
-#: .\jwt_email_auth\utils.py:213
+#: .\jwt_email_auth\utils.py:240
 msgid "Wrong cipher key."
 msgstr "Väärä salausavain."
 
-#: .\jwt_email_auth\views.py:156
+#: .\jwt_email_auth\views.py:184
 msgid "Failed to send login codes. Try again later."
 msgstr "Ei voitu lähettää kirjautumiskoodia. Yritä uudelleen myöhemmin."
 
-#: .\jwt_email_auth\views.py:185
+#: .\jwt_email_auth\views.py:226
 #, python-format
 msgid "No login code found for '%(value)s'."
 msgstr "Ei löydetty kirjautumiskoodia '%(value)s':lle."
 
-#: .\jwt_email_auth\views.py:190
+#: .\jwt_email_auth\views.py:231
 msgid "Incorrect login code."
 msgstr "Väärä kirjautumiskoodi."
 
-#: .\jwt_email_auth\views.py:198
+#: .\jwt_email_auth\views.py:254
 msgid "Data was corrupted. Try to send another login code."
 msgstr "Data korruptoitunut. Yritä lähettää uusi kirjautumiskoodi."

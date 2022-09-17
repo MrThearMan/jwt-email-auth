@@ -457,6 +457,27 @@ def test_login_endpoint__login_code_expired(settings, caplog):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+def test_login_endpoint__use_cookies(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
+
+    assert response1.data is None
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+    assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+
+
 def test_login_endpoint__no_token_login(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "USE_TOKENS": False,
@@ -501,8 +522,9 @@ def test_login_endpoint__no_cookie_login(caplog, settings):
     assert response.data == {"method": ["Cookie-based authentication not configured."]}
 
 
-def test_login_endpoint__use_cookies(caplog, settings):
+def test_login_endpoint__both_login_methods(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
         "USE_COOKIES": True,
     }
 
@@ -517,9 +539,26 @@ def test_login_endpoint__use_cookies(caplog, settings):
     response1 = client.post("/login", data, format="json")
 
     assert response1.data is None
-    assert response1.status_code == status.HTTP_204_NO_CONTENT
     assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
     assert response1.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+
+    caplog.clear()
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.TOKEN}
+    response2 = client.post("/login", data, format="json")
+
+    access = response2.data["access"]
+    refresh = response2.data["refresh"]
+    assert response2.cookies.get("access") is None
+    assert response2.cookies.get("refresh") is None
+    assert TOKEN_PATTERN.match(access) is not None
+    assert TOKEN_PATTERN.match(refresh) is not None
+    assert response2.status_code == status.HTTP_200_OK
 
 
 def test_login_endpoint__cipher(caplog, settings):
@@ -993,6 +1032,66 @@ def test_refresh_endpoint__use_cookies(caplog, settings):
     assert response2.status_code == status.HTTP_204_NO_CONTENT
     assert response2.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
     assert response2.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+
+
+def test_refresh_endpoint__both_login_methods(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
+    response1 = client.post("/login", data, format="json")
+
+    assert response1.data is None
+    assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response1.status_code == status.HTTP_204_NO_CONTENT
+
+    caplog.clear()
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.TOKEN}
+    response2 = client.post("/login", data, format="json")
+
+    assert response2.cookies.get("access") is None
+    assert response2.cookies.get("refresh") is None
+    assert TOKEN_PATTERN.match(response2.data["access"]) is not None
+    assert TOKEN_PATTERN.match(response2.data["refresh"]) is not None
+    assert response2.status_code == status.HTTP_200_OK
+
+    client.cookies.clear()
+
+    response3 = client.post("/refresh", {"token": response2.data["refresh"]}, format="json")
+
+    assert response3.cookies.get("access") is None
+    assert response3.cookies.get("refresh") is None
+    assert TOKEN_PATTERN.match(response3.data["access"]) is not None
+    assert TOKEN_PATTERN.match(response3.data["refresh"]) is not None
+    assert response3.status_code == status.HTTP_200_OK
+
+    client.cookies = response1.cookies
+    # patch the request data contents when they are given to BaseAuthView._get_refresh_token
+    with patch("rest_framework.serializers.Serializer.data", new_callable=PropertyMock, return_value={}) as patched:
+        # token given due to serializer being set at import time, not used in reality
+        response4 = client.post("/refresh", {"token": str(RefreshToken())}, format="json")
+
+    assert patched.call_count == 1
+
+    assert response4.data is None
+    assert response4.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response4.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+    assert response4.status_code == status.HTTP_204_NO_CONTENT
 
 
 def test_refresh_endpoint__cipher(caplog, settings):
