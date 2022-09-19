@@ -9,7 +9,7 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
 
 from .settings import auth_settings
-from .typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from .typing import TYPE_CHECKING, Any, Dict, List, LoginMethod, Optional, Union
 from .utils import decrypt_with_cipher, encrypt_with_cipher, token_from_headers
 
 
@@ -122,6 +122,10 @@ class AccessToken:
         :raises AuthenticationFailed: Token was invalid.
         """
         token: Optional[str] = None
+        prefer: Optional[str] = request.headers.get("Prefer")
+
+        if token is None and prefer == LoginMethod.TOKEN.value and auth_settings.USE_TOKENS:
+            token = token_from_headers(request)
 
         if token is None and auth_settings.USE_COOKIES:
             token = request.COOKIES.get(cls.token_type)

@@ -139,6 +139,23 @@ def test_access_token__from_request__cookies(settings, drf_request):
     assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
+def test_access_token__from_request__prefer_token(settings, drf_request):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
+        "USE_COOKIES": True,
+    }
+
+    old_token = AccessToken()
+
+    drf_request.META["HTTP_PREFER"] = "token"
+    drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {old_token}"
+
+    token = AccessToken.from_request(drf_request)
+
+    assert list(token.payload.keys()) == ["type", "exp", "iat"]
+    assert str(token) == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+
+
 def test_access_token__from_request__cookies__refresh(settings, drf_request):
     settings.JWT_EMAIL_AUTH = {
         "USE_COOKIES": True,

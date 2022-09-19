@@ -138,7 +138,7 @@ class SendLoginCodeViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
         204: "Authorization successful, login data cached and code sent.",
-        400: "Missing data or invalid types.",
+        400: "Missing data or invalid values.",
         412: "This user is not allowed to send another login code yet.",
         503: "Server could not send login code.",
     }
@@ -151,7 +151,7 @@ class SendLoginCodeViewSchema(SendLoginCodeViewSchemaMixin, AutoSchema):
 class LoginViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
-        400: "Missing data or invalid types.",
+        400: "Missing data or invalid values.",
         403: "Given login code was incorrect.",
         404: "Authorization not attempted, or login code expired.",
         410: "Login data was corrupted.",
@@ -171,7 +171,7 @@ class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
 class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
-        400: "Missing data or invalid types.",
+        400: "Missing data or invalid values.",
         403: "Refresh token has expired or is invalid.",
         404: "Refresh token user no longer exists.",
         500: "Could not find refresh token based on settings.",
@@ -191,7 +191,7 @@ class LogoutViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
         204: "Refresh token invalidated.",
-        400: "Missing data or invalid types.",
+        400: "Missing data or invalid values.",
         500: "Could not find refresh token based on settings.",
     }
 
@@ -203,7 +203,7 @@ class LogoutViewSchema(LogoutViewSchemaMixin, AutoSchema):
 class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
-        400: "Missing data or invalid types.",
+        400: "Missing data or invalid values.",
         403: "Refresh token has expired or is invalid.",
         412: "A given claim not found from the list of expected claims, or is not allowed to be updated.",
         500: "Could not find refresh token based on settings.",
@@ -223,7 +223,7 @@ class TokenClaimViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
         200: TokenClaimOutputSerializer,
-        400: "Missing data or invalid types.",
+        400: "Missing data or invalid values.",
         403: "Access token has expired or is invalid.",
     }
 

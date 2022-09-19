@@ -150,6 +150,10 @@ class JWTEmailAuthSettings(NamedTuple):
     # Cookies will be checked before Authorization headers if they are enabled.
     USE_COOKIES: bool = False
     #
+    # Default login method to use if none is given in Prefer-headers. If not set,
+    # cookie-based login will be used if enabled, else token-based.
+    DEFAULT_LOGIN_METHOD: Optional[Literal["token", "cookies"]] = None
+    #
     # Cookie key to use for the access token
     ACCESS_TOKEN_KEY: str = "access"
     #

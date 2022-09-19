@@ -2,10 +2,11 @@ import logging
 
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.http.request import HttpHeaders
 from django.utils.translation import gettext_lazy
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import APIException, AuthenticationFailed, NotFound
+from rest_framework.exceptions import APIException, AuthenticationFailed, NotFound, ParseError
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -127,12 +128,17 @@ class BaseAuthView(APIView):
         return response
 
     @staticmethod
-    def _get_refresh_token(cookies: Dict[str, str], data: Dict[str, Any]) -> Tuple[str, str]:
+    def _get_refresh_token(cookies: Dict[str, str], data: Dict[str, Any], headers: HttpHeaders) -> Tuple[str, str]:
         token_from_cookies = cookies.get(TokenType.refresh)
+        token_from_data = data.get("token")
+        prefer = headers.get("Prefer")
+
+        if prefer == "token" and auth_settings.USE_TOKENS and token_from_data is not None:
+            return LoginMethod.TOKEN, token_from_data
+
         if auth_settings.USE_COOKIES and token_from_cookies is not None:
             return LoginMethod.COOKIES, token_from_cookies
 
-        token_from_data = data.get("token")
         if auth_settings.USE_TOKENS and token_from_data is not None:
             return LoginMethod.TOKEN, token_from_data
 
@@ -205,7 +211,7 @@ class SendLoginCodeView(BaseAuthView):
 
 
 class LoginView(BaseAuthView):
-    """Get new refresh and access token pair."""
+    """Get new refresh and access token pair. Use Prefer-header to set the login method."""
 
     serializer_class: Type[BaseSerializer] = LoginSerializer
 
@@ -217,6 +223,20 @@ class LoginView(BaseAuthView):
     def post(self, request: Request, *args, **kwargs) -> Response:
         login = self.serializer_class(data=request.data)
         login.is_valid(raise_exception=True)
+
+        method = request.headers.get(
+            "Prefer",
+            auth_settings.DEFAULT_LOGIN_METHOD
+            or (LoginMethod.COOKIES.value if auth_settings.USE_COOKIES else LoginMethod.TOKEN.value),
+        )
+
+        if method not in LoginMethod.values:
+            raise ParseError(f"{method!r} not a valid login method. Use one of these: {LoginMethod.values!r}")
+        if method == LoginMethod.COOKIES.value and not auth_settings.USE_COOKIES:
+            raise ParseError("Cookie-based authentication not configured.")
+        if method == LoginMethod.TOKEN.value and not auth_settings.USE_TOKENS:
+            raise ParseError("Token-based authentication not configured.")
+
         data = login.data
         value = self._get_id_value(data)
 
@@ -247,7 +267,7 @@ class LoginView(BaseAuthView):
         refresh.update(claim_data)
         access = refresh.new_access_token(sync=True)
 
-        return self.make_response(data["method"], access, refresh)
+        return self.make_response(method, access, refresh)
 
     def _get_id_value(self, data: Dict[str, Any]) -> Any:
         return get_id_value_from_request_data(data)
@@ -274,7 +294,7 @@ class RefreshTokenView(BaseAuthView):
         token.is_valid(raise_exception=True)
         data = token.data
 
-        method, token_string = self._get_refresh_token(request.COOKIES, data)
+        method, token_string = self._get_refresh_token(request.COOKIES, data, request.headers)
         refresh = RefreshToken(token=token_string)
 
         user_check = data.get("user_check", False)
@@ -306,7 +326,7 @@ class LogoutView(BaseAuthView):
         token = self.serializer_class(data=request.data)
         token.is_valid(raise_exception=True)
         data = token.data
-        _, token_string = self._get_refresh_token(request.COOKIES, data)
+        _, token_string = self._get_refresh_token(request.COOKIES, data, request.headers)
         RefreshTokenRotationLog.objects.remove_by_token_title(token=token_string)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -332,7 +352,7 @@ class UpdateTokenView(BaseAuthView):
             if claim not in auth_settings.UPDATEABLE_CLAIMS:
                 raise ClaimNotUpdateable(claim=claim)
 
-        method, token_string = self._get_refresh_token(request.COOKIES, data)
+        method, token_string = self._get_refresh_token(request.COOKIES, data, request.headers)
         refresh = RefreshToken(token=token_string)
         refresh.update(data["data"])
         if auth_settings.ROTATE_REFRESH_TOKENS:

@@ -102,7 +102,7 @@ def blocking_cache_key_from_email(request: Request) -> str:
 
 
 def get_id_value_from_request_data(data: Dict[str, Any]) -> str:
-    return [value for key, value in data.items() if key not in ("code", "method")][0]
+    return [value for key, value in data.items() if key not in ("code",)][0]
 
 
 def user_is_blocked(request: Request, record_attempt: bool = True) -> bool:

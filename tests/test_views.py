@@ -469,8 +469,8 @@ def test_login_endpoint__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -494,10 +494,10 @@ def test_login_endpoint__no_token_login(caplog, settings):
     key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code}
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.TOKEN}
-    response = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.TOKEN.value)
 
-    assert response.data == {"method": ["Token-based authentication not configured."]}
+    assert response.data == {"detail": "Token-based authentication not configured."}
 
 
 def test_login_endpoint__no_cookie_login(caplog, settings):
@@ -516,10 +516,10 @@ def test_login_endpoint__no_cookie_login(caplog, settings):
     key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code}
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
-    assert response.data == {"method": ["Cookie-based authentication not configured."]}
+    assert response.data == {"detail": "Cookie-based authentication not configured."}
 
 
 def test_login_endpoint__both_login_methods(caplog, settings):
@@ -535,8 +535,8 @@ def test_login_endpoint__both_login_methods(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response1.data is None
     assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
@@ -549,8 +549,8 @@ def test_login_endpoint__both_login_methods(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.TOKEN}
-    response2 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response2 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.TOKEN.value)
 
     access = response2.data["access"]
     refresh = response2.data["refresh"]
@@ -559,6 +559,25 @@ def test_login_endpoint__both_login_methods(caplog, settings):
     assert TOKEN_PATTERN.match(access) is not None
     assert TOKEN_PATTERN.match(refresh) is not None
     assert response2.status_code == status.HTTP_200_OK
+
+
+def test_login_endpoint__undefined_login_method(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKENS": True,
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    data = {"email": "foo@bar.com", "code": code}
+    response2 = client.post("/login", data, format="json", HTTP_PREFER="foo")
+
+    assert response2.data == {"detail": "'foo' not a valid login method. Use one of these: ['token', 'cookies']"}
 
 
 def test_login_endpoint__cipher(caplog, settings):
@@ -648,8 +667,8 @@ def test_login_endpoint__cipher__use_cookies(caplog, settings):
     key = generate_cache_key("foo@bar.com", extra_prefix="login")
     assert cache.get(key) == {"code": code}
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response.data is None
     assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -913,8 +932,8 @@ def test_refresh_endpoint__cannot_find_refresh_token__should_use_token_auth(capl
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -1016,8 +1035,8 @@ def test_refresh_endpoint__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -1034,6 +1053,33 @@ def test_refresh_endpoint__use_cookies(caplog, settings):
     assert response2.cookies["refresh"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
 
 
+def test_refresh_endpoint__prefer_token(caplog, settings):
+    settings.JWT_EMAIL_AUTH = {
+        "USE_TOKEN": True,
+        "USE_COOKIES": True,
+    }
+
+    client = APIClient()
+
+    client.post("/authenticate", {"email": "foo@bar.com"}, format="json")
+
+    message = caplog.record_tuples[0][2]
+    code = get_login_code_from_message(message)
+
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.TOKEN.value)
+
+    response2 = client.post(
+        "/refresh", {"token": response1.data["refresh"]}, format="json", HTTP_PREFER=LoginMethod.TOKEN.value
+    )
+
+    assert response2.cookies.get("access") is None
+    assert response2.cookies.get("refresh") is None
+    assert TOKEN_PATTERN.match(response2.data["access"]) is not None
+    assert TOKEN_PATTERN.match(response2.data["refresh"]) is not None
+    assert response2.status_code == status.HTTP_200_OK
+
+
 def test_refresh_endpoint__both_login_methods(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "USE_TOKENS": True,
@@ -1047,8 +1093,8 @@ def test_refresh_endpoint__both_login_methods(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response1.data is None
     assert response1.cookies["access"].value == equals_regex(r"^[\w-]+\.[\w-]+\.[\w-]+$")
@@ -1061,8 +1107,8 @@ def test_refresh_endpoint__both_login_methods(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.TOKEN}
-    response2 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response2 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.TOKEN.value)
 
     assert response2.cookies.get("access") is None
     assert response2.cookies.get("refresh") is None
@@ -1167,8 +1213,8 @@ def test_refresh_endpoint__cipher__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     client.cookies = response1.cookies
     # token given due to serializer being set at import time, not used in reality
@@ -1337,8 +1383,8 @@ def test_logout_endpoint__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -1377,8 +1423,8 @@ def test_logout_endpoint__cipher__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 
@@ -1542,8 +1588,8 @@ def test_update_endpoint__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
 
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
@@ -1699,8 +1745,8 @@ def test_update_endpoint__cipher__use_cookies(caplog, settings):
 
     assert len(RefreshTokenRotationLog.objects.all()) == 0
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 
@@ -1794,8 +1840,8 @@ def test_token_claim_endpoint__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 
@@ -1861,8 +1907,8 @@ def test_token_claim_endpoint__cipher__use_cookies(caplog, settings):
     message = caplog.record_tuples[0][2]
     code = get_login_code_from_message(message)
 
-    data = {"email": "foo@bar.com", "code": code, "method": LoginMethod.COOKIES}
-    response1 = client.post("/login", data, format="json")
+    data = {"email": "foo@bar.com", "code": code}
+    response1 = client.post("/login", data, format="json", HTTP_PREFER=LoginMethod.COOKIES.value)
     assert response1.data is None
     assert response1.status_code == status.HTTP_204_NO_CONTENT
 

@@ -9,11 +9,12 @@ from rest_framework.settings import api_settings
 from .fields import TokenField
 from .settings import auth_settings
 from .tokens import AccessToken
-from .typing import Any, Dict, List, LoginMethod, Optional
+from .typing import Any, Dict, List, Optional
 
 
 __all__ = [
     "BaseAccessSerializer",
+    "BaseHeaderSerializer",
     "BaseLoginSerializer",
     "BaseSendLoginCodeSerializer",
     "LoginSerializer",
@@ -30,65 +31,56 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-# Input
-
-
-class BaseSendLoginCodeSerializer(serializers.Serializer):
-    pass
-
-
-class SendLoginCodeSerializer(BaseSendLoginCodeSerializer):
-    email = serializers.EmailField(help_text="Email address to send the code to.")
-
-
-class BaseLoginSerializer(serializers.Serializer):
-    code = serializers.CharField(help_text="Login code.")
-    method = serializers.ChoiceField(
-        help_text="Login method to use.",
-        choices=LoginMethod.choices,
-        default=LoginMethod.COOKIES.value if auth_settings.USE_COOKIES else LoginMethod.TOKEN.value,
-    )
-
-    def validate_method(self, value: str) -> str:
-        if value == LoginMethod.COOKIES and not auth_settings.USE_COOKIES:
-            raise ValidationError("Cookie-based authentication not configured.")
-        if value == LoginMethod.TOKEN and not auth_settings.USE_TOKENS:
-            raise ValidationError("Token-based authentication not configured.")
-
-        return value
-
-
-class LoginSerializer(BaseLoginSerializer):
-    email = serializers.EmailField(help_text="Email address the code was sent to.")
-
-
-class RefreshTokenSerializer(serializers.Serializer):
-    if not auth_settings.USE_COOKIES:
-        token = TokenField(help_text="Refresh token.")
-
-    user_check = serializers.BooleanField(default=False, help_text="Check that user for token still exists.")
-
-
-class LogoutSerializer(serializers.Serializer):
-    if not auth_settings.USE_COOKIES:
-        token = TokenField(help_text="Refresh token.")
-
-
-class TokenUpdateSerializer(serializers.Serializer):
-    data = serializers.DictField(help_text="Claims to update.")
-    if not auth_settings.USE_COOKIES:
-        token = TokenField(help_text="Refresh token.")
-
-
-class TokenClaimSerializer(serializers.Serializer):
-    pass
-
-
 # Utility
 
 
-class BaseAccessSerializer(serializers.Serializer):
-    """Serializer that takes specified claims from request JWT and adds them to the serializer data.
+class BaseHeaderSerializer(serializers.Serializer):
+    """Serializer that adds the specified headers from request to the serializer data.
+    Serializer must have the incoming request object in its context dictionary.
+    """
+
+    take_from_headers: List[str] = []
+    """Headers to take values from.
+    Header names should be in Capitalized-Kebab-Case, but
+    keys in the serializer data will be in snake_case.
+    """
+
+    @cached_property
+    def request_from_context(self) -> Request:
+        request: Optional[Request] = self.context.get("request")
+        if request is None or not isinstance(request, Request):
+            raise ValidationError(
+                {
+                    api_settings.NON_FIELD_ERRORS_KEY: ErrorDetail(
+                        string="Must include a Request object in the context of the Serializer.",
+                        code="request_missing",
+                    )
+                }
+            )
+        return request
+
+    @cached_property
+    def header_values(self) -> Dict[str, Any]:
+        request = self.request_from_context
+        return {key.replace("-", "_").lower(): request.headers.get(key, None) for key in self.take_from_headers}
+
+    def add_headers(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        data.update(self.header_values)
+        return data
+
+    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        ret = super().to_internal_value(data)
+        ret = self.add_headers(ret)
+        return ret
+
+    def to_representation(self, instance) -> Dict[str, Any]:
+        ret = super().to_representation(instance)
+        ret = self.add_headers(ret)
+        return ret
+
+
+class BaseAccessSerializer(BaseHeaderSerializer):
+    """Serializer that adds the specified claims from request JWT to the serializer data.
     Serializer must have the incoming request object in its context dictionary.
     """
 
@@ -96,12 +88,6 @@ class BaseAccessSerializer(serializers.Serializer):
     """List of keys to take from token claims and pass to bound method.
     Claims can be anything specified in JWT_EMAIL_AUTH["EXPECTED_CLAIMS"] django setting.
     A ValidationError will be raised if token doesn't have all of these claims.
-    """
-
-    take_from_headers: List[str] = []
-    """Headers to take values from.
-    Header names should be in Capitalized-Kebab-Case, but
-    keys in the serializer data will be in snake_case.
     """
 
     @cached_property
@@ -122,29 +108,6 @@ class BaseAccessSerializer(serializers.Serializer):
             )
         return data
 
-    @cached_property
-    def header_values(self) -> Dict[str, Any]:
-        request = self.request_from_context
-        return {key.replace("-", "_").lower(): request.headers.get(key, None) for key in self.take_from_headers}
-
-    @cached_property
-    def request_from_context(self) -> Request:
-        request: Optional[Request] = self.context.get("request")
-        if request is None or not isinstance(request, Request):
-            raise ValidationError(
-                {
-                    api_settings.NON_FIELD_ERRORS_KEY: ErrorDetail(
-                        string="Must include a Request object in the context of the Serializer.",
-                        code="request_missing",
-                    )
-                }
-            )
-        return request
-
-    def add_headers(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        data.update(self.header_values)
-        return data
-
     def add_token_claims(self, data: Dict[str, Any]) -> Dict[str, Any]:
         data.update(self.token_claims)
         return data
@@ -152,14 +115,49 @@ class BaseAccessSerializer(serializers.Serializer):
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         ret = super().to_internal_value(data)
         ret = self.add_token_claims(ret)
-        ret = self.add_headers(ret)
         return ret
 
     def to_representation(self, instance) -> Dict[str, Any]:
         ret = super().to_representation(instance)
         ret = self.add_token_claims(ret)
-        ret = self.add_headers(ret)
         return ret
+
+
+# Input
+
+
+class BaseSendLoginCodeSerializer(serializers.Serializer):
+    pass
+
+
+class SendLoginCodeSerializer(BaseSendLoginCodeSerializer):
+    email = serializers.EmailField(help_text="Email address to send the code to.")
+
+
+class BaseLoginSerializer(serializers.Serializer):
+    code = serializers.CharField(help_text="Login code.")
+
+
+class LoginSerializer(BaseLoginSerializer):
+    email = serializers.EmailField(help_text="Email address the code was sent to.")
+
+
+class RefreshTokenSerializer(serializers.Serializer):
+    token = TokenField(help_text="Refresh token.", required=not auth_settings.USE_COOKIES)
+    user_check = serializers.BooleanField(default=False, help_text="Check that user for token still exists.")
+
+
+class LogoutSerializer(serializers.Serializer):
+    token = TokenField(help_text="Refresh token.", required=not auth_settings.USE_COOKIES)
+
+
+class TokenUpdateSerializer(serializers.Serializer):
+    data = serializers.DictField(help_text="Claims to update.")
+    token = TokenField(help_text="Refresh token.", required=not auth_settings.USE_COOKIES)
+
+
+class TokenClaimSerializer(serializers.Serializer):
+    pass
 
 
 # Output (for schema)

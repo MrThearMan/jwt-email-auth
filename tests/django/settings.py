@@ -63,18 +63,10 @@ CACHES = {
 }
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 LOGGING = {
@@ -120,7 +112,9 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 JWT_EMAIL_AUTH = {
     "SENDING_ON": False,
     "ROTATE_REFRESH_TOKENS": False,
+    "USE_TOKENS": True,
     "USE_COOKIES": False,
+    "SKIP_CODE_CHECKS": False,
 }
 
 REST_FRAMEWORK = {

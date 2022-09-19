@@ -1,0 +1,61 @@
+### Send login code - token
+POST {{base_url}}/authenticate
+Content-Type: application/json
+Accept-Language: fi
+Prefer: token
+
+{
+  "email": "test@user.com"
+}
+
+### Login user - token
+POST {{base_url}}/login
+Content-Type: application/json
+Accept-Language: fi
+Prefer: token
+
+{
+  "code": "684895",
+  "email": "test@user.com"
+}
+
+> {% client.global.set("access", response.body.access); client.global.set("refresh", response.body.refresh); %}
+
+### New refresh token - token
+POST {{base_url}}/refresh
+Content-Type: application/json
+Accept-Language: fi
+Prefer: token
+
+{
+  "token": "{{refresh}}"
+}
+
+> {% client.global.set("access", response.body.access); client.global.set("refresh", response.body.refresh); %}
+
+### Send login code - cookie
+POST {{base_url}}/authenticate
+Content-Type: application/json
+Accept-Language: fi
+Prefer: cookies
+
+{
+  "email": "test@user.com"
+}
+
+### Login user - cookie
+POST {{base_url}}/login
+Content-Type: application/json
+Accept-Language: fi
+Prefer: cookies
+
+{
+  "code": "684895",
+  "email": "test@user.com"
+}
+
+### New refresh token - cookie
+POST {{base_url}}/refresh
+Content-Type: application/json
+Accept-Language: fi
+Prefer: cookies

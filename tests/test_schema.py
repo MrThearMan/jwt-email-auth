@@ -189,12 +189,6 @@ def test_login_schema__get_components(drf_request):
                     "format": "email",
                     "type": "string",
                 },
-                "method": {
-                    "default": "token",
-                    "description": "Login method to use.",
-                    "enum": ["token", "cookies"],
-                    "type": "string",
-                },
             },
             "required": ["code", "email"],
             "type": "object",
@@ -361,7 +355,7 @@ def test_send_login_code_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data or invalid values.",
         },
         "412": {
             "content": {
@@ -429,7 +423,7 @@ def test_login_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data or invalid values.",
         },
         "403": {
             "content": {
@@ -529,7 +523,7 @@ def test_refresh_token_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data or invalid values.",
         },
         "403": {
             "content": {
@@ -609,7 +603,7 @@ def test_logout_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data or invalid values.",
         },
         "500": {
             "content": {
@@ -661,7 +655,7 @@ def test_update_token_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data or invalid values.",
         },
         "403": {
             "content": {
@@ -745,7 +739,7 @@ def test_token_claim_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "Missing data or invalid types.",
+            "description": "Missing data or invalid values.",
         },
         "403": {
             "content": {

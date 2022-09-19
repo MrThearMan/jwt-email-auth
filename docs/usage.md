@@ -18,6 +18,12 @@
 | {<br>  "email":"person@example.com"<br>  "code":"123222"<br>} | {<br>  "access":"..."<br>  "refresh":"..."<br>} |
 
 
+> If both `USE_TOKENS` and `USE_COOKIES` are enabled, you can select the wanted login method
+> via the `Prefer` header´. Set it to `token` or `cookies` to select one or the other. If not set,
+> the value will be determined from `DEFAULT_LOGIN_METHOD`, but if this is not set the default
+> will be `cookies` if cookies are enabled, and `token` if not.
+
+
 3. Refresh access token from the *refresh token* endpoint (from `RefreshTokenView` class).
 
 | Request                                                     | Response                                        |
