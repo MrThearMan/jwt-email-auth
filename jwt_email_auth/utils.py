@@ -32,11 +32,13 @@ if TYPE_CHECKING:
 __all__ = [
     "decrypt_with_cipher",
     "encrypt_with_cipher",
+    "EXAMPLE_PRIVATE_KEY",
     "generate_cache_key",
     "generate_code_sent_cache_key",
     "generate_login_data_cache_key",
     "generate_user_blocking_cache_key",
     "get_id_value_from_request_data",
+    "parse_signing_key",
     "send_login_email",
     "token_from_headers",
     "TOKEN_PATTERN",
@@ -48,6 +50,17 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 TOKEN_PATTERN = re.compile(r"^[\w-]+\.[\w-]+\.[\w-]+$")
+
+# EXAMPLE_PUBLIC_KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIMOFDpS02jVpNbJidXBM+s9QzWqVx56pxZdWEgVjA4T"
+EXAMPLE_PRIVATE_KEY = (
+    "-----BEGIN OPENSSH PRIVATE KEY-----|"
+    "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW|"
+    "QyNTUxOQAAACCDDhQ6UtNo1aTWyYnVwTPrPUM1qlceeqcWXVhIFYwOEwAAAJDEf7enxH+3|"
+    "pwAAAAtzc2gtZWQyNTUxOQAAACCDDhQ6UtNo1aTWyYnVwTPrPUM1qlceeqcWXVhIFYwOEw|"
+    "AAAECjUueNb+pa9Mf0cVahpJzyBbwQgZrp2qLgYykEiC4g4IMOFDpS02jVpNbJidXBM+s9|"
+    "QzWqVx56pxZdWEgVjA4TAAAAC2xhbXBwQEtBTlRPAQI=|"
+    "-----END OPENSSH PRIVATE KEY-----"
+)
 
 
 def random_code() -> str:
@@ -184,27 +197,19 @@ def load_example_signing_key() -> Ed25519PrivateKey:
     You should set 'SIGNING_KEY' to your environment variables, or change this callback
     with the JWT_EMAIL_AUTH["SIGNING_KEY"] setting before going to production.
     """
-
-    # _default_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIMOFDpS02jVpNbJidXBM+s9QzWqVx56pxZdWEgVjA4T"
-    _default_private_key = (
-        "-----BEGIN OPENSSH PRIVATE KEY-----|"
-        "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW|"
-        "QyNTUxOQAAACCDDhQ6UtNo1aTWyYnVwTPrPUM1qlceeqcWXVhIFYwOEwAAAJDEf7enxH+3|"
-        "pwAAAAtzc2gtZWQyNTUxOQAAACCDDhQ6UtNo1aTWyYnVwTPrPUM1qlceeqcWXVhIFYwOEw|"
-        "AAAECjUueNb+pa9Mf0cVahpJzyBbwQgZrp2qLgYykEiC4g4IMOFDpS02jVpNbJidXBM+s9|"
-        "QzWqVx56pxZdWEgVjA4TAAAAC2xhbXBwQEtBTlRPAQI=|"
-        "-----END OPENSSH PRIVATE KEY-----"
-    )
-
-    key = getenv("SIGNING_KEY", _default_private_key)
-    if key == _default_private_key:
+    key = getenv("SIGNING_KEY", EXAMPLE_PRIVATE_KEY)
+    if key == EXAMPLE_PRIVATE_KEY:
         warn(
             "Using the default signing key. "
             "Please change before going to production. "
             "To change, set 'SIGNING_KEY' environment variable."
         )
+    return parse_signing_key(key)
+
+
+def parse_signing_key(key: str) -> Ed25519PrivateKey:
     key = "\n".join(key.split("|"))
-    return load_ssh_private_key(key.encode(), password=None, backend=default_backend())  # type: ignore
+    return load_ssh_private_key(key.encode(), password=None, backend=default_backend())
 
 
 def encrypt_with_cipher(string: str) -> str:

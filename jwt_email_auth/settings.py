@@ -152,7 +152,7 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # Default login method to use if none is given in Prefer-headers. If not set,
     # cookie-based login will be used if enabled, else token-based.
-    DEFAULT_LOGIN_METHOD: Optional[Literal["token", "cookies"]] = None
+    DEFAULT_LOGIN_METHOD: Optional[Literal["token", "cookies"]] = None  # noqa: F821
     #
     # Cookie key to use for the access token
     ACCESS_TOKEN_KEY: str = "access"
@@ -183,13 +183,13 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # Controls whether a cookie is sent with cross-origin requests,
     # providing some protection against cross-site request forgery attacks (CSRF).
-    SET_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
+    SET_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"  # noqa: F821
     #
     # IP address spoofing prevention settings:
     # https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users
     #
     # Indicate whether the originating client is on the right or left in the X-Forwarded-For header
-    PROXY_ORDER: Literal["left-most", "right-most"] = "left-most"
+    PROXY_ORDER: Literal["left-most", "right-most"] = "left-most"  # noqa: F821
     #
     # Number of proxies between the server and internet
     PROXY_COUNT: Optional[int] = None

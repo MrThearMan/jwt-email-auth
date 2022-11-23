@@ -79,7 +79,7 @@ class BaseAuthView(APIView):
         return serializer_class(*args, **kwargs)
 
     def get_serializer_class(self) -> Type[BaseSerializer]:
-        assert self.serializer_class, "Serializer class not defined"
+        assert self.serializer_class, "Serializer class not defined"  # noqa: S101
         return self.serializer_class
 
     def get_serializer_context(self):

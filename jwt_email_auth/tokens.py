@@ -40,7 +40,7 @@ class AccessToken:
     token_type = TokenType(TokenType.access)
     lifetime = auth_settings.ACCESS_TOKEN_LIFETIME
 
-    def __init__(self, token: Optional[str] = None) -> None:  # pylint:disable=too-many-branches
+    def __init__(self, token: Optional[str] = None) -> None:  # noqa: C901
         """Create a new token or construct one from encoded string.
 
         :param token: Encoded token without prefix.
