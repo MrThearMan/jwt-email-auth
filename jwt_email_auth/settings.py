@@ -3,7 +3,6 @@ from datetime import timedelta
 from inspect import cleandoc
 from pathlib import Path
 
-from django.conf import settings
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
@@ -203,8 +202,6 @@ class JWTEmailAuthSettings(NamedTuple):
 
 SETTING_NAME: str = "JWT_EMAIL_AUTH"
 
-USER_SETTINGS: Optional[Dict[str, Any]] = getattr(settings, SETTING_NAME, None)
-
 DEFAULTS: Dict[str, Any] = JWTEmailAuthSettings()._asdict()
 
 IMPORT_STRINGS: Set[Union[bytes, str]] = {
@@ -231,7 +228,7 @@ REMOVED_SETTINGS: Set[str] = {
 
 
 auth_settings = SettingsHolder(
-    user_settings=USER_SETTINGS,
+    setting_name=SETTING_NAME,
     defaults=DEFAULTS,
     import_strings=IMPORT_STRINGS,
     removed_settings=REMOVED_SETTINGS,
