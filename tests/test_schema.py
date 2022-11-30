@@ -409,6 +409,15 @@ def test_login_schema__get_responses(drf_request):
             },
             "description": "New refresh and access token pair.",
         },
+        "204": {
+            "content": {
+                "application/json": {
+                    "default": "",
+                    "type": "string",
+                },
+            },
+            "description": "New refresh and access token pair returned in cookies.",
+        },
         "400": {
             "content": {
                 "application/json": {
@@ -487,7 +496,7 @@ def test_login_schema__get_responses(drf_request):
                     }
                 }
             },
-            "description": "User has been blocked after too many attemps at login.",
+            "description": "User has been blocked after too many attempts at login.",
         },
     }
 
@@ -508,6 +517,15 @@ def test_refresh_token_schema__get_responses(drf_request):
                 },
             },
             "description": "New refresh and access token pair.",
+        },
+        "204": {
+            "content": {
+                "application/json": {
+                    "default": "",
+                    "type": "string",
+                },
+            },
+            "description": "New refresh and access token pair returned in cookies.",
         },
         "400": {
             "content": {
@@ -640,6 +658,15 @@ def test_update_token_schema__get_responses(drf_request):
                 },
             },
             "description": "New refresh and access token pair.",
+        },
+        "204": {
+            "content": {
+                "application/json": {
+                    "default": "",
+                    "type": "string",
+                },
+            },
+            "description": "New refresh and access token pair returned in cookies.",
         },
         "400": {
             "content": {

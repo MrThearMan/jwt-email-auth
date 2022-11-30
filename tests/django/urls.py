@@ -87,6 +87,7 @@ urlpatterns = [
             title="Your Project",
             description="API for all things",
             version="1.0.0",
+            public=True,
         ),
         name="openapi-schema",
     ),

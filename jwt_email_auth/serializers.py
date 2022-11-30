@@ -9,17 +9,20 @@ from rest_framework.settings import api_settings
 from .fields import TokenField
 from .settings import auth_settings
 from .tokens import AccessToken
-from .typing import Any, Dict, List, Optional
+from .typing import Any, ClassVar, Dict, List, Optional
 
 
 __all__ = [
+    "AccessSerializerMixin",
     "BaseAccessSerializer",
-    "BaseHeaderSerializer",
     "BaseLoginSerializer",
     "BaseSendLoginCodeSerializer",
+    "CookieSerializerMixin",
+    "HeaderSerializerMixin",
     "LoginSerializer",
     "LogoutSerializer",
     "RefreshTokenSerializer",
+    "RequestFromContextMixin",
     "SendLoginCodeSerializer",
     "TokenClaimOutputSerializer",
     "TokenClaimSerializer",
@@ -34,17 +37,7 @@ logger = logging.getLogger(__name__)
 # Utility
 
 
-class BaseHeaderSerializer(serializers.Serializer):
-    """Serializer that adds the specified headers from request to the serializer data.
-    Serializer must have the incoming request object in its context dictionary.
-    """
-
-    take_from_headers: List[str] = []
-    """Headers to take values from.
-    Header names should be in Capitalized-Kebab-Case, but
-    keys in the serializer data will be in snake_case.
-    """
-
+class RequestFromContextMixin:
     @cached_property
     def request_from_context(self) -> Request:
         request: Optional[Request] = self.context.get("request")
@@ -59,12 +52,23 @@ class BaseHeaderSerializer(serializers.Serializer):
             )
         return request
 
+
+class HeaderSerializerMixin(RequestFromContextMixin):
+
+    take_from_headers: ClassVar[List[str]] = []
+    """Headers to take values from.
+    Header names will be converted to snake_case.
+    """
+
     @cached_property
     def header_values(self) -> Dict[str, Any]:
         request = self.request_from_context
         return {key.replace("-", "_").lower(): request.headers.get(key, None) for key in self.take_from_headers}
 
     def add_headers(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        # Remove any values added to original header names.
+        for key in self.take_from_headers:
+            data.pop(key, None)
         data.update(self.header_values)
         return data
 
@@ -79,14 +83,44 @@ class BaseHeaderSerializer(serializers.Serializer):
         return ret
 
 
-class BaseAccessSerializer(BaseHeaderSerializer):
+class CookieSerializerMixin(RequestFromContextMixin):
+
+    take_from_cookies: ClassVar[List[str]] = []
+    """Cookies to take values from.
+    Cookie names will be converted to snake_case.
+    """
+
+    @cached_property
+    def cookie_values(self) -> Dict[str, Any]:
+        request = self.request_from_context
+        return {key.replace("-", "_").lower(): request.COOKIES.get(key, None) for key in self.take_from_cookies}
+
+    def add_cookies(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        # Remove any values added to original cookie names.
+        for key in self.take_from_cookies:
+            data.pop(key, None)
+        data.update(self.cookie_values)
+        return data
+
+    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        ret = super().to_internal_value(data)
+        ret = self.add_cookies(ret)
+        return ret
+
+    def to_representation(self, instance) -> Dict[str, Any]:
+        ret = super().to_representation(instance)
+        ret = self.add_cookies(ret)
+        return ret
+
+
+class AccessSerializerMixin(RequestFromContextMixin):
     """Serializer that adds the specified claims from request JWT to the serializer data.
     Serializer must have the incoming request object in its context dictionary.
     """
 
-    take_from_token: List[str] = []
-    """List of keys to take from token claims and pass to bound method.
-    Claims can be anything specified in JWT_EMAIL_AUTH["EXPECTED_CLAIMS"] django setting.
+    take_from_token: ClassVar[List[str]] = []
+    """List of keys to take from the token claims and pass to the serializer.
+    Claims can be anything specified in auth_settings.EXPECTED_CLAIMS.
     A ValidationError will be raised if token doesn't have all of these claims.
     """
 
@@ -121,6 +155,21 @@ class BaseAccessSerializer(BaseHeaderSerializer):
         ret = super().to_representation(instance)
         ret = self.add_token_claims(ret)
         return ret
+
+
+class BaseAccessSerializer(CookieSerializerMixin, HeaderSerializerMixin, AccessSerializerMixin, serializers.Serializer):
+    """Serializer that adds the specified token claims, headers, and cookies from request
+    JWT to the serializer data. Serializer must have the incoming request object in its context dictionary.
+    """
+
+    @cached_property
+    def fields(self) -> Dict[str, serializers.Field]:
+        fields = super().fields
+        for header_name in self.take_from_headers:
+            fields[header_name] = serializers.CharField(default=None, allow_null=True, allow_blank=True)
+        for cookie_name in self.take_from_cookies:
+            fields[cookie_name] = serializers.CharField(default=None, allow_null=True, allow_blank=True)
+        return fields
 
 
 # Input

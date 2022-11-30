@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jwt-email-auth"
-version = "0.11.4"
+version = "0.11.5"
 description = "JWT authentication from email login codes."
 authors = [
     "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
@@ -50,7 +50,6 @@ exclude = [
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/MrThearMan/jwt-email-auth/issues"
 
-
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
 Django = ">=3.2"
@@ -61,6 +60,8 @@ magic-specs = ">=0.0.4"
 cryptography = ">=36.0.0"
 PyJWT = ">=2.3.0"
 cffi = ">=1.15.0"
+uritemplate = { version = ">=4.1.1", optional = true }
+PyYAML = { version = ">=5.4.1", optional = true }
 
 [tool.poetry.group.test.dependencies]
 pytest = "7.2.0"
@@ -80,6 +81,9 @@ mkdocs-mermaid2-plugin = "0.6.0"
 mypy = "0.991"
 django-stubs = "1.13.0"
 djangorestframework-stubs = "1.8.0"
+
+[tool.poetry.extras]
+openapi = ["uritemplate", "PyYAML"]
 
 [tool.black]
 line-length = 120
@@ -175,6 +179,8 @@ deps =
     cryptography>=36.0.0
     PyJWT>=2.3.0
     cffi>=1.15.0
+    uritemplate>=4.1.1
+    PyYAML>=5.4.1
 
     pytest
     coverage

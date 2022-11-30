@@ -1,10 +1,11 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, NamedTuple, Optional, Set, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Literal, NamedTuple, Optional, Set, Tuple, Type, Union
 
 from django.db.models import TextChoices
 
 
 __all__ = [
     "Any",
+    "ClassVar",
     "Dict",
     "List",
     "Literal",

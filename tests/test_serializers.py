@@ -25,11 +25,24 @@ def test_base_access_serializer__validated_data__headers(drf_request):
     drf_request.META["HTTP_CACHE_CONTROL"] = "no-cache"
 
     class TestSerializer(BaseAccessSerializer):
-        take_from_headers = ["Cache-Control"]
+        take_from_headers = ["Cache-Control", "Extra"]
 
     serializer = TestSerializer(data={}, context={"request": drf_request})
     serializer.is_valid(raise_exception=True)
-    assert serializer.validated_data == {"cache_control": "no-cache"}
+    assert serializer.validated_data == {"cache_control": "no-cache", "extra": None}
+
+
+def test_base_access_serializer__validated_data__cookies(drf_request):
+    token = AccessToken()
+    drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+    drf_request.COOKIES["Access-Token"] = "foo"
+
+    class TestSerializer(BaseAccessSerializer):
+        take_from_cookies = ["Access-Token", "Extra"]
+
+    serializer = TestSerializer(data={}, context={"request": drf_request})
+    serializer.is_valid(raise_exception=True)
+    assert serializer.validated_data == {"access_token": "foo", "extra": None}
 
 
 def test_base_access_serializer__data(drf_request):
@@ -50,11 +63,24 @@ def test_base_access_serializer__data__headers(drf_request):
     drf_request.META["HTTP_CACHE_CONTROL"] = "no-cache"
 
     class TestSerializer(BaseAccessSerializer):
-        take_from_headers = ["Cache-Control"]
+        take_from_headers = ["Cache-Control", "Extra"]
 
     serializer = TestSerializer(data={}, context={"request": drf_request})
     serializer.is_valid(raise_exception=True)
-    assert serializer.data == {"cache_control": "no-cache"}
+    assert serializer.data == {"cache_control": "no-cache", "extra": None}
+
+
+def test_base_access_serializer__data__cookies(drf_request):
+    token = AccessToken()
+    drf_request.META["HTTP_AUTHORIZATION"] = f"Bearer {token}"
+    drf_request.COOKIES["Access-Token"] = "foo"
+
+    class TestSerializer(BaseAccessSerializer):
+        take_from_cookies = ["Access-Token", "Extra"]
+
+    serializer = TestSerializer(data={}, context={"request": drf_request})
+    serializer.is_valid(raise_exception=True)
+    assert serializer.data == {"access_token": "foo", "extra": None}
 
 
 def test_base_access_serializer__context_not_included():

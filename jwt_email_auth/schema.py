@@ -23,11 +23,10 @@ __all__ = [
     "SendLoginCodeViewSchema",
     "SendLoginCodeViewSchemaMixin",
     "TokenClaimViewSchema",
+    "TokenClaimViewSchemaMixin",
     "UpdateTokenViewSchema",
     "UpdateTokenViewSchemaMixin",
 ]
-
-from .settings import auth_settings
 
 
 NO_CONTENT_SCHEMA = {"type": "string", "default": ""}
@@ -151,17 +150,14 @@ class SendLoginCodeViewSchema(SendLoginCodeViewSchemaMixin, AutoSchema):
 class LoginViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
+        200: TokenOutputSerializer,
+        204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
         403: "Given login code was incorrect.",
         404: "Authorization not attempted, or login code expired.",
         410: "Login data was corrupted.",
-        412: "User has been blocked after too many attemps at login.",
+        412: "User has been blocked after too many attempts at login.",
     }
-
-    if auth_settings.USE_COOKIES:  # pragma: no cover
-        responses[204] = "New refresh and access token pair returned in cookies."
-    else:
-        responses[200] = TokenOutputSerializer
 
 
 class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
@@ -171,16 +167,13 @@ class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
 class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
+        200: TokenOutputSerializer,
+        204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
         403: "Refresh token has expired or is invalid.",
         404: "Refresh token user no longer exists.",
         500: "Could not find refresh token based on settings.",
     }
-
-    if auth_settings.USE_COOKIES:  # pragma: no cover
-        responses[204] = "New refresh and access token pair returned in cookies."
-    else:
-        responses[200] = TokenOutputSerializer
 
 
 class RefreshTokenViewSchema(RefreshTokenViewSchemaMixin, AutoSchema):
@@ -203,16 +196,13 @@ class LogoutViewSchema(LogoutViewSchemaMixin, AutoSchema):
 class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
 
     responses = {
+        200: TokenOutputSerializer,
+        204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
         403: "Refresh token has expired or is invalid.",
         412: "A given claim not found from the list of expected claims, or is not allowed to be updated.",
         500: "Could not find refresh token based on settings.",
     }
-
-    if auth_settings.USE_COOKIES:  # pragma: no cover
-        responses[204] = "New refresh and access token pair returned in cookies."
-    else:
-        responses[200] = TokenOutputSerializer
 
 
 class UpdateTokenViewSchema(UpdateTokenViewSchemaMixin, AutoSchema):

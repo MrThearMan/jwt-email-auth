@@ -64,7 +64,9 @@ logger = logging.getLogger(__name__)
 
 
 class BaseAuthView(APIView):
-    """Base class for JWT authentication"""
+    """
+    Base class for JWT authentication
+    """
 
     serializer_class: Type[BaseSerializer]
 
@@ -154,7 +156,9 @@ class BaseAuthView(APIView):
 
 
 class SendLoginCodeView(BaseAuthView):
-    """Send a new login code."""
+    """
+    Send a new login code.
+    """
 
     serializer_class: Type[BaseSerializer] = SendLoginCodeSerializer
 
@@ -211,7 +215,11 @@ class SendLoginCodeView(BaseAuthView):
 
 
 class LoginView(BaseAuthView):
-    """Get new refresh and access token pair. Use Prefer-header to set the login method."""
+    """
+    Get new refresh and access token pair.
+    Can set the Prefer-header to "cookies" or "token" to select which type of login to use.
+    If not set, the login method will be determined automatically based on settings.
+    """
 
     serializer_class: Type[BaseSerializer] = LoginSerializer
 
@@ -280,7 +288,11 @@ class LoginView(BaseAuthView):
 
 
 class RefreshTokenView(BaseAuthView):
-    """Get new access token from a refresh token."""
+    """
+    Get new access token from a refresh token.
+    Can set the Prefer-header to "cookies" or "token" to select where the token should be taken from.
+    If not set, the type will be determined automatically based on settings.
+    """
 
     serializer_class: Type[BaseSerializer] = RefreshTokenSerializer
 
@@ -310,7 +322,11 @@ class RefreshTokenView(BaseAuthView):
 
 
 class LogoutView(BaseAuthView):
-    """Invalidate refresh token when logging out."""
+    """
+    Invalidate refresh token when logging out.
+    Can set the Prefer-header to "cookies" or "token" to select where the token should be taken from.
+    If not set, the type will be determined automatically based on settings.
+    """
 
     serializer_class: Type[BaseSerializer] = LogoutSerializer
 
@@ -332,7 +348,11 @@ class LogoutView(BaseAuthView):
 
 
 class UpdateTokenView(BaseAuthView):
-    """Update token claims. Changes the token signatures."""
+    """
+    Update token claims. Changes the token signatures.
+    Can set the Prefer-header to "cookies" or "token" to select where the token should be taken from.
+    If not set, the type will be determined automatically based on settings.
+    """
 
     serializer_class: Type[BaseSerializer] = TokenUpdateSerializer
 
@@ -364,7 +384,11 @@ class UpdateTokenView(BaseAuthView):
 
 
 class TokenClaimView(BaseAuthView):
-    """Extract token claims."""
+    """
+    Extract token claims.
+    Can set the Prefer-header to "cookies" or "token" to select where token should be taken from.
+    If not set, the type will be determined automatically based on settings.
+    """
 
     serializer_class: Type[BaseSerializer] = TokenClaimSerializer
 
