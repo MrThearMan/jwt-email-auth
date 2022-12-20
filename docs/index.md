@@ -33,7 +33,7 @@ and then the cached information is obtained using the code that was sent to the 
 [cache]: https://docs.djangoproject.com/en/3.2/topics/cache/#the-low-level-cache-api
 
 [coverage-badge]: https://coveralls.io/repos/github/MrThearMan/jwt-email-auth/badge.svg?branch=main
-[status-badge]: https://img.shields.io/github/workflow/status/MrThearMan/jwt-email-auth/Test
+[status-badge]: https://img.shields.io/github/actions/workflow/status/MrThearMan/jwt-email-auth/test.yml?branch=main
 [pypi-badge]: https://img.shields.io/pypi/v/jwt-email-auth
 [licence-badge]: https://img.shields.io/github/license/MrThearMan/jwt-email-auth
 [repo-badge]: https://img.shields.io/github/last-commit/MrThearMan/jwt-email-auth
