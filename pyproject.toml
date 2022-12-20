@@ -74,12 +74,12 @@ coveralls = "3.3.1"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.4.2"
-pymdown-extensions = "9.8"
+pymdown-extensions = "9.9"
 mkdocs-mermaid2-plugin = "0.6.0"
 
 [tool.poetry.group.lint.dependencies]
 mypy = "0.991"
-django-stubs = "1.13.0"
+django-stubs = "1.13.1"
 djangorestframework-stubs = "1.8.0"
 
 [tool.poetry.extras]
