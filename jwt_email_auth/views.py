@@ -49,7 +49,6 @@ from .utils import (
     user_is_blocked,
 )
 
-
 __all__ = [
     "LoginView",
     "LogoutView",

@@ -8,7 +8,6 @@ from settings_holder import SettingsHolder, reload_settings
 
 from .typing import Any, Dict, List, Literal, NamedTuple, Optional, Set, Union
 
-
 __all__ = [
     "auth_settings",
 ]

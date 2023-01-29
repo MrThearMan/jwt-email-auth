@@ -12,7 +12,6 @@ from .settings import auth_settings
 from .typing import TYPE_CHECKING, Any, Dict, List, LoginMethod, Optional, Union
 from .utils import decrypt_with_cipher, encrypt_with_cipher, token_from_headers
 
-
 if TYPE_CHECKING:
     from .rotation.models import RefreshTokenRotationLog
 

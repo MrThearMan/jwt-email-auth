@@ -4,7 +4,6 @@ from rest_framework.exceptions import APIException
 
 from .typing import Any, Optional
 
-
 __all__ = [
     "ClaimNotUpdateable",
     "CorruptedDataException",

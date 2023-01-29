@@ -9,7 +9,6 @@ from .settings import auth_settings
 from .tokens import AccessToken
 from .typing import Optional, Tuple
 
-
 __all__ = [
     "JWTAuthentication",
 ]

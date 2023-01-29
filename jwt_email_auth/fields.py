@@ -7,7 +7,6 @@ from .tokens import AccessToken
 from .typing import Any, Optional
 from .utils import valid_jwt_format
 
-
 __all__ = [
     "AutoTokenField",
     "TokenField",

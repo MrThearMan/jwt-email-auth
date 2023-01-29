@@ -7,7 +7,6 @@ from .permissions import HasValidJWT
 from .serializers import TokenClaimOutputSerializer, TokenOutputSerializer
 from .typing import Any, Dict, Type, Union
 
-
 __all__ = [
     "add_jwt_email_auth_security_requirement",
     "add_jwt_email_auth_security_scheme",

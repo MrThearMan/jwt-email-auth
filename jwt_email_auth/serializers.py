@@ -11,7 +11,6 @@ from .settings import auth_settings
 from .tokens import AccessToken
 from .typing import Any, ClassVar, Dict, List, Optional
 
-
 __all__ = [
     "AccessSerializerMixin",
     "BaseAccessSerializer",

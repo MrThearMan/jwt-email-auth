@@ -5,7 +5,6 @@ from django.utils.functional import cached_property
 
 from .typing import TYPE_CHECKING, Any
 
-
 if TYPE_CHECKING:
     from .tokens import AccessToken
 

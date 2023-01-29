@@ -24,7 +24,6 @@ from rest_framework.request import Request
 from .settings import auth_settings
 from .typing import TYPE_CHECKING, Any, Dict, Union
 
-
 if TYPE_CHECKING:
     from .tokens import RefreshToken
 
@@ -80,7 +79,7 @@ def get_ip(request: Request) -> str:
 
 def generate_cache_key(content: str, /, extra_prefix: str) -> str:
     """Generate cache key using a prefix (from auth_settings), and md5 hexdigest."""
-    return f"{auth_settings.CACHE_PREFIX}-{extra_prefix}-{md5(content.encode()).hexdigest()}"
+    return f"{auth_settings.CACHE_PREFIX}-{extra_prefix}-{md5(content.encode()).hexdigest()}"  # noqa: S324
 
 
 def generate_login_data_cache_key(value: str) -> str:

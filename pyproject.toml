@@ -64,22 +64,23 @@ uritemplate = { version = ">=4.1.1", optional = true }
 PyYAML = { version = ">=5.4.1", optional = true }
 
 [tool.poetry.group.test.dependencies]
-pytest = "7.2.0"
+pytest = "7.2.1"
 coverage = "6.5.0"
 pytest-django = "4.5.2"
-pre-commit = "2.20.0"
-tox = "3.27.1"
-tox-gh-actions = "2.11.0"
+pytest-freezegun = "0.4.2"
+pre-commit = "3.0.1"
+tox = "4.4.2"
+tox-gh-actions = "3.0.0"
 coveralls = "3.3.1"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.4.2"
-pymdown-extensions = "9.9"
+pymdown-extensions = "9.9.2"
 mkdocs-mermaid2-plugin = "0.6.0"
 
 [tool.poetry.group.lint.dependencies]
 mypy = "0.991"
-django-stubs = "1.13.1"
+django-stubs = "1.14.0"
 djangorestframework-stubs = "1.8.0"
 
 [tool.poetry.extras]
@@ -87,12 +88,6 @@ openapi = ["uritemplate", "PyYAML"]
 
 [tool.black]
 line-length = 120
-
-[tool.isort]
-profile = "black"
-line_length = 120
-skip_gitignore = "True"
-lines_after_imports = 2
 
 [tool.ruff]
 fix = true
@@ -103,14 +98,12 @@ exclude = [
 select = [
     "F",  # pyflakes
     "E",  # pycodestyle errors
-    # "D",  # pydocstyle
-    # "N",  # pep8-naming
+    "I",  # isort
     "S",  # flake8-bandit
     "C",  # flake8-comprehensions
     "B",  # flake8-bugbear
     "T",  # flake8-print
     "W",  # pycodestyle warnings
-    # "ANN",  # flake8-annotations
 ]
 ignore = [
     "S105",  # no passwords hardcoded
@@ -120,7 +113,7 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = "True"
 warn_unused_configs = "True"
 plugins = [
@@ -161,7 +154,7 @@ python =
     3.11: py311
 
 [testenv]
-whitelist_externals =
+allowlist_externals =
     poetry
 setenv =
     PYTHONPATH = {toxinidir}

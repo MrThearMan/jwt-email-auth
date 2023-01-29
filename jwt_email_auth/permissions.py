@@ -8,7 +8,6 @@ from rest_framework.permissions import BasePermission
 from .settings import auth_settings
 from .tokens import AccessToken
 
-
 __all__ = [
     "HasValidJWT",
 ]

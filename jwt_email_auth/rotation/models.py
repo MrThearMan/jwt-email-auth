@@ -8,7 +8,6 @@ from django.db.models import Q
 from ..settings import auth_settings
 from ..utils import decrypt_with_cipher
 
-
 __all__ = ["RefreshTokenRotationLog"]
 
 
