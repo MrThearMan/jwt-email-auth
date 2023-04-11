@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class HasValidJWT(BasePermission):
-
     message = gettext_lazy("Invalid token.")
     code = "permission_denied"
 

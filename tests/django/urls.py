@@ -28,7 +28,6 @@ class Schema(AutoSchema):
 
 
 class TestView1(APIView):
-
     authentication_classes = [JWTAuthentication]
     permission_classes = []
 
@@ -44,7 +43,6 @@ class TestView1(APIView):
 
 
 class TestView2(APIView):
-
     authentication_classes = []
     permission_classes = [HasValidJWT]
 
@@ -58,7 +56,6 @@ class TestView2(APIView):
 
 
 class TestView3(APIView):
-
     authentication_classes = [JWTAuthentication]
     permission_classes = [HasValidJWT]
 
