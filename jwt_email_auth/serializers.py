@@ -53,7 +53,6 @@ class RequestFromContextMixin:
 
 
 class HeaderSerializerMixin(RequestFromContextMixin):
-
     take_from_headers: ClassVar[List[str]] = []
     """Headers to take values from.
     Header names will be converted to snake_case.
@@ -83,7 +82,6 @@ class HeaderSerializerMixin(RequestFromContextMixin):
 
 
 class CookieSerializerMixin(RequestFromContextMixin):
-
     take_from_cookies: ClassVar[List[str]] = []
     """Cookies to take values from.
     Cookie names will be converted to snake_case.

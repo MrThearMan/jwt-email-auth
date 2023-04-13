@@ -63,7 +63,7 @@ EXAMPLE_PRIVATE_KEY = (
 
 
 def random_code() -> str:
-    return str(randint(1, 999_999)).zfill(6)
+    return str(randint(1, 999_999)).zfill(6)  # noqa: S311
 
 
 def get_ip(request: Request) -> str:
@@ -201,7 +201,8 @@ def load_example_signing_key() -> Ed25519PrivateKey:
         warn(
             "Using the default signing key. "
             "Please change before going to production. "
-            "To change, set 'SIGNING_KEY' environment variable."
+            "To change, set 'SIGNING_KEY' environment variable.",
+            stacklevel=2,
         )
     return parse_signing_key(key)
 

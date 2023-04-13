@@ -88,7 +88,6 @@ class DisablePermChecks:
 
 
 class JWTEmailAuthSchemaMixin:
-
     responses: Dict[int, Union[str, Type[serializers.Serializer]]] = {}
 
     def get_components(self, path, method) -> Dict[str, Any]:
@@ -133,7 +132,6 @@ class JWTEmailAuthSchemaMixin:
 
 
 class SendLoginCodeViewSchemaMixin(JWTEmailAuthSchemaMixin):
-
     responses = {
         204: "Authorization successful, login data cached and code sent.",
         400: "Missing data or invalid values.",
@@ -147,7 +145,6 @@ class SendLoginCodeViewSchema(SendLoginCodeViewSchemaMixin, AutoSchema):
 
 
 class LoginViewSchemaMixin(JWTEmailAuthSchemaMixin):
-
     responses = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
@@ -164,7 +161,6 @@ class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
 
 
 class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
-
     responses = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
@@ -180,7 +176,6 @@ class RefreshTokenViewSchema(RefreshTokenViewSchemaMixin, AutoSchema):
 
 
 class LogoutViewSchemaMixin(JWTEmailAuthSchemaMixin):
-
     responses = {
         204: "Refresh token invalidated.",
         400: "Missing data or invalid values.",
@@ -193,7 +188,6 @@ class LogoutViewSchema(LogoutViewSchemaMixin, AutoSchema):
 
 
 class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
-
     responses = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
@@ -209,7 +203,6 @@ class UpdateTokenViewSchema(UpdateTokenViewSchemaMixin, AutoSchema):
 
 
 class TokenClaimViewSchemaMixin(JWTEmailAuthSchemaMixin):
-
     responses = {
         200: TokenClaimOutputSerializer,
         400: "Missing data or invalid values.",

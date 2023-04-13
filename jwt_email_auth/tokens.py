@@ -35,7 +35,6 @@ class TokenType(Definition):
 
 
 class AccessToken:
-
     token_type = TokenType(TokenType.access)
     lifetime = auth_settings.ACCESS_TOKEN_LIFETIME
 
@@ -202,7 +201,6 @@ class AccessToken:
 
 
 class RefreshToken(AccessToken):
-
     token_type = TokenType(TokenType.refresh)
     lifetime = auth_settings.REFRESH_TOKEN_LIFETIME
 

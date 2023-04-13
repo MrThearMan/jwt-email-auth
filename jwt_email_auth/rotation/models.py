@@ -41,7 +41,6 @@ class RefreshTokenRotationLogManager(models.Manager):
 
 
 class RefreshTokenRotationLog(models.Model):
-
     id = models.BigAutoField(primary_key=True)
     expires_at = models.DateTimeField(editable=False, help_text="Date and time when the token expires.")
     title = models.UUIDField(editable=False, help_text="Title this refresh token holds.")
