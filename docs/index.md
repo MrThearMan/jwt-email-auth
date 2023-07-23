@@ -22,6 +22,8 @@ pip install jwt-email-auth
 
 **Source Code**: [https://github.com/MrThearMan/jwt-email-auth/](https://github.com/MrThearMan/jwt-email-auth/)
 
+**Contributing**: [https://github.com/MrThearMan/jwt-email-auth/blob/main/CONTRIBUTING.md](https://github.com/MrThearMan/jwt-email-auth/blob/main/CONTRIBUTING.md)
+
 ---
 
 
