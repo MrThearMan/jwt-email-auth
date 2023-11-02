@@ -1,9 +1,8 @@
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from django.contrib.auth.models import AnonymousUser
 from django.utils.functional import cached_property
-
-from .typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .tokens import AccessToken
@@ -23,11 +22,11 @@ class StatelessUser(AnonymousUser):
     is_active = True
     username = "StatelessUser"
 
-    def __init__(self, token: "AccessToken" = None):
+    def __init__(self, token: "AccessToken" = None) -> None:
         self.token = token if token is not None else {}
 
     @cached_property
-    def id(self) -> str:
+    def id(self) -> str:  # noqa: A003
         return str(uuid4())
 
     @cached_property
@@ -41,10 +40,10 @@ class StatelessUser(AnonymousUser):
     def __str__(self) -> str:
         return self.__class__.__name__
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return hash(self) == hash(other)
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def __hash__(self) -> int:

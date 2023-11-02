@@ -957,7 +957,7 @@ def test_refresh_endpoint__cannot_find_refresh_token__should_use_token_auth(capl
     assert response2.data == {"detail": "Could not find refresh token. Only token authentication is available."}
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_refresh_endpoint__rotate(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -987,7 +987,7 @@ def test_refresh_endpoint__rotate(caplog, settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_refresh_endpoint__rotate__using_old_refresh_invalidates_current_one(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1239,7 +1239,7 @@ def test_refresh_endpoint__cipher__use_cookies(caplog, settings):
 # Logout
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_logout_endpoint(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1269,7 +1269,7 @@ def test_logout_endpoint(caplog, settings):
     assert response3.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_logout_endpoint__with_old_token(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1303,7 +1303,7 @@ def test_logout_endpoint__with_old_token(caplog, settings):
     assert response4.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_logout_endpoint__cipher(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1334,7 +1334,7 @@ def test_logout_endpoint__cipher(caplog, settings):
     assert response3.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_logout_endpoint__cipher__changed(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1367,7 +1367,7 @@ def test_logout_endpoint__cipher__changed(caplog, settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_logout_endpoint__use_cookies(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1406,7 +1406,7 @@ def test_logout_endpoint__use_cookies(caplog, settings):
     assert response3.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_logout_endpoint__cipher__use_cookies(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1452,7 +1452,7 @@ def _data_callback(*args, **kwargs):
     return {"foo": 0, "bar": False}
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_update_endpoint(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1513,7 +1513,7 @@ def test_update_endpoint(caplog, settings):
     assert response3.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_update_endpoint__unexpected_claim(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1540,7 +1540,7 @@ def test_update_endpoint__unexpected_claim(caplog, settings):
     assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_update_endpoint__not_allowed_to_update(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1569,7 +1569,7 @@ def test_update_endpoint__not_allowed_to_update(caplog, settings):
     assert response2.status_code == status.HTTP_412_PRECONDITION_FAILED
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_update_endpoint__use_cookies(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1627,7 +1627,7 @@ def test_update_endpoint__use_cookies(caplog, settings):
     assert token["bar"] is True
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_update_endpoint__cipher(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1682,7 +1682,7 @@ def test_update_endpoint__cipher(caplog, settings):
     assert response3.status_code == status.HTTP_403_FORBIDDEN
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_update_endpoint__cipher__changed(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,
@@ -1725,7 +1725,7 @@ def test_update_endpoint__cipher__changed(caplog, settings):
     assert response2.status_code == status.HTTP_400_BAD_REQUEST
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db()
 def test_update_endpoint__cipher__use_cookies(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
         "ROTATE_REFRESH_TOKENS": True,

@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 import jwt
 from django.utils.translation import gettext_lazy
@@ -9,7 +10,7 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.request import Request
 
 from .settings import auth_settings
-from .typing import TYPE_CHECKING, Any, Dict, List, LoginMethod, Optional, Union
+from .typing import Any, Dict, List, LoginMethod, Optional, Union
 from .utils import decrypt_with_cipher, encrypt_with_cipher, token_from_headers
 
 if TYPE_CHECKING:
@@ -38,8 +39,9 @@ class AccessToken:
     token_type = TokenType(TokenType.access)
     lifetime = auth_settings.ACCESS_TOKEN_LIFETIME
 
-    def __init__(self, token: Optional[str] = None) -> None:  # noqa: C901
-        """Create a new token or construct one from encoded string.
+    def __init__(self, token: Optional[str] = None) -> None:  # noqa: C901, PLR0912
+        """
+        Create a new token or construct one from encoded string.
 
         :param token: Encoded token without prefix.
         :raises AuthenticationFailed: Token was invalid.
@@ -93,7 +95,7 @@ class AccessToken:
                 logger.info(error)
                 raise AuthenticationFailed(gettext_lazy("Invalid token."), code="invalid_token") from error
 
-            except Exception as error:  # pragma: no cover
+            except Exception as error:  # noqa: BLE001 pragma: no cover
                 logger.info(error)
                 raise AuthenticationFailed(gettext_lazy("Unexpected error."), code="unexpected_error") from error
 
@@ -113,7 +115,8 @@ class AccessToken:
 
     @classmethod
     def from_request(cls, request: Request) -> "AccessToken":
-        """Construct a token from request.
+        """
+        Construct a token from request.
 
         :param request: Request with token in headers/cookies.
         :raises NotAuthenticated: No token in headers/cookies.
@@ -154,7 +157,7 @@ class AccessToken:
     def __getitem__(self, key: str) -> Any:
         return self.payload[key]
 
-    def __setitem__(self, key: str, value: Union[int, float, str, bool, bytes]) -> None:
+    def __setitem__(self, key: str, value: Union[float, str, bool, bytes]) -> None:
         self.payload[key] = value
 
     def __delitem__(self, key: str) -> None:
@@ -172,13 +175,10 @@ class AccessToken:
         self.payload.update({} if data is None else data, **kwargs)
 
     def verify_payload(self) -> None:
-        missing_claims: List[str] = []
-        for claim in auth_settings.EXPECTED_CLAIMS:
-            if claim not in self:
-                missing_claims.append(claim)
-
+        missing_claims: List[str] = [claim for claim in auth_settings.EXPECTED_CLAIMS if claim not in self]
         if missing_claims:
-            raise AuthenticationFailed(f"Missing token claims: {missing_claims}.", code="missing_claims")
+            msg = f"Missing token claims: {missing_claims}."
+            raise AuthenticationFailed(msg, code="missing_claims")
 
     def verify_token_type(self) -> None:
         if self.token_type != self.payload.get("type", "notype"):
@@ -204,8 +204,9 @@ class RefreshToken(AccessToken):
     token_type = TokenType(TokenType.refresh)
     lifetime = auth_settings.REFRESH_TOKEN_LIFETIME
 
-    def new_access_token(self, sync: bool = False) -> "AccessToken":
-        """Create a new access token from this refresh token.
+    def new_access_token(self, sync: bool = False) -> "AccessToken":  # noqa: FBT001, FBT002
+        """
+        Create a new access token from this refresh token.
 
         :param sync: Sync the two tokens, as if they were created at the same time.
         """

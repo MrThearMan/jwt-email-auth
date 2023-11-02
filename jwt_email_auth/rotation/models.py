@@ -36,12 +36,11 @@ class RefreshTokenRotationLogManager(models.Manager):
     def pass_title(self, title: str, expires_at: datetime) -> "RefreshTokenRotationLog":
         """Remove logs with the given title, plus all expired logs, and then create a new log for the title."""
         self.remove_by_title(title=title)
-        log = self.create(title=title, expires_at=expires_at)
-        return log
+        return self.create(title=title, expires_at=expires_at)
 
 
 class RefreshTokenRotationLog(models.Model):
-    id = models.BigAutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)  # noqa: A003
     expires_at = models.DateTimeField(editable=False, help_text="Date and time when the token expires.")
     title = models.UUIDField(editable=False, help_text="Title this refresh token holds.")
 

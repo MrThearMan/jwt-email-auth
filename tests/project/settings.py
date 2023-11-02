@@ -51,7 +51,7 @@ TEMPLATES = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "django" / "db.sqlite3",
+        "NAME": BASE_DIR / "project" / "db.sqlite3",
     }
 }
 
@@ -63,7 +63,9 @@ CACHES = {
 }
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -92,8 +94,8 @@ LOGGING = {
     },
 }
 
-ROOT_URLCONF = "tests.django.urls"
-WSGI_APPLICATION = "tests.django.wsgi.application"
+ROOT_URLCONF = "tests.project.urls"
+WSGI_APPLICATION = "tests.project.wsgi.application"
 LANGUAGE_CODE = "en"
 LANGUAGES = [("en", "English"), ("fi", "Finland")]
 TIME_ZONE = "UTC"

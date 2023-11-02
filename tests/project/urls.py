@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from jwt_email_auth.authentication import JWTAuthentication
 from jwt_email_auth.permissions import HasValidJWT
 from jwt_email_auth.schema import add_unauthenticated_response
+from jwt_email_auth.typing import Any
 from jwt_email_auth.views import (
     LoginView,
     LogoutView,
@@ -33,7 +34,7 @@ class TestView1(APIView):
 
     schema = Schema()
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         data = {
             "token": str(request.auth),
             "user": str(request.user),
@@ -46,7 +47,7 @@ class TestView2(APIView):
     authentication_classes = []
     permission_classes = [HasValidJWT]
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         data = {
             "token": str(request.auth),
             "user": str(request.user),
@@ -59,7 +60,7 @@ class TestView3(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [HasValidJWT]
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         data = {
             "token": str(request.auth),
             "user": str(request.user),

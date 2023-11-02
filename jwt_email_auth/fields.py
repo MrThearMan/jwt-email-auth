@@ -1,10 +1,11 @@
+from django.db import models
 from django.utils.functional import cached_property
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
 from rest_framework.fields import CharField, HiddenField, empty
 from rest_framework.request import Request
 
 from .tokens import AccessToken
-from .typing import Any, Optional
+from .typing import Any, Callable, ClassVar, List, Optional
 from .utils import valid_jwt_format
 
 __all__ = [
@@ -16,11 +17,12 @@ __all__ = [
 class TokenField(CharField):
     """Validates incoming tokens are in the correct format."""
 
-    default_validators = [valid_jwt_format]
+    default_validators: ClassVar[List[Callable[[str], None]]] = [valid_jwt_format]
 
 
 class AutoTokenField(HiddenField):
-    """A field that automatically populates from the parent serializers context.
+    """
+    A field that automatically populates from the parent serializers context.
     The context dictionary's must include a Request object, and that Request object
     must have the authorization token, either in its cookies or the 'Authorization' header
     depending on settings, from which the JWT is created. If any of these are missing,
@@ -34,7 +36,7 @@ class AutoTokenField(HiddenField):
     from user input.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         kwargs["default"] = empty
         super().__init__(**kwargs)
 
@@ -44,23 +46,24 @@ class AutoTokenField(HiddenField):
         self.read_only = False
 
     @cached_property
-    def _default(self) -> AccessToken:  # type: ignore
+    def _default(self) -> AccessToken:
         request: Optional[Request] = self.parent.context.get("request")
         if request is None or not isinstance(request, Request):
-            raise ValidationError("Must include a Request object in the context of the Serializer.")
+            msg = "Must include a Request object in the context of the Serializer."
+            raise ValidationError(msg)
 
         try:
             return AccessToken.from_request(request)
         except (AuthenticationFailed, NotAuthenticated) as error:
             raise ValidationError(error.detail) from error
 
-    def get_default(self) -> AccessToken:  # type: ignore
+    def get_default(self) -> AccessToken:
         return self._default
 
     def run_validation(self, data: Any = ...) -> AccessToken:
         return self.get_default()
 
-    def get_attribute(self, instance) -> AccessToken:
+    def get_attribute(self, instance: models.Model) -> AccessToken:
         return self.get_default()
 
     def to_representation(self, value: AccessToken) -> str:

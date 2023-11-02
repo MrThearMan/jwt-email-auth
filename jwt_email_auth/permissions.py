@@ -4,6 +4,8 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+from rest_framework.views import APIView
 
 from .settings import auth_settings
 from .tokens import AccessToken
@@ -17,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 class HasValidJWT(BasePermission):
-    message = gettext_lazy("Invalid token.")
-    code = "permission_denied"
+    message: str = gettext_lazy("Invalid token.")
+    code: str = "permission_denied"
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: APIView) -> bool:
         if request.method == "OPTIONS" and settings.DEBUG and auth_settings.OPTIONS_SCHEMA_ACCESS:
             logger.debug("Allow access for OPTIONS requests in DEBUG mode.")
             return True

@@ -1,5 +1,6 @@
 import logging
 
+from django.db import models
 from django.utils.functional import cached_property
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail, ValidationError
@@ -72,13 +73,11 @@ class HeaderSerializerMixin(RequestFromContextMixin):
 
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         ret = super().to_internal_value(data)
-        ret = self.add_headers(ret)
-        return ret
+        return self.add_headers(ret)
 
-    def to_representation(self, instance) -> Dict[str, Any]:
+    def to_representation(self, instance: models.Model) -> Dict[str, Any]:
         ret = super().to_representation(instance)
-        ret = self.add_headers(ret)
-        return ret
+        return self.add_headers(ret)
 
 
 class CookieSerializerMixin(RequestFromContextMixin):
@@ -101,17 +100,16 @@ class CookieSerializerMixin(RequestFromContextMixin):
 
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         ret = super().to_internal_value(data)
-        ret = self.add_cookies(ret)
-        return ret
+        return self.add_cookies(ret)
 
-    def to_representation(self, instance) -> Dict[str, Any]:
+    def to_representation(self, instance: models.Model) -> Dict[str, Any]:
         ret = super().to_representation(instance)
-        ret = self.add_cookies(ret)
-        return ret
+        return self.add_cookies(ret)
 
 
 class AccessSerializerMixin(RequestFromContextMixin):
-    """Serializer that adds the specified claims from request JWT to the serializer data.
+    """
+    Serializer that adds the specified claims from request JWT to the serializer data.
     Serializer must have the incoming request object in its context dictionary.
     """
 
@@ -131,7 +129,7 @@ class AccessSerializerMixin(RequestFromContextMixin):
         for key in self.take_from_token:
             try:
                 data[key] = token[key]
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 missing.append(key)
         if missing:
             raise ValidationError(
@@ -145,17 +143,16 @@ class AccessSerializerMixin(RequestFromContextMixin):
 
     def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
         ret = super().to_internal_value(data)
-        ret = self.add_token_claims(ret)
-        return ret
+        return self.add_token_claims(ret)
 
-    def to_representation(self, instance) -> Dict[str, Any]:
+    def to_representation(self, instance: models.Model) -> Dict[str, Any]:
         ret = super().to_representation(instance)
-        ret = self.add_token_claims(ret)
-        return ret
+        return self.add_token_claims(ret)
 
 
 class BaseAccessSerializer(CookieSerializerMixin, HeaderSerializerMixin, AccessSerializerMixin, serializers.Serializer):
-    """Serializer that adds the specified token claims, headers, and cookies from request
+    """
+    Serializer that adds the specified token claims, headers, and cookies from request
     JWT to the serializer data. Serializer must have the incoming request object in its context dictionary.
     """
 

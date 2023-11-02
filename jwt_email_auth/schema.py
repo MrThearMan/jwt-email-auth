@@ -1,11 +1,11 @@
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 
 from .authentication import JWTAuthentication
 from .permissions import HasValidJWT
 from .serializers import TokenClaimOutputSerializer, TokenOutputSerializer
-from .typing import Any, Dict, Type, Union
+from .typing import Any, ClassVar, Dict, Type, Union
 
 __all__ = [
     "add_jwt_email_auth_security_requirement",
@@ -42,7 +42,8 @@ ERROR_SCHEMA = {
 
 
 def add_jwt_email_auth_security_scheme(schema: Dict[str, Any]) -> None:
-    """Add JWT email auth Security Scheme to the OpenAPI V3 Scheme.
+    """
+    Add JWT email auth Security Scheme to the OpenAPI V3 Scheme.
     Use in `rest_framework.schemas.openapi.SchemaGenerator.get_schema`.
     """
     schema["components"]["securitySchemes"] = {
@@ -55,7 +56,8 @@ def add_jwt_email_auth_security_scheme(schema: Dict[str, Any]) -> None:
 
 
 def add_jwt_email_auth_security_requirement(view: APIView, operation: Dict[str, Any]) -> None:
-    """Add JWT email auth security requirement to the view if it has JWT permission or authentication classes.
+    """
+    Add JWT email auth security requirement to the view if it has JWT permission or authentication classes.
     Use in `rest_framework.schemas.openapi.AutoSchema.get_operation`.
     """
     if JWTAuthentication in view.authentication_classes or HasValidJWT in view.permission_classes:
@@ -63,7 +65,8 @@ def add_jwt_email_auth_security_requirement(view: APIView, operation: Dict[str, 
 
 
 def add_unauthenticated_response(self: AutoSchema, responses: Dict[str, Any]) -> None:
-    """Adds 401 response to the given responses-dict if it has JWT permission or authentication classes.
+    """
+    Adds 401 response to the given responses-dict if it has JWT permission or authentication classes.
     Use in `rest_framework.schemas.openapi.AutoSchema.get_responses`.
     """
     if JWTAuthentication in self.view.authentication_classes or HasValidJWT in self.view.permission_classes:
@@ -77,20 +80,21 @@ def add_unauthenticated_response(self: AutoSchema, responses: Dict[str, Any]) ->
 
 
 class DisablePermChecks:
-    """`rest_framework.schemas.openapi.SchemaGenerator` mixin class.
+    """
+    `rest_framework.schemas.openapi.SchemaGenerator` mixin class.
 
     Disable permission checks so that views with `HasValidJWT` in
     `permission_classes` are shown in the schema.
     """
 
-    def has_view_permissions(self, path, method, view) -> bool:
+    def has_view_permissions(self, path: str, method: str, view: APIView) -> bool:
         return True
 
 
 class JWTEmailAuthSchemaMixin:
-    responses: Dict[int, Union[str, Type[serializers.Serializer]]] = {}
+    responses: ClassVar[Dict[int, Union[str, Type[serializers.Serializer]]]] = {}
 
-    def get_components(self, path, method) -> Dict[str, Any]:
+    def get_components(self, path: str, method: str) -> Dict[str, Any]:
         components = {}
 
         request_serializer = self.get_serializer(path, method)
@@ -107,17 +111,17 @@ class JWTEmailAuthSchemaMixin:
 
         return components
 
-    def get_responses(self, path, method) -> Dict[str, Any]:
+    def get_responses(self, path: str, method: str) -> Dict[str, Any]:
         data = {}
         response_media_types = self.map_renderers(path, method)
 
         for status_code, info in self.responses.items():
-            if status_code == 204:
+            if status_code == status.HTTP_204_NO_CONTENT:
                 schema = NO_CONTENT_SCHEMA
 
             elif isinstance(info, type) and issubclass(info, serializers.Serializer):
                 serializer_class = info
-                info = serializer_class.__doc__
+                info = serializer_class.__doc__  # noqa: PLW2901
                 serializer = self.view.initialize_serializer(serializer_class=serializer_class)
                 schema = {"schema": self._get_reference(serializer)}
             else:
@@ -132,7 +136,7 @@ class JWTEmailAuthSchemaMixin:
 
 
 class SendLoginCodeViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses = {
+    responses: ClassVar[Dict[int, str]] = {
         204: "Authorization successful, login data cached and code sent.",
         400: "Missing data or invalid values.",
         412: "This user is not allowed to send another login code yet.",
@@ -145,7 +149,7 @@ class SendLoginCodeViewSchema(SendLoginCodeViewSchemaMixin, AutoSchema):
 
 
 class LoginViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses = {
+    responses: ClassVar[Dict[int, str]] = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
@@ -161,7 +165,7 @@ class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
 
 
 class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses = {
+    responses: ClassVar[Dict[int, str]] = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
@@ -176,7 +180,7 @@ class RefreshTokenViewSchema(RefreshTokenViewSchemaMixin, AutoSchema):
 
 
 class LogoutViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses = {
+    responses: ClassVar[Dict[int, str]] = {
         204: "Refresh token invalidated.",
         400: "Missing data or invalid values.",
         500: "Could not find refresh token based on settings.",
@@ -188,7 +192,7 @@ class LogoutViewSchema(LogoutViewSchemaMixin, AutoSchema):
 
 
 class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses = {
+    responses: ClassVar[Dict[int, str]] = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
@@ -203,7 +207,7 @@ class UpdateTokenViewSchema(UpdateTokenViewSchemaMixin, AutoSchema):
 
 
 class TokenClaimViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses = {
+    responses: ClassVar[Dict[int, str]] = {
         200: TokenClaimOutputSerializer,
         400: "Missing data or invalid values.",
         403: "Access token has expired or is invalid.",

@@ -27,7 +27,7 @@ class JWTEmailAuthSettings(NamedTuple):
     # List of emails for which code checks and email sending are off,
     # even if SKIP_CODE_CHECKS=False and/or SENDING_ON=True.
     # Useful for creating review accounts in an otherwise closed system.
-    SKIP_CODE_CHECKS_FOR: List[str] = []
+    SKIP_CODE_CHECKS_FOR: List[str] = []  # noqa: RUF012
     #
     # How long an access token is valid for
     ACCESS_TOKEN_LIFETIME: timedelta = timedelta(minutes=5)
@@ -58,10 +58,10 @@ class JWTEmailAuthSettings(NamedTuple):
     LOGIN_ATTEMPTS: int = 10
     #
     # List of expected custom JWT claims
-    EXPECTED_CLAIMS: List[str] = []
+    EXPECTED_CLAIMS: List[str] = []  # noqa: RUF012
     #
     # Which expected claims can be updated without re-authentication
-    UPDATEABLE_CLAIMS: List[str] = []
+    UPDATEABLE_CLAIMS: List[str] = []  # noqa: RUF012
     #
     # Email sender. Default is settings.DEFAULT_FROM_EMAIL
     LOGIN_SENDING_EMAIL: Optional[str] = None
@@ -150,7 +150,7 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # Default login method to use if none is given in Prefer-headers. If not set,
     # cookie-based login will be used if enabled, else token-based.
-    DEFAULT_LOGIN_METHOD: Optional[Literal["token", "cookies"]] = None  # noqa: F821
+    DEFAULT_LOGIN_METHOD: Optional[Literal["token", "cookies"]] = None
     #
     # Cookie key to use for the access token
     ACCESS_TOKEN_KEY: str = "access"
@@ -181,13 +181,13 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # Controls whether a cookie is sent with cross-origin requests,
     # providing some protection against cross-site request forgery attacks (CSRF).
-    SET_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"  # noqa: F821
+    SET_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
     #
     # IP address spoofing prevention settings:
     # https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users
     #
     # Indicate whether the originating client is on the right or left in the X-Forwarded-For header
-    PROXY_ORDER: Literal["left-most", "right-most"] = "left-most"  # noqa: F821
+    PROXY_ORDER: Literal["left-most", "right-most"] = "left-most"
     #
     # Number of proxies between the server and internet
     PROXY_COUNT: Optional[int] = None

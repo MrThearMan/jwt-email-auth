@@ -1,4 +1,17 @@
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Literal, NamedTuple, Optional, Set, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from django.db.models import TextChoices
 
@@ -14,8 +27,8 @@ __all__ = [
     "Set",
     "Tuple",
     "Type",
-    "TYPE_CHECKING",
     "Union",
+    "Callable",
 ]
 
 

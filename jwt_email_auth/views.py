@@ -41,7 +41,7 @@ from .serializers import (
 )
 from .settings import auth_settings
 from .tokens import AccessToken, RefreshToken, TokenType
-from .typing import Any, Dict, List, LoginMethod, Tuple, Type
+from .typing import Any, ClassVar, Dict, List, LoginMethod, Tuple, Type
 from .utils import (
     generate_code_sent_cache_key,
     generate_login_data_cache_key,
@@ -63,11 +63,9 @@ logger = logging.getLogger(__name__)
 
 
 class BaseAuthView(APIView):
-    """
-    Base class for JWT authentication
-    """
+    """Base class for JWT authentication"""
 
-    serializer_class: Type[BaseSerializer]
+    serializer_class: ClassVar[Type[BaseSerializer]]
 
     def get_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer:
         kwargs["serializer_class"] = self.get_serializer_class()
@@ -83,7 +81,7 @@ class BaseAuthView(APIView):
         assert self.serializer_class, "Serializer class not defined"  # noqa: S101
         return self.serializer_class
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> Dict[str, Any]:
         return {"request": self.request, "format": self.format_kwarg, "view": self}
 
     @classmethod
@@ -96,7 +94,8 @@ class BaseAuthView(APIView):
         if method == LoginMethod.TOKEN and auth_settings.USE_TOKENS:
             return self.response_with_data(access, refresh)
 
-        raise ImproperlyConfigured(f"Method {method!r} is not available.")  # pragma: no cover
+        msg = f"Method {method!r} is not available."
+        raise ImproperlyConfigured(msg)  # pragma: no cover
 
     @staticmethod
     def response_with_data(access: AccessToken, refresh: RefreshToken) -> Response:
@@ -146,34 +145,35 @@ class BaseAuthView(APIView):
         msg = "Could not find refresh token."
 
         if auth_settings.USE_COOKIES and not auth_settings.USE_TOKENS:
-            raise APIException(f"{msg} Only cookie authentication is available.")
+            msg = f"{msg} Only cookie authentication is available."
+            raise APIException(msg)
 
         if auth_settings.USE_TOKENS and not auth_settings.USE_COOKIES:
-            raise APIException(f"{msg} Only token authentication is available.")
+            msg = f"{msg} Only token authentication is available."
+            raise APIException(msg)
 
-        raise APIException(f"{msg} Neither token or cookie authentication configured.")
+        msg = f"{msg} Neither token or cookie authentication configured."
+        raise APIException(msg)
 
 
 class SendLoginCodeView(BaseAuthView):
-    """
-    Send a new login code.
-    """
+    """Send a new login code."""
 
-    serializer_class: Type[BaseSerializer] = SendLoginCodeSerializer
+    serializer_class: ClassVar[Type[BaseSerializer]] = SendLoginCodeSerializer
 
-    authentication_classes: List[Type[BaseAuthentication]] = []
-    permission_classes: List[Type[BasePermission]] = []
+    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[List[Type[BasePermission]]] = []
 
     schema = SendLoginCodeViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         login_info = self.serializer_class(data=request.data)
         login_info.is_valid(raise_exception=True)
         data = login_info.data
         value = self._get_id_value(data)
 
         if user_is_blocked(request, record_attempt=False):
-            raise SendCodeCooldown()
+            raise SendCodeCooldown
 
         login_data_cache_key = generate_login_data_cache_key(value)
         code_sent_cache_key = generate_code_sent_cache_key(value)
@@ -192,7 +192,7 @@ class SendLoginCodeView(BaseAuthView):
             auth_settings.SEND_LOGIN_CODE_CALLBACK(value, login_data, self.request)
             cache.set(code_sent_cache_key, 1, auth_settings.CODE_SEND_COOLDOWN.total_seconds())
 
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             cache.delete(login_data_cache_key)
             logger.critical(f"Login code sending failed: {type(error).__name__}('{error}')")
             raise ServerException(gettext_lazy("Failed to send login codes. Try again later.")) from error
@@ -209,7 +209,7 @@ class SendLoginCodeView(BaseAuthView):
         else:
             code_sent = cache.get(code_sent_cache_key)
             if code_sent is not None:
-                raise SendCodeCooldown()
+                raise SendCodeCooldown
         return login_data
 
 
@@ -220,14 +220,14 @@ class LoginView(BaseAuthView):
     If not set, the login method will be determined automatically based on settings.
     """
 
-    serializer_class: Type[BaseSerializer] = LoginSerializer
+    serializer_class: ClassVar[Type[BaseSerializer]] = LoginSerializer
 
-    authentication_classes: List[Type[BaseAuthentication]] = []
-    permission_classes: List[Type[BasePermission]] = []
+    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[List[Type[BasePermission]]] = []
 
     schema = LoginViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         login = self.serializer_class(data=request.data)
         login.is_valid(raise_exception=True)
 
@@ -238,11 +238,14 @@ class LoginView(BaseAuthView):
         )
 
         if method not in LoginMethod.values:
-            raise ParseError(f"{method!r} not a valid login method. Use one of these: {LoginMethod.values!r}")
+            msg = f"{method!r} not a valid login method. Use one of these: {LoginMethod.values!r}"
+            raise ParseError(msg)
         if method == LoginMethod.COOKIES.value and not auth_settings.USE_COOKIES:
-            raise ParseError("Cookie-based authentication not configured.")
+            msg = "Cookie-based authentication not configured."
+            raise ParseError(msg)
         if method == LoginMethod.TOKEN.value and not auth_settings.USE_TOKENS:
-            raise ParseError("Token-based authentication not configured.")
+            msg = "Token-based authentication not configured."
+            raise ParseError(msg)
 
         data = login.data
         value = self._get_id_value(data)
@@ -258,9 +261,12 @@ class LoginView(BaseAuthView):
             raise NotFound(gettext_lazy("No login code found for '%(value)s'.") % {"value": value})
 
         login_code = login_data.pop("code", None)
-        if not auth_settings.SKIP_CODE_CHECKS and value not in auth_settings.SKIP_CODE_CHECKS_FOR:
-            if login_code != data["code"]:
-                raise AuthenticationFailed(gettext_lazy("Incorrect login code."))
+        if (
+            not auth_settings.SKIP_CODE_CHECKS
+            and value not in auth_settings.SKIP_CODE_CHECKS_FOR
+            and login_code != data["code"]
+        ):
+            raise AuthenticationFailed(gettext_lazy("Incorrect login code."))
 
         cache.delete(code_sent_cache_key)
         cache.delete(login_data_cache_key)
@@ -293,14 +299,14 @@ class RefreshTokenView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: Type[BaseSerializer] = RefreshTokenSerializer
+    serializer_class: ClassVar[Type[BaseSerializer]] = RefreshTokenSerializer
 
-    authentication_classes: List[Type[BaseAuthentication]] = []
-    permission_classes: List[Type[BasePermission]] = []
+    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[List[Type[BasePermission]]] = []
 
     schema = RefreshTokenViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         token = self.serializer_class(data=request.data)
         token.is_valid(raise_exception=True)
         data = token.data
@@ -327,14 +333,14 @@ class LogoutView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: Type[BaseSerializer] = LogoutSerializer
+    serializer_class: ClassVar[Type[BaseSerializer]] = LogoutSerializer
 
-    authentication_classes: List[Type[BaseAuthentication]] = []
-    permission_classes: List[Type[BasePermission]] = []
+    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[List[Type[BasePermission]]] = []
 
     schema = LogoutViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Import is here so that jwt rotation remains optional
         from .rotation.models import RefreshTokenRotationLog
 
@@ -353,14 +359,14 @@ class UpdateTokenView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: Type[BaseSerializer] = TokenUpdateSerializer
+    serializer_class: ClassVar[Type[BaseSerializer]] = TokenUpdateSerializer
 
-    authentication_classes: List[Type[BaseAuthentication]] = []
-    permission_classes: List[Type[BasePermission]] = []
+    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[List[Type[BasePermission]]] = []
 
     schema = UpdateTokenViewSchema()
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         token = self.serializer_class(data=request.data)
         token.is_valid(raise_exception=True)
         data = token.data
@@ -389,13 +395,13 @@ class TokenClaimView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: Type[BaseSerializer] = TokenClaimSerializer
+    serializer_class: ClassVar[Type[BaseSerializer]] = TokenClaimSerializer
 
-    authentication_classes: List[Type[BaseAuthentication]] = [JWTAuthentication]
-    permission_classes: List[Type[BasePermission]] = [HasValidJWT]
+    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = [JWTAuthentication]
+    permission_classes: ClassVar[List[Type[BasePermission]]] = [HasValidJWT]
 
     schema = TokenClaimViewSchema()
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         access = AccessToken.from_request(request)
         return Response(data=access.payload, status=status.HTTP_200_OK)

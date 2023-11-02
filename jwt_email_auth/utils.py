@@ -5,6 +5,7 @@ from hashlib import md5
 from inspect import cleandoc
 from os import getenv, urandom
 from random import randint
+from typing import TYPE_CHECKING
 from warnings import warn
 
 from cryptography.exceptions import InvalidTag
@@ -22,7 +23,7 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, Va
 from rest_framework.request import Request
 
 from .settings import auth_settings
-from .typing import TYPE_CHECKING, Any, Dict, Union
+from .typing import Any, Dict, Union
 
 if TYPE_CHECKING:
     from .tokens import RefreshToken
@@ -94,12 +95,12 @@ def generate_user_blocking_cache_key(value: str) -> str:
     return generate_cache_key(value, extra_prefix="block")
 
 
-def validate_login_and_provide_login_data(email: str) -> Dict[str, Any]:
+def validate_login_and_provide_login_data(email: str) -> Dict[str, Any]:  # noqa: ARG001
     """Default function to validate login and provide login data. It is meant to be overriden in Django settings."""
     return {}
 
 
-def blocking_handler(request: Request) -> None:
+def blocking_handler(request: Request) -> None:  # noqa: ARG001
     return
 
 
@@ -114,10 +115,10 @@ def blocking_cache_key_from_email(request: Request) -> str:
 
 
 def get_id_value_from_request_data(data: Dict[str, Any]) -> str:
-    return [value for key, value in data.items() if key not in ("code",)][0]
+    return next(value for key, value in data.items() if key not in ["code"])
 
 
-def user_is_blocked(request: Request, record_attempt: bool = True) -> bool:
+def user_is_blocked(request: Request, record_attempt: bool = True) -> bool:  # noqa: FBT001, FBT002
     cache_key = auth_settings.LOGIN_BLOCKER_CACHE_KEY_CALLBACK(request)
     attempt = cache.get(cache_key, 0) + 1
 
@@ -157,13 +158,13 @@ def send_login_email(email: str, login_data: Dict[str, Any], request: Request) -
 
 
 def token_from_headers(request: Request) -> str:
-    """Return token from request headers.
+    """
+    Return token from request headers.
 
     :param request: Request with token in headers/cookies.
     :raises NotAuthenticated: No token in headers/cookies.
     :raises AuthenticationFailed: Token was invalid.
     """
-
     auth_header = get_authorization_header(request)
     if not auth_header:
         raise NotAuthenticated(gettext_lazy("No Authorization header found from request."))
@@ -183,7 +184,7 @@ def valid_jwt_format(token: str) -> None:
     if auth_settings.CIPHER_KEY is not None:
         try:
             token = decrypt_with_cipher(token)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001
             raise ValidationError(gettext_lazy("JWT decrypt failed."), code="jwt_decrypt_failed") from error
 
     match = TOKEN_PATTERN.match(token)
@@ -192,7 +193,8 @@ def valid_jwt_format(token: str) -> None:
 
 
 def load_example_signing_key() -> Ed25519PrivateKey:
-    """Loads an example signing key for signing and checking the signature of JWTs.
+    """
+    Loads an example signing key for signing and checking the signature of JWTs.
     You should set 'SIGNING_KEY' to your environment variables, or change this callback
     with the JWT_EMAIL_AUTH["SIGNING_KEY"] setting before going to production.
     """
@@ -217,7 +219,7 @@ def encrypt_with_cipher(string: str) -> str:
         key = b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
         raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001
         raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
     nonce = urandom(12)
@@ -231,7 +233,7 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
         key = b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
         raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001
         raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
     string = b64decode(string)
@@ -247,6 +249,6 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
     return decrypted_token.decode()
 
 
-def user_check_callback(refresh: "RefreshToken") -> None:
+def user_check_callback(refresh: "RefreshToken") -> None:  # noqa: ARG001
     """Default function to check if token user still exists."""
     return  # pragma: no cover
