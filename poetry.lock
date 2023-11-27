@@ -438,14 +438,17 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 name = "django-ipware"
-version = "5.0.2"
+version = "6.0.0"
 description = "A Django application to retrieve user's IP address"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "django-ipware-5.0.2.tar.gz", hash = "sha256:ab3ab7645e674df682c1146a5bddfa5151b1b7be7be9210872c3156bd836aad4"},
-    {file = "django_ipware-5.0.2-py2.py3-none-any.whl", hash = "sha256:838b7aede77734603bd32ebd08ad7957304266580b646f8cbe982c4833b71c84"},
+    {file = "django-ipware-6.0.0.tar.gz", hash = "sha256:c656805c824449b5171e6f851f6369000fe204ec03ac9977110a9b0aff4825b6"},
+    {file = "django_ipware-6.0.0-py2.py3-none-any.whl", hash = "sha256:5595aa3819d6c82c2a09a307dfe58f3d40bff3e098c2e8508118195ac3270465"},
 ]
+
+[package.dependencies]
+python-ipware = ">=2.0.0"
 
 [[package]]
 name = "django-settings-holder"
@@ -1100,6 +1103,20 @@ files = [
 
 [package.dependencies]
 six = ">=1.5"
+
+[[package]]
+name = "python-ipware"
+version = "2.0.0"
+description = "A Python package to retrieve user's IP address"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "python-ipware-2.0.0.tar.gz", hash = "sha256:a52757123c718342f74b16ab2d9d4a531888d69d10b8197c073164635df0a13b"},
+    {file = "python_ipware-2.0.0-py3-none-any.whl", hash = "sha256:802858aa13308d572876d1883edae0eae380fe70a51fdefcb46c8a2099240862"},
+]
+
+[package.extras]
+dev = ["coverage[toml]", "coveralls (>=3.3,<4.0)", "ruff", "twine"]
 
 [[package]]
 name = "pytz"
