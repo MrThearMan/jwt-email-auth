@@ -680,13 +680,13 @@ six = ">=1.13.0"
 
 [[package]]
 name = "magic-specs"
-version = "0.0.6"
+version = "0.0.7"
 description = ""
 optional = false
 python-versions = ">=3.8,<4"
 files = [
-    {file = "magic-specs-0.0.6.tar.gz", hash = "sha256:4a5a0d1275edb7f4c7f79dbb55f44fd9ff9238431cb48b14b94326553e9f219b"},
-    {file = "magic_specs-0.0.6-py3-none-any.whl", hash = "sha256:928e68d773e4a489f2bca484480cd6bdcc5df2530b16021ab02a308478e53636"},
+    {file = "magic_specs-0.0.7-py3-none-any.whl", hash = "sha256:228c2997aa7e356c0ec1b648e60c0ed0957337e137c07e744ffefc7c90bfb50c"},
+    {file = "magic_specs-0.0.7.tar.gz", hash = "sha256:4d8b409d5595ed629880e02cffb89da6a59aac44a3c4738c22eeced58effe9c2"},
 ]
 
 [[package]]
