@@ -438,13 +438,13 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 name = "django-ipware"
-version = "6.0.0"
+version = "6.0.1"
 description = "A Django application to retrieve user's IP address"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "django-ipware-6.0.0.tar.gz", hash = "sha256:c656805c824449b5171e6f851f6369000fe204ec03ac9977110a9b0aff4825b6"},
-    {file = "django_ipware-6.0.0-py2.py3-none-any.whl", hash = "sha256:5595aa3819d6c82c2a09a307dfe58f3d40bff3e098c2e8508118195ac3270465"},
+    {file = "django-ipware-6.0.1.tar.gz", hash = "sha256:0233341eddcc19de44f463dd3e53c87ef9dcc519fc74a99911cebe9b58197549"},
+    {file = "django_ipware-6.0.1-py2.py3-none-any.whl", hash = "sha256:a596cdab22e6ca2dd53016d31450d371cac91485f9082cfb723a49ea203d8eef"},
 ]
 
 [package.dependencies]
