@@ -26,7 +26,7 @@ class StatelessUser(AnonymousUser):
         self.token = token if token is not None else {}
 
     @cached_property
-    def id(self) -> str:  # noqa: A003
+    def id(self) -> str:
         return str(uuid4())
 
     @cached_property
