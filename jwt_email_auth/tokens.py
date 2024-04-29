@@ -95,7 +95,7 @@ class AccessToken:
                 logger.info(error)
                 raise AuthenticationFailed(gettext_lazy("Invalid token."), code="invalid_token") from error
 
-            except Exception as error:  # noqa: BLE001 pragma: no cover
+            except Exception as error:  # pragma: no cover
                 logger.info(error)
                 raise AuthenticationFailed(gettext_lazy("Unexpected error."), code="unexpected_error") from error
 
