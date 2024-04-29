@@ -192,7 +192,7 @@ class SendLoginCodeView(BaseAuthView):
             auth_settings.SEND_LOGIN_CODE_CALLBACK(value, login_data, self.request)
             cache.set(code_sent_cache_key, 1, auth_settings.CODE_SEND_COOLDOWN.total_seconds())
 
-        except Exception as error:  # noqa: BLE001
+        except Exception as error:
             cache.delete(login_data_cache_key)
             logger.critical(f"Login code sending failed: {type(error).__name__}('{error}')")
             raise ServerException(gettext_lazy("Failed to send login codes. Try again later.")) from error

@@ -184,7 +184,7 @@ def valid_jwt_format(token: str) -> None:
     if auth_settings.CIPHER_KEY is not None:
         try:
             token = decrypt_with_cipher(token)
-        except Exception as error:  # noqa: BLE001
+        except Exception as error:
             raise ValidationError(gettext_lazy("JWT decrypt failed."), code="jwt_decrypt_failed") from error
 
     match = TOKEN_PATTERN.match(token)
@@ -219,7 +219,7 @@ def encrypt_with_cipher(string: str) -> str:
         key = b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
         raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
     nonce = urandom(12)
@@ -233,7 +233,7 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
         key = b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
         raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
     string = b64decode(string)
