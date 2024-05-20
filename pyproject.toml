@@ -66,7 +66,7 @@ uritemplate = { version = ">=4.1.1", optional = true }
 PyYAML = { version = ">=5.4.1", optional = true }
 
 [tool.poetry.group.test.dependencies]
-pytest = "8.2.0"
+pytest = "8.2.1"
 coverage = "7.5.1"
 pytest-django = "4.8.0"
 pre-commit = "3.5.0"
