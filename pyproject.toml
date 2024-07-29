@@ -66,7 +66,7 @@ uritemplate = { version = ">=4.1.1", optional = true }
 PyYAML = { version = ">=5.4.1", optional = true }
 
 [tool.poetry.group.test.dependencies]
-pytest = "8.3.1"
+pytest = "8.3.2"
 coverage = "7.6.0"
 pytest-django = "4.8.0"
 pre-commit = "3.5.0"
@@ -75,12 +75,12 @@ tox-gh-actions = "3.2.0"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.0"
-pymdown-extensions = "10.8.1"
+pymdown-extensions = "10.9"
 mkdocs-mermaid2-plugin = "1.1.1"
 
 [tool.poetry.group.lint.dependencies]
 mypy = "1.11.0"
-django-stubs = "5.0.2"
+django-stubs = "5.0.4"
 djangorestframework-stubs = "3.15.0"
 
 [tool.poetry.extras]
