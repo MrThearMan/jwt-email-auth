@@ -832,13 +832,13 @@ files = [
 
 [[package]]
 name = "mkdocs"
-version = "1.6.0"
+version = "1.6.1"
 description = "Project documentation with Markdown."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "mkdocs-1.6.0-py3-none-any.whl", hash = "sha256:1eb5cb7676b7d89323e62b56235010216319217d4af5ddc543a91beb8d125ea7"},
-    {file = "mkdocs-1.6.0.tar.gz", hash = "sha256:a73f735824ef83a4f3bcb7a231dcab23f5a838f88b7efc54a0eef5fbdbc3c512"},
+    {file = "mkdocs-1.6.1-py3-none-any.whl", hash = "sha256:db91759624d1647f3f34aa0c3f327dd2601beae39a366d6e064c03468d35c20e"},
+    {file = "mkdocs-1.6.1.tar.gz", hash = "sha256:7b432f01d928c084353ab39c57282f29f92136665bdd6abf7c1ec8d822ef86f2"},
 ]
 
 [package.dependencies]
@@ -1537,4 +1537,4 @@ openapi = ["PyYAML", "uritemplate"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4"
-content-hash = "6384d750465e9e7bfec53c3bc99be9b255e8b7d7a7d54ea4d3c2cf5f37a7196a"
+content-hash = "4f7f94daecfd2cd3852c0b8f18d69d6ee4f15cfb98e9590caa20d00e22193ef3"
