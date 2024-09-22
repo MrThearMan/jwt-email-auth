@@ -1,16 +1,17 @@
+from __future__ import annotations
+
+import base64
+import hashlib
 import logging
+import os
+import random
 import re
-from base64 import b64decode, b64encode
-from hashlib import md5
 from inspect import cleandoc
-from os import getenv, urandom
-from random import randint
 from typing import TYPE_CHECKING
 from warnings import warn
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.serialization import load_ssh_private_key
 from django.core.cache import cache
@@ -20,19 +21,22 @@ from django.utils.translation import gettext_lazy
 from ipware import get_client_ip
 from rest_framework.authentication import get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
-from rest_framework.request import Request
 
 from .settings import auth_settings
-from .typing import Any, Dict, Union
 
 if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from rest_framework.request import Request
+
     from .tokens import RefreshToken
+    from .typing import Any
 
 
 __all__ = [
+    "EXAMPLE_PRIVATE_KEY",
+    "TOKEN_PATTERN",
     "decrypt_with_cipher",
     "encrypt_with_cipher",
-    "EXAMPLE_PRIVATE_KEY",
     "generate_cache_key",
     "generate_code_sent_cache_key",
     "generate_login_data_cache_key",
@@ -41,7 +45,6 @@ __all__ = [
     "parse_signing_key",
     "send_login_email",
     "token_from_headers",
-    "TOKEN_PATTERN",
     "user_is_blocked",
     "valid_jwt_format",
 ]
@@ -64,7 +67,7 @@ EXAMPLE_PRIVATE_KEY = (
 
 
 def random_code() -> str:
-    return str(randint(1, 999_999)).zfill(6)  # noqa: S311
+    return str(random.randint(1, 999_999)).zfill(6)  # noqa: S311
 
 
 def get_ip(request: Request) -> str:
@@ -80,7 +83,7 @@ def get_ip(request: Request) -> str:
 
 def generate_cache_key(content: str, /, extra_prefix: str) -> str:
     """Generate cache key using a prefix (from auth_settings), and md5 hexdigest."""
-    return f"{auth_settings.CACHE_PREFIX}-{extra_prefix}-{md5(content.encode()).hexdigest()}"  # noqa: S324
+    return f"{auth_settings.CACHE_PREFIX}-{extra_prefix}-{hashlib.md5(content.encode()).hexdigest()}"  # noqa: S324
 
 
 def generate_login_data_cache_key(value: str) -> str:
@@ -95,7 +98,7 @@ def generate_user_blocking_cache_key(value: str) -> str:
     return generate_cache_key(value, extra_prefix="block")
 
 
-def validate_login_and_provide_login_data(email: str) -> Dict[str, Any]:  # noqa: ARG001
+def validate_login_and_provide_login_data(email: str) -> dict[str, Any]:  # noqa: ARG001
     """Default function to validate login and provide login data. It is meant to be overriden in Django settings."""
     return {}
 
@@ -114,8 +117,8 @@ def blocking_cache_key_from_email(request: Request) -> str:
     return generate_user_blocking_cache_key(value)
 
 
-def get_id_value_from_request_data(data: Dict[str, Any]) -> str:
-    return next(value for key, value in data.items() if key not in ["code"])
+def get_id_value_from_request_data(data: dict[str, Any]) -> str:
+    return next(value for key, value in data.items() if key != "code")
 
 
 def user_is_blocked(request: Request, record_attempt: bool = True) -> bool:  # noqa: FBT001, FBT002
@@ -135,7 +138,7 @@ def user_is_blocked(request: Request, record_attempt: bool = True) -> bool:  # n
     return block
 
 
-def send_login_email(email: str, login_data: Dict[str, Any], request: Request) -> None:
+def send_login_email(email: str, login_data: dict[str, Any], request: Request) -> None:
     code = login_data["code"]
     valid = int(auth_settings.LOGIN_CODE_LIFETIME.total_seconds() // 60)
     plain_message = cleandoc(auth_settings.LOGIN_EMAIL_MESSAGE.format(code=code, valid=valid))
@@ -198,7 +201,7 @@ def load_example_signing_key() -> Ed25519PrivateKey:
     You should set 'SIGNING_KEY' to your environment variables, or change this callback
     with the JWT_EMAIL_AUTH["SIGNING_KEY"] setting before going to production.
     """
-    key = getenv("SIGNING_KEY", EXAMPLE_PRIVATE_KEY)
+    key = os.getenv("SIGNING_KEY", EXAMPLE_PRIVATE_KEY)
     if key == EXAMPLE_PRIVATE_KEY:
         warn(
             "Using the default signing key. "
@@ -216,27 +219,27 @@ def parse_signing_key(key: str) -> Ed25519PrivateKey:
 
 def encrypt_with_cipher(string: str) -> str:
     try:
-        key = b64decode(auth_settings.CIPHER_KEY)
+        key = base64.b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
         raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
     except Exception as error:
         raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
-    nonce = urandom(12)
+    nonce = os.urandom(12)
     cipher = AESGCM(key)
     encrypted_token = cipher.encrypt(nonce, string.encode(encoding="utf-8"), None)
-    return b64encode(nonce + encrypted_token).decode()
+    return base64.b64encode(nonce + encrypted_token).decode()
 
 
-def decrypt_with_cipher(string: Union[str, bytes]) -> str:
+def decrypt_with_cipher(string: str | bytes) -> str:
     try:
-        key = b64decode(auth_settings.CIPHER_KEY)
+        key = base64.b64decode(auth_settings.CIPHER_KEY)
     except TypeError as error:
         raise RuntimeError(gettext_lazy("Cipher key not set.")) from error
     except Exception as error:
         raise RuntimeError(gettext_lazy("Invalid cipher key.")) from error
 
-    string = b64decode(string)
+    string = base64.b64decode(string)
     nonce = string[:12]
     data = string[12:]
     cipher = AESGCM(key=key)
@@ -249,6 +252,6 @@ def decrypt_with_cipher(string: Union[str, bytes]) -> str:
     return decrypted_token.decode()
 
 
-def user_check_callback(refresh: "RefreshToken") -> None:  # noqa: ARG001
+def user_check_callback(refresh: RefreshToken) -> None:  # noqa: ARG001
     """Default function to check if token user still exists."""
     return  # pragma: no cover

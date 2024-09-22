@@ -1,16 +1,20 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from rest_framework import serializers, status
 from rest_framework.schemas.openapi import AutoSchema
-from rest_framework.views import APIView
 
 from .authentication import JWTAuthentication
 from .permissions import HasValidJWT
 from .serializers import TokenClaimOutputSerializer, TokenOutputSerializer
-from .typing import Any, ClassVar, Dict, Type, Union
+
+if TYPE_CHECKING:
+    from rest_framework.views import APIView
+
+    from .typing import Any, ClassVar
 
 __all__ = [
-    "add_jwt_email_auth_security_requirement",
-    "add_jwt_email_auth_security_scheme",
-    "add_unauthenticated_response",
     "DisablePermChecks",
     "JWTEmailAuthSchemaMixin",
     "LoginViewSchema",
@@ -25,6 +29,9 @@ __all__ = [
     "TokenClaimViewSchemaMixin",
     "UpdateTokenViewSchema",
     "UpdateTokenViewSchemaMixin",
+    "add_jwt_email_auth_security_requirement",
+    "add_jwt_email_auth_security_scheme",
+    "add_unauthenticated_response",
 ]
 
 
@@ -41,7 +48,7 @@ ERROR_SCHEMA = {
 }
 
 
-def add_jwt_email_auth_security_scheme(schema: Dict[str, Any]) -> None:
+def add_jwt_email_auth_security_scheme(schema: dict[str, Any]) -> None:
     """
     Add JWT email auth Security Scheme to the OpenAPI V3 Scheme.
     Use in `rest_framework.schemas.openapi.SchemaGenerator.get_schema`.
@@ -55,7 +62,7 @@ def add_jwt_email_auth_security_scheme(schema: Dict[str, Any]) -> None:
     }
 
 
-def add_jwt_email_auth_security_requirement(view: APIView, operation: Dict[str, Any]) -> None:
+def add_jwt_email_auth_security_requirement(view: APIView, operation: dict[str, Any]) -> None:
     """
     Add JWT email auth security requirement to the view if it has JWT permission or authentication classes.
     Use in `rest_framework.schemas.openapi.AutoSchema.get_operation`.
@@ -64,7 +71,7 @@ def add_jwt_email_auth_security_requirement(view: APIView, operation: Dict[str, 
         operation["security"] = [{"jwt_email_auth": []}]
 
 
-def add_unauthenticated_response(self: AutoSchema, responses: Dict[str, Any]) -> None:
+def add_unauthenticated_response(self: AutoSchema, responses: dict[str, Any]) -> None:
     """
     Adds 401 response to the given responses-dict if it has JWT permission or authentication classes.
     Use in `rest_framework.schemas.openapi.AutoSchema.get_responses`.
@@ -92,9 +99,9 @@ class DisablePermChecks:
 
 
 class JWTEmailAuthSchemaMixin:
-    responses: ClassVar[Dict[int, Union[str, Type[serializers.Serializer]]]] = {}
+    responses: ClassVar[dict[int, str | type[serializers.Serializer]]] = {}
 
-    def get_components(self, path: str, method: str) -> Dict[str, Any]:
+    def get_components(self, path: str, method: str) -> dict[str, Any]:
         components = {}
 
         request_serializer = self.get_serializer(path, method)
@@ -111,7 +118,7 @@ class JWTEmailAuthSchemaMixin:
 
         return components
 
-    def get_responses(self, path: str, method: str) -> Dict[str, Any]:
+    def get_responses(self, path: str, method: str) -> dict[str, Any]:
         data = {}
         response_media_types = self.map_renderers(path, method)
 
@@ -136,7 +143,7 @@ class JWTEmailAuthSchemaMixin:
 
 
 class SendLoginCodeViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses: ClassVar[Dict[int, str]] = {
+    responses: ClassVar[dict[int, str]] = {
         204: "Authorization successful, login data cached and code sent.",
         400: "Missing data or invalid values.",
         412: "This user is not allowed to send another login code yet.",
@@ -149,7 +156,7 @@ class SendLoginCodeViewSchema(SendLoginCodeViewSchemaMixin, AutoSchema):
 
 
 class LoginViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses: ClassVar[Dict[int, str]] = {
+    responses: ClassVar[dict[int, str]] = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
@@ -165,7 +172,7 @@ class LoginViewSchema(LoginViewSchemaMixin, AutoSchema):
 
 
 class RefreshTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses: ClassVar[Dict[int, str]] = {
+    responses: ClassVar[dict[int, str]] = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
@@ -180,7 +187,7 @@ class RefreshTokenViewSchema(RefreshTokenViewSchemaMixin, AutoSchema):
 
 
 class LogoutViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses: ClassVar[Dict[int, str]] = {
+    responses: ClassVar[dict[int, str]] = {
         204: "Refresh token invalidated.",
         400: "Missing data or invalid values.",
         500: "Could not find refresh token based on settings.",
@@ -192,7 +199,7 @@ class LogoutViewSchema(LogoutViewSchemaMixin, AutoSchema):
 
 
 class UpdateTokenViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses: ClassVar[Dict[int, str]] = {
+    responses: ClassVar[dict[int, str]] = {
         200: TokenOutputSerializer,
         204: "New refresh and access token pair returned in cookies.",
         400: "Missing data or invalid values.",
@@ -207,7 +214,7 @@ class UpdateTokenViewSchema(UpdateTokenViewSchemaMixin, AutoSchema):
 
 
 class TokenClaimViewSchemaMixin(JWTEmailAuthSchemaMixin):
-    responses: ClassVar[Dict[int, str]] = {
+    responses: ClassVar[dict[int, str]] = {
         200: TokenClaimOutputSerializer,
         400: "Missing data or invalid values.",
         403: "Access token has expired or is invalid.",

@@ -1,12 +1,17 @@
+from __future__ import annotations
+
+import datetime
 import logging
-from datetime import timedelta
 from inspect import cleandoc
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from django.test.signals import setting_changed
 from settings_holder import SettingsHolder, reload_settings
 
-from .typing import Any, Dict, List, Literal, NamedTuple, Optional, Set, Union
+from .typing import Any, Literal, NamedTuple
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 __all__ = [
     "auth_settings",
@@ -27,27 +32,27 @@ class JWTEmailAuthSettings(NamedTuple):
     # List of emails for which code checks and email sending are off,
     # even if SKIP_CODE_CHECKS=False and/or SENDING_ON=True.
     # Useful for creating review accounts in an otherwise closed system.
-    SKIP_CODE_CHECKS_FOR: List[str] = []  # noqa: RUF012
+    SKIP_CODE_CHECKS_FOR: list[str] = []
     #
     # How long an access token is valid for
-    ACCESS_TOKEN_LIFETIME: timedelta = timedelta(minutes=5)
+    ACCESS_TOKEN_LIFETIME: datetime.timedelta = datetime.timedelta(minutes=5)
     #
     # How long a refresh token is valid for
-    REFRESH_TOKEN_LIFETIME: timedelta = timedelta(days=14)
+    REFRESH_TOKEN_LIFETIME: datetime.timedelta = datetime.timedelta(days=14)
     #
     # How long a login code is stored in cache
-    LOGIN_CODE_LIFETIME: timedelta = timedelta(minutes=5)
+    LOGIN_CODE_LIFETIME: datetime.timedelta = datetime.timedelta(minutes=5)
     #
     # After user has exceeded defined number of login attempts,
     # this is the cooldown until they can attempt login again.
-    LOGIN_COOLDOWN: timedelta = timedelta(minutes=5)
+    LOGIN_COOLDOWN: datetime.timedelta = datetime.timedelta(minutes=5)
     #
     # After a user has sent a login code, this is the cooldown until
     # they can send one again.
-    CODE_SEND_COOLDOWN: timedelta = timedelta(minutes=1)
+    CODE_SEND_COOLDOWN: datetime.timedelta = datetime.timedelta(minutes=1)
     #
     # How long after the creation of the JWT does it become valid.
-    NOT_BEFORE_TIME: Optional[timedelta] = None
+    NOT_BEFORE_TIME: datetime.timedelta | None = None
     #
     # If True, return a new refresh token when requesting a new
     # access token from RefreshTokenView. The old refresh token will
@@ -58,13 +63,13 @@ class JWTEmailAuthSettings(NamedTuple):
     LOGIN_ATTEMPTS: int = 10
     #
     # List of expected custom JWT claims
-    EXPECTED_CLAIMS: List[str] = []  # noqa: RUF012
+    EXPECTED_CLAIMS: list[str] = []
     #
     # Which expected claims can be updated without re-authentication
-    UPDATEABLE_CLAIMS: List[str] = []  # noqa: RUF012
+    UPDATEABLE_CLAIMS: list[str] = []
     #
     # Email sender. Default is settings.DEFAULT_FROM_EMAIL
-    LOGIN_SENDING_EMAIL: Optional[str] = None
+    LOGIN_SENDING_EMAIL: str | None = None
     #
     # Email subject line
     LOGIN_SUBJECT_LINE: str = "Login to Django"
@@ -81,13 +86,13 @@ class JWTEmailAuthSettings(NamedTuple):
     )
     #
     # Path to html_message template. Context must have {{ code }} and {{ valid }}!
-    LOGIN_EMAIL_HTML_TEMPLATE: Optional[Path] = None
+    LOGIN_EMAIL_HTML_TEMPLATE: Path | None = None
     #
     # Issuer of the JWT
-    ISSUER: Optional[str] = None
+    ISSUER: str | None = None
     #
     # Intended recipient of the JWT
-    AUDIENCE: Optional[str] = None
+    AUDIENCE: str | None = None
     #
     # A time margin in seconds for the expiration check
     LEEWAY: int = 0
@@ -99,7 +104,7 @@ class JWTEmailAuthSettings(NamedTuple):
     HEADER_PREFIX: str = "Bearer"
     #
     # Additional JWT header fields
-    EXTRA_HEADERS: Optional[Dict[str, str]] = None
+    EXTRA_HEADERS: dict[str, str] | None = None
     #
     # Cache prefix
     CACHE_PREFIX: str = "Django"
@@ -114,18 +119,18 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # If set, JWT will be encrypted with AES in GCM-mode using this as the secret key.
     # Should be either 16, 24, or 32 bytes, encoded to base64, e.g., `b64encode(urandom(32)).decode()`
-    CIPHER_KEY: Optional[str] = None
+    CIPHER_KEY: str | None = None
     #
     # Function to generate a login code.
     # Takes no arguments. Returns a login code (str).
     CODE_GENERATOR: str = "jwt_email_auth.utils.random_code"
     #
     # Function that sends the login email.
-    # Arguments: email (str), and login data (Dict[str, Any]), and request (Request). Returns None.
+    # Arguments: email (str), and login data (dict[str, Any]), and request (Request). Returns None.
     SEND_LOGIN_CODE_CALLBACK: str = "jwt_email_auth.utils.send_login_email"
     #
     # Function to use for validating user and providing login data.
-    # Arguments: email (str). Returns login data (Dict[str, Any]).
+    # Arguments: email (str). Returns login data (dict[str, Any]).
     LOGIN_VALIDATION_AND_DATA_CALLBACK: str = "jwt_email_auth.utils.validate_login_and_provide_login_data"
     #
     # Function to generate cache key for storing user's login attempts.
@@ -150,7 +155,7 @@ class JWTEmailAuthSettings(NamedTuple):
     #
     # Default login method to use if none is given in Prefer-headers. If not set,
     # cookie-based login will be used if enabled, else token-based.
-    DEFAULT_LOGIN_METHOD: Optional[Literal["token", "cookies"]] = None
+    DEFAULT_LOGIN_METHOD: Literal["token", "cookies"] | None = None
     #
     # Cookie key to use for the access token
     ACCESS_TOKEN_KEY: str = "access"
@@ -174,7 +179,7 @@ class JWTEmailAuthSettings(NamedTuple):
     # Defines the host to which the cookie will be sent.
     # If None, this attribute defaults to the host of the
     # current document URL, not including subdomains.
-    SET_COOKIE_DOMAIN: Optional[str] = None
+    SET_COOKIE_DOMAIN: str | None = None
     #
     # If True, forbids JavaScript from accessing the cookie.
     SET_COOKIE_HTTPONLY: bool = True
@@ -190,20 +195,20 @@ class JWTEmailAuthSettings(NamedTuple):
     PROXY_ORDER: Literal["left-most", "right-most"] = "left-most"
     #
     # Number of proxies between the server and internet
-    PROXY_COUNT: Optional[int] = None
+    PROXY_COUNT: int | None = None
     #
     # Only these proxy IPs are allowed connections
-    PROXY_TRUSTED_IPS: Optional[List[str]] = None
+    PROXY_TRUSTED_IPS: list[str] | None = None
     #
     # Meta precedence order
-    REQUEST_HEADER_ORDER: Optional[List[str]] = None
+    REQUEST_HEADER_ORDER: list[str] | None = None
 
 
 SETTING_NAME: str = "JWT_EMAIL_AUTH"
 
-DEFAULTS: Dict[str, Any] = JWTEmailAuthSettings()._asdict()
+DEFAULTS: dict[str, Any] = JWTEmailAuthSettings()._asdict()
 
-IMPORT_STRINGS: Set[Union[bytes, str]] = {
+IMPORT_STRINGS: set[bytes | str] = {
     b"SIGNING_KEY",
     "CODE_GENERATOR",
     "SEND_LOGIN_CODE_CALLBACK",
@@ -213,7 +218,7 @@ IMPORT_STRINGS: Set[Union[bytes, str]] = {
     "USER_CHECK_CALLBACK",
 }
 
-REMOVED_SETTINGS: Set[str] = {
+REMOVED_SETTINGS: set[str] = {
     "LOGIN_EMAIL_CALLBACK",
     "SEND_EMAILS",
     "LOGIN_DATA",

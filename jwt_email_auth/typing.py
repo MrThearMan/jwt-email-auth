@@ -1,34 +1,16 @@
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Literal,
-    NamedTuple,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from __future__ import annotations
+
+from typing import Any, Callable, ClassVar, Literal, NamedTuple
 
 from django.db.models import TextChoices
 
 __all__ = [
     "Any",
+    "Callable",
     "ClassVar",
-    "Dict",
-    "List",
     "Literal",
     "LoginMethod",
     "NamedTuple",
-    "Optional",
-    "Set",
-    "Tuple",
-    "Type",
-    "Union",
-    "Callable",
 ]
 
 

@@ -1,5 +1,7 @@
+from __future__ import annotations
+
+import uuid
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 from django.contrib.auth.models import AnonymousUser
 from django.utils.functional import cached_property
@@ -22,12 +24,12 @@ class StatelessUser(AnonymousUser):
     is_active = True
     username = "StatelessUser"
 
-    def __init__(self, token: "AccessToken" = None) -> None:
+    def __init__(self, token: AccessToken | None = None) -> None:
         self.token = token if token is not None else {}
 
     @cached_property
     def id(self) -> str:
-        return str(uuid4())
+        return str(uuid.uuid4())
 
     @cached_property
     def pk(self) -> str:

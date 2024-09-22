@@ -1,12 +1,12 @@
+import datetime
 import logging
-from datetime import datetime, timezone
 
 import jwt
 from django.db import models, transaction
 from django.db.models import Q
 
-from ..settings import auth_settings
-from ..utils import decrypt_with_cipher
+from jwt_email_auth.settings import auth_settings
+from jwt_email_auth.utils import decrypt_with_cipher
 
 __all__ = ["RefreshTokenRotationLog"]
 
@@ -29,11 +29,11 @@ class RefreshTokenRotationLogManager(models.Manager):
 
     def remove_by_title(self, title: str) -> None:
         """Remove logs with the given title, plus all expired logs."""
-        cond = Q(title=title) | Q(expires_at__lte=datetime.now(tz=timezone.utc))
+        cond = Q(title=title) | Q(expires_at__lte=datetime.datetime.now(tz=datetime.timezone.utc))
         self.filter(cond).delete()
 
     @transaction.atomic
-    def pass_title(self, title: str, expires_at: datetime) -> "RefreshTokenRotationLog":
+    def pass_title(self, title: str, expires_at: datetime.datetime) -> "RefreshTokenRotationLog":
         """Remove logs with the given title, plus all expired logs, and then create a new log for the title."""
         self.remove_by_title(title=title)
         return self.create(title=title, expires_at=expires_at)
@@ -45,3 +45,6 @@ class RefreshTokenRotationLog(models.Model):
     title = models.UUIDField(editable=False, help_text="Title this refresh token holds.")
 
     objects = RefreshTokenRotationLogManager()
+
+    def __str__(self) -> str:
+        return str(self.title)

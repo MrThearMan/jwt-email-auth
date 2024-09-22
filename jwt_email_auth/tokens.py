@@ -1,19 +1,22 @@
+from __future__ import annotations
+
+import datetime
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
 import jwt
 from django.utils.translation import gettext_lazy
 from magic_specs import Definition
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
-from rest_framework.request import Request
 
 from .settings import auth_settings
-from .typing import Any, Dict, List, LoginMethod, Optional, Union
+from .typing import Any, LoginMethod
 from .utils import decrypt_with_cipher, encrypt_with_cipher, token_from_headers
 
 if TYPE_CHECKING:
+    from rest_framework.request import Request
+
     from .rotation.models import RefreshTokenRotationLog
 
 
@@ -27,9 +30,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-Token = Union["AccessToken", "RefreshToken"]
-
-
 class TokenType(Definition):
     access = auth_settings.ACCESS_TOKEN_KEY
     refresh = auth_settings.REFRESH_TOKEN_KEY
@@ -39,7 +39,7 @@ class AccessToken:
     token_type = TokenType(TokenType.access)
     lifetime = auth_settings.ACCESS_TOKEN_LIFETIME
 
-    def __init__(self, token: Optional[str] = None) -> None:  # noqa: C901, PLR0912
+    def __init__(self, token: str | None = None) -> None:  # noqa: C901, PLR0912
         """
         Create a new token or construct one from encoded string.
 
@@ -103,7 +103,7 @@ class AccessToken:
             self.verify_payload()
 
         else:  # new token
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.datetime.now(tz=datetime.timezone.utc)
             self.payload = {"type": self.token_type, "exp": now + self.lifetime, "iat": now}
 
             if auth_settings.NOT_BEFORE_TIME is not None:
@@ -114,7 +114,7 @@ class AccessToken:
                 self.payload["iss"] = auth_settings.ISSUER
 
     @classmethod
-    def from_request(cls, request: Request) -> "AccessToken":
+    def from_request(cls, request: Request) -> AccessToken:
         """
         Construct a token from request.
 
@@ -122,8 +122,8 @@ class AccessToken:
         :raises NotAuthenticated: No token in headers/cookies.
         :raises AuthenticationFailed: Token was invalid.
         """
-        token: Optional[str] = None
-        prefer: Optional[str] = request.headers.get("Prefer")
+        token: str | None = None
+        prefer: str | None = request.headers.get("Prefer")
 
         if token is None and prefer == LoginMethod.TOKEN.value and auth_settings.USE_TOKENS:
             token = token_from_headers(request)
@@ -157,7 +157,7 @@ class AccessToken:
     def __getitem__(self, key: str) -> Any:
         return self.payload[key]
 
-    def __setitem__(self, key: str, value: Union[float, str, bool, bytes]) -> None:
+    def __setitem__(self, key: str, value: float | str | bool | bytes) -> None:
         self.payload[key] = value
 
     def __delitem__(self, key: str) -> None:
@@ -166,16 +166,16 @@ class AccessToken:
     def __contains__(self, key: str) -> bool:
         return key in self.payload
 
-    def get(self, key: str, default: Optional[Any] = None) -> Any:
+    def get(self, key: str, default: Any = None) -> Any:
         """Fetch the value of a claim from this token."""
         return self.payload.get(key, default)
 
-    def update(self, data: Dict[str, Any] = None, **kwargs: Any) -> None:
+    def update(self, data: Optional[dict[str, Any]] = None, **kwargs: Any) -> None:
         """Update payload."""
         self.payload.update({} if data is None else data, **kwargs)
 
     def verify_payload(self) -> None:
-        missing_claims: List[str] = [claim for claim in auth_settings.EXPECTED_CLAIMS if claim not in self]
+        missing_claims: list[str] = [claim for claim in auth_settings.EXPECTED_CLAIMS if claim not in self]
         if missing_claims:
             msg = f"Missing token claims: {missing_claims}."
             raise AuthenticationFailed(msg, code="missing_claims")
@@ -204,7 +204,7 @@ class RefreshToken(AccessToken):
     token_type = TokenType(TokenType.refresh)
     lifetime = auth_settings.REFRESH_TOKEN_LIFETIME
 
-    def new_access_token(self, sync: bool = False) -> "AccessToken":  # noqa: FBT001, FBT002
+    def new_access_token(self, sync: bool = False) -> AccessToken:  # noqa: FBT001, FBT002
         """
         Create a new access token from this refresh token.
 
@@ -217,7 +217,7 @@ class RefreshToken(AccessToken):
         access.copy_claims(self)
         return access
 
-    def rotate(self) -> "RefreshToken":
+    def rotate(self) -> RefreshToken:
         """Rotate refresh token."""
         log = self.check_log()
         refresh = RefreshToken()
@@ -225,7 +225,7 @@ class RefreshToken(AccessToken):
         refresh.create_log(title=log.title)
         return refresh
 
-    def check_log(self) -> "RefreshTokenRotationLog":
+    def check_log(self) -> RefreshTokenRotationLog:
         """Check if token is in the rotation log."""
         # Import is here so that jwt rotation remains optional
         from .rotation.models import RefreshTokenRotationLog
@@ -238,7 +238,7 @@ class RefreshToken(AccessToken):
 
         return log
 
-    def create_log(self, title: Optional[uuid.UUID] = None) -> None:
+    def create_log(self, title: uuid.UUID | None = None) -> None:
         """
         Update rotation log for the given title,
         and set the "jti" and "sub" claims for this token.
@@ -252,3 +252,6 @@ class RefreshToken(AccessToken):
         log = RefreshTokenRotationLog.objects.pass_title(title=str(title), expires_at=self.payload["exp"])
         self.payload["sub"] = str(title)
         self.payload["jti"] = log.id
+
+
+Token = Union[AccessToken, RefreshToken]

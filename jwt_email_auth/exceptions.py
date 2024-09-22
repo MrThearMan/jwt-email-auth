@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django.utils.translation import gettext_lazy
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
-from .typing import Any, Optional
+if TYPE_CHECKING:
+    from .typing import Any
 
 __all__ = [
     "ClaimNotUpdateable",
@@ -31,7 +36,7 @@ class UserBanned(APIException):
     default_detail = gettext_lazy("Maximum number of attempts reached. Try again in %(x)s minutes.")
     default_code = "user_banned"
 
-    def __init__(self, cooldown: int, detail: Optional[str] = None, code: Optional[str] = None) -> None:
+    def __init__(self, cooldown: int, detail: str | None = None, code: str | None = None) -> None:
         self.default_detail %= {"x": cooldown}
         super().__init__(detail, code)
 
@@ -41,7 +46,7 @@ class UnexpectedClaim(APIException):
     default_detail = gettext_lazy("'%(claim)s' not found from the list of expected claims.")
     default_code = "unexpected_claim"
 
-    def __init__(self, claim: Any, detail: Optional[str] = None, code: Optional[str] = None) -> None:
+    def __init__(self, claim: Any, detail: str | None = None, code: str | None = None) -> None:
         self.default_detail %= {"claim": str(claim)}
         super().__init__(detail, code)
 
@@ -51,7 +56,7 @@ class ClaimNotUpdateable(UnexpectedClaim):
     default_detail = gettext_lazy("Not allowed to update claim '%(claim)s'.")
     default_code = "claim_not_updateable"
 
-    def __init__(self, claim: Any, detail: Optional[str] = None, code: Optional[str] = None) -> None:
+    def __init__(self, claim: Any, detail: str | None = None, code: str | None = None) -> None:
         self.default_detail %= {"claim": str(claim)}
         super().__init__(detail, code)
 

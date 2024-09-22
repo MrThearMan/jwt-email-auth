@@ -1,12 +1,19 @@
-from django.db import models
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django.utils.functional import cached_property
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, ValidationError
 from rest_framework.fields import CharField, HiddenField, empty
 from rest_framework.request import Request
 
 from .tokens import AccessToken
-from .typing import Any, Callable, ClassVar, List, Optional
 from .utils import valid_jwt_format
+
+if TYPE_CHECKING:
+    from django.db import models
+
+    from .typing import Any, Callable, ClassVar
 
 __all__ = [
     "AutoTokenField",
@@ -17,7 +24,7 @@ __all__ = [
 class TokenField(CharField):
     """Validates incoming tokens are in the correct format."""
 
-    default_validators: ClassVar[List[Callable[[str], None]]] = [valid_jwt_format]
+    default_validators: ClassVar[list[Callable[[str], None]]] = [valid_jwt_format]
 
 
 class AutoTokenField(HiddenField):
@@ -47,7 +54,7 @@ class AutoTokenField(HiddenField):
 
     @cached_property
     def _default(self) -> AccessToken:
-        request: Optional[Request] = self.parent.context.get("request")
+        request: Request | None = self.parent.context.get("request")
         if request is None or not isinstance(request, Request):
             msg = "Must include a Request object in the context of the Serializer."
             raise ValidationError(msg)

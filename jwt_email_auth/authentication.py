@@ -1,13 +1,18 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
-from rest_framework.request import Request
 
 from .models import StatelessUser
 from .settings import auth_settings
 from .tokens import AccessToken
-from .typing import Optional, Tuple
+
+if TYPE_CHECKING:
+    from rest_framework.request import Request
+
 
 __all__ = [
     "JWTAuthentication",
@@ -18,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class JWTAuthentication(BaseAuthentication):
-    def authenticate(self, request: Request) -> Optional[Tuple[StatelessUser, str]]:
+    def authenticate(self, request: Request) -> tuple[StatelessUser, str] | None:
         try:
             token = AccessToken.from_request(request)
         except (AuthenticationFailed, NotAuthenticated) as error:

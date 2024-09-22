@@ -1,16 +1,14 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
-from django.http.request import HttpHeaders
 from django.utils.translation import gettext_lazy
 from rest_framework import status
-from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import APIException, AuthenticationFailed, NotFound, ParseError
-from rest_framework.permissions import BasePermission
-from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.serializers import BaseSerializer
 from rest_framework.views import APIView
 
 from .authentication import JWTAuthentication
@@ -41,13 +39,20 @@ from .serializers import (
 )
 from .settings import auth_settings
 from .tokens import AccessToken, RefreshToken, TokenType
-from .typing import Any, ClassVar, Dict, List, LoginMethod, Tuple, Type
+from .typing import Any, ClassVar, LoginMethod
 from .utils import (
     generate_code_sent_cache_key,
     generate_login_data_cache_key,
     get_id_value_from_request_data,
     user_is_blocked,
 )
+
+if TYPE_CHECKING:
+    from django.http.request import HttpHeaders
+    from rest_framework.authentication import BaseAuthentication
+    from rest_framework.permissions import BasePermission
+    from rest_framework.request import Request
+    from rest_framework.serializers import BaseSerializer
 
 __all__ = [
     "LoginView",
@@ -65,27 +70,27 @@ logger = logging.getLogger(__name__)
 class BaseAuthView(APIView):
     """Base class for JWT authentication"""
 
-    serializer_class: ClassVar[Type[BaseSerializer]]
+    serializer_class: ClassVar[type[BaseSerializer]]
 
     def get_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer:
         kwargs["serializer_class"] = self.get_serializer_class()
         return self.initialize_serializer(*args, **kwargs)
 
     def initialize_serializer(self, *args: Any, **kwargs: Any) -> BaseSerializer:
-        serializer_class: Type[BaseSerializer] = kwargs.pop("serializer_class")
+        serializer_class: type[BaseSerializer] = kwargs.pop("serializer_class")
         kwargs.setdefault("context", self.get_serializer_context())
         kwargs.setdefault("many", getattr(serializer_class, "many", False))
         return serializer_class(*args, **kwargs)
 
-    def get_serializer_class(self) -> Type[BaseSerializer]:
+    def get_serializer_class(self) -> type[BaseSerializer]:
         assert self.serializer_class, "Serializer class not defined"  # noqa: S101
         return self.serializer_class
 
-    def get_serializer_context(self) -> Dict[str, Any]:
+    def get_serializer_context(self) -> dict[str, Any]:
         return {"request": self.request, "format": self.format_kwarg, "view": self}
 
     @classmethod
-    def get_extra_actions(cls) -> List[str]:
+    def get_extra_actions(cls) -> list[str]:
         return []
 
     def make_response(self, method: str, access: AccessToken, refresh: RefreshToken) -> Response:
@@ -128,7 +133,7 @@ class BaseAuthView(APIView):
         return response
 
     @staticmethod
-    def _get_refresh_token(cookies: Dict[str, str], data: Dict[str, Any], headers: HttpHeaders) -> Tuple[str, str]:
+    def _get_refresh_token(cookies: dict[str, str], data: dict[str, Any], headers: HttpHeaders) -> tuple[str, str]:
         token_from_cookies = cookies.get(TokenType.refresh)
         token_from_data = data.get("token")
         prefer = headers.get("Prefer")
@@ -159,10 +164,10 @@ class BaseAuthView(APIView):
 class SendLoginCodeView(BaseAuthView):
     """Send a new login code."""
 
-    serializer_class: ClassVar[Type[BaseSerializer]] = SendLoginCodeSerializer
+    serializer_class: ClassVar[type[BaseSerializer]] = SendLoginCodeSerializer
 
-    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
-    permission_classes: ClassVar[List[Type[BasePermission]]] = []
+    authentication_classes: ClassVar[list[type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[list[type[BasePermission]]] = []
 
     schema = SendLoginCodeViewSchema()
 
@@ -199,10 +204,10 @@ class SendLoginCodeView(BaseAuthView):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def _get_id_value(self, data: Dict[str, Any]) -> Any:
+    def _get_id_value(self, data: dict[str, Any]) -> Any:
         return get_id_value_from_request_data(data)
 
-    def _get_login_data(self, code_sent_cache_key: str, login_data_cache_key: str, value: Any) -> Dict[str, Any]:
+    def _get_login_data(self, code_sent_cache_key: str, login_data_cache_key: str, value: Any) -> dict[str, Any]:
         login_data = cache.get(login_data_cache_key)
         if login_data is None:
             login_data = auth_settings.LOGIN_VALIDATION_AND_DATA_CALLBACK(value)
@@ -220,10 +225,10 @@ class LoginView(BaseAuthView):
     If not set, the login method will be determined automatically based on settings.
     """
 
-    serializer_class: ClassVar[Type[BaseSerializer]] = LoginSerializer
+    serializer_class: ClassVar[type[BaseSerializer]] = LoginSerializer
 
-    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
-    permission_classes: ClassVar[List[Type[BasePermission]]] = []
+    authentication_classes: ClassVar[list[type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[list[type[BasePermission]]] = []
 
     schema = LoginViewSchema()
 
@@ -282,10 +287,10 @@ class LoginView(BaseAuthView):
 
         return self.make_response(method, access, refresh)
 
-    def _get_id_value(self, data: Dict[str, Any]) -> Any:
+    def _get_id_value(self, data: dict[str, Any]) -> Any:
         return get_id_value_from_request_data(data)
 
-    def _get_claims(self, login_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_claims(self, login_data: dict[str, Any]) -> dict[str, Any]:
         try:
             return {key: login_data[key] for key in auth_settings.EXPECTED_CLAIMS}
         except KeyError as error:
@@ -299,10 +304,10 @@ class RefreshTokenView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: ClassVar[Type[BaseSerializer]] = RefreshTokenSerializer
+    serializer_class: ClassVar[type[BaseSerializer]] = RefreshTokenSerializer
 
-    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
-    permission_classes: ClassVar[List[Type[BasePermission]]] = []
+    authentication_classes: ClassVar[list[type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[list[type[BasePermission]]] = []
 
     schema = RefreshTokenViewSchema()
 
@@ -333,10 +338,10 @@ class LogoutView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: ClassVar[Type[BaseSerializer]] = LogoutSerializer
+    serializer_class: ClassVar[type[BaseSerializer]] = LogoutSerializer
 
-    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
-    permission_classes: ClassVar[List[Type[BasePermission]]] = []
+    authentication_classes: ClassVar[list[type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[list[type[BasePermission]]] = []
 
     schema = LogoutViewSchema()
 
@@ -359,10 +364,10 @@ class UpdateTokenView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: ClassVar[Type[BaseSerializer]] = TokenUpdateSerializer
+    serializer_class: ClassVar[type[BaseSerializer]] = TokenUpdateSerializer
 
-    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = []
-    permission_classes: ClassVar[List[Type[BasePermission]]] = []
+    authentication_classes: ClassVar[list[type[BaseAuthentication]]] = []
+    permission_classes: ClassVar[list[type[BasePermission]]] = []
 
     schema = UpdateTokenViewSchema()
 
@@ -395,10 +400,10 @@ class TokenClaimView(BaseAuthView):
     If not set, the type will be determined automatically based on settings.
     """
 
-    serializer_class: ClassVar[Type[BaseSerializer]] = TokenClaimSerializer
+    serializer_class: ClassVar[type[BaseSerializer]] = TokenClaimSerializer
 
-    authentication_classes: ClassVar[List[Type[BaseAuthentication]]] = [JWTAuthentication]
-    permission_classes: ClassVar[List[Type[BasePermission]]] = [HasValidJWT]
+    authentication_classes: ClassVar[list[type[BaseAuthentication]]] = [JWTAuthentication]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [HasValidJWT]
 
     schema = TokenClaimViewSchema()
 
