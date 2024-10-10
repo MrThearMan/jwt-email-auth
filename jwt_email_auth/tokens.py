@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import jwt
 from django.utils.translation import gettext_lazy
-from magic_specs import Definition
 from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated
 
+from .definition import Definition
 from .settings import auth_settings
 from .typing import Any, LoginMethod
 from .utils import decrypt_with_cipher, encrypt_with_cipher, token_from_headers

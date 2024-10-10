@@ -33,10 +33,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
@@ -56,7 +56,6 @@ Django = ">=4.2"
 djangorestframework = ">=3.12.0"
 django-ipware = ">=4.0.0"
 django-settings-holder = ">=0.1.2"
-magic-specs = ">=0.0.4"
 cryptography = ">=36.0.0"
 PyJWT = ">=2.3.0"
 cffi = ">=1.15.0"
@@ -262,7 +261,7 @@ banned-from = [
 max-args = 7
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 warn_return_any = "True"
 warn_unused_configs = "True"
 plugins = [
@@ -293,15 +292,15 @@ django_settings_module = "tests.project.settings"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py{39, 310, 311, 312}-django{42, 50, 51}
+envlist = py{310, 311, 312, 313}-django{42, 50, 51}
 isolated_build = true
 
 [gh-actions]
 python =
-    3.9: py39
     3.10: py310
     3.11: py311
     3.12: py312
+    3.13: py313
 
 [testenv]
 allowlist_externals =
@@ -310,12 +309,8 @@ setenv =
     PYTHONPATH = {toxinidir}
 deps =
     django42: Django>=4.2,<4.3
-
-    python-38-django50: Django>=4.2,<4.3
-    python-{310, 311, 312}-django50: Django>=5.0,<5.1
-
-    python-38-django51: Django>=4.2,<4.3
-    python-{310, 311, 312}-django51: Django>=5.1,<5.2
+    django50: Django>=5.0,<5.1
+    django51: Django>=5.1,<5.2
 
     djangorestframework>=3.12.0
     django-ipware>=4.0.0
@@ -335,5 +330,5 @@ commands =
 """
 
 [build-system]
-requires = ["poetry-core>=1.5.0"]
+requires = ["poetry-core>=1.9.0"]
 build-backend = "poetry.core.masonry.api"
