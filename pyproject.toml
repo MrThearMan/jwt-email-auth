@@ -64,7 +64,7 @@ PyYAML = { version = ">=5.4.1", optional = true }
 
 [tool.poetry.group.test.dependencies]
 pytest = "8.3.3"
-coverage = "7.6.4"
+coverage = "7.6.8"
 pytest-django = "4.9.0"
 tox = "4.23.2"
 tox-gh-actions = "3.2.0"
