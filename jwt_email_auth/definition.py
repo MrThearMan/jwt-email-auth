@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Hashable, Iterator, KeysView, ValuesView
+from collections.abc import Hashable, Iterator, KeysView, ValuesView
+from typing import Any
 
 from .utils import iterable_cache
 
