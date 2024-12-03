@@ -251,7 +251,7 @@ class RefreshToken(AccessToken):
 
         log = RefreshTokenRotationLog.objects.pass_title(title=str(title), expires_at=self.payload["exp"])
         self.payload["sub"] = str(title)
-        self.payload["jti"] = log.id
+        self.payload["jti"] = str(log.id)
 
 
 Token = Union[AccessToken, RefreshToken]
