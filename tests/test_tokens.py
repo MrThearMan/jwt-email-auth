@@ -1,6 +1,6 @@
+import datetime
 import re
-from datetime import timedelta
-from time import sleep
+import time
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -84,7 +84,7 @@ def test_access_token__add_issuer(settings):
 
 
 def test_access_token__add_not_before_time(settings):
-    settings.JWT_EMAIL_AUTH = {"NOT_BEFORE_TIME": timedelta(minutes=1)}
+    settings.JWT_EMAIL_AUTH = {"NOT_BEFORE_TIME": datetime.timedelta(minutes=1)}
 
     token = AccessToken()
 
@@ -93,7 +93,7 @@ def test_access_token__add_not_before_time(settings):
 
 def test_access_token__sync_with():
     old_token = AccessToken()
-    sleep(1)
+    time.sleep(1)
     new_token = AccessToken()
 
     new_token.sync_with(old_token)
@@ -102,10 +102,10 @@ def test_access_token__sync_with():
 
 
 def test_access_token__sync_with__not_before(settings):
-    settings.JWT_EMAIL_AUTH = {"NOT_BEFORE_TIME": timedelta(minutes=1)}
+    settings.JWT_EMAIL_AUTH = {"NOT_BEFORE_TIME": datetime.timedelta(minutes=1)}
 
     old_token = AccessToken()
-    sleep(1)
+    time.sleep(1)
     new_token = AccessToken()
 
     new_token.sync_with(old_token)
@@ -216,12 +216,12 @@ def test_access_token__from_token__expired():
     with patch(
         "jwt_email_auth.tokens.AccessToken.lifetime",
         new_callable=PropertyMock,
-        return_value=timedelta(seconds=1),
+        return_value=datetime.timedelta(seconds=1),
     ):
         old_token = str(AccessToken())
 
     # Wait for token to expire
-    sleep(2)
+    time.sleep(2)
 
     with pytest.raises(AuthenticationFailed, match="Signature has expired."):
         AccessToken(token=old_token)
@@ -268,7 +268,7 @@ def test_refresh_token__add_to_log(settings):
     token = RefreshToken()
     token.create_log()
 
-    assert token["jti"] == 1
+    assert token["jti"] == "1"
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
 
@@ -303,13 +303,13 @@ def test_refresh_token__rotate(settings):
     token = RefreshToken()
     token.create_log()
 
-    assert token["jti"] == 1
+    assert token["jti"] == "1"
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     new_token = token.rotate()
 
     assert str(token) != str(new_token)
-    assert new_token["jti"] == 2
+    assert new_token["jti"] == "2"
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
 
@@ -358,7 +358,7 @@ def test_refresh_token__remove_from_log__by_token_title(settings):
     token = RefreshToken()
     token.create_log()
 
-    assert token["jti"] == 1
+    assert token["jti"] == "1"
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     RefreshTokenRotationLog.objects.remove_by_token_title(token=str(token))
@@ -378,7 +378,7 @@ def test_refresh_token__remove_from_log__by_token_title__cipher(settings):
     token = RefreshToken()
     token.create_log()
 
-    assert token["jti"] == 1
+    assert token["jti"] == "1"
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     RefreshTokenRotationLog.objects.remove_by_token_title(token=str(token))
@@ -398,7 +398,7 @@ def test_refresh_token__remove_from_log__by_token_title__cipher__changed(setting
     refresh = RefreshToken()
     refresh.create_log()
 
-    assert refresh["jti"] == 1
+    assert refresh["jti"] == "1"
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     token = str(refresh)
@@ -425,7 +425,7 @@ def test_refresh_token__remove_from_log__by_title(settings):
     token = RefreshToken()
     token.create_log()
 
-    assert token["jti"] == 1
+    assert token["jti"] == "1"
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     RefreshTokenRotationLog.objects.remove_by_title(title=str(token["sub"]))
@@ -438,12 +438,12 @@ def test_refresh_token__expired():
     with patch(
         "jwt_email_auth.tokens.RefreshToken.lifetime",
         new_callable=PropertyMock,
-        return_value=timedelta(seconds=1),
+        return_value=datetime.timedelta(seconds=1),
     ):
         old_token = str(RefreshToken())
 
     # Wait for token to expire
-    sleep(2)
+    time.sleep(2)
 
     with pytest.raises(AuthenticationFailed, match="Signature has expired."):
         RefreshToken(token=old_token)
@@ -458,7 +458,7 @@ def test_refresh_token__expired__rotated(settings):
     with patch(
         "jwt_email_auth.tokens.RefreshToken.lifetime",
         new_callable=PropertyMock,
-        return_value=timedelta(seconds=1),
+        return_value=datetime.timedelta(seconds=1),
     ):
         token = RefreshToken()
         token.create_log()
@@ -466,7 +466,7 @@ def test_refresh_token__expired__rotated(settings):
     assert len(RefreshTokenRotationLog.objects.all()) == 1
 
     # Wait for token to expire
-    sleep(2)
+    time.sleep(2)
 
     with pytest.raises(AuthenticationFailed, match="Signature has expired."):
         RefreshToken(token=str(token))
@@ -483,7 +483,7 @@ def test_refresh_token__remove_expired_tokens_from_other_groups(settings):
     with patch(
         "jwt_email_auth.tokens.RefreshToken.lifetime",
         new_callable=PropertyMock,
-        return_value=timedelta(seconds=1),
+        return_value=datetime.timedelta(seconds=1),
     ):
         old_token = RefreshToken()
         old_token.create_log()
@@ -493,7 +493,7 @@ def test_refresh_token__remove_expired_tokens_from_other_groups(settings):
     assert logs[0].id == 1
 
     # Wait for token to expire
-    sleep(2)
+    time.sleep(2)
 
     new_token = RefreshToken()
     new_token.create_log()
@@ -533,7 +533,7 @@ def test_refresh_token__missing_sub(settings):
 
 
 @pytest.mark.parametrize("sync", [[False], [True]])
-def test_refresh_token__new_access_token(sync: bool):
+def test_refresh_token__new_access_token(sync):
     token = RefreshToken()
     access_token = token.new_access_token(sync=sync)
 
