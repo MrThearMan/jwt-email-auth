@@ -1,12 +1,9 @@
-[tool.poetry]
+[project]
 name = "jwt-email-auth"
 version = "0.11.5"
 description = "JWT authentication from email login codes."
 authors = [
-    "Matti Lamppu <lamppu.matti.akseli@gmail.com>",
-]
-packages = [
-    { include = "jwt_email_auth" },
+    { name = "Matti Lamppu", email = "lamppu.matti.akseli@gmail.com" },
 ]
 license = "MIT"
 readme = "README.md"
@@ -22,10 +19,6 @@ keywords = [
     "jwt",
     "auth",
     "authentication"
-]
-include = [
-    "README.md",
-    "LICENSE",
 ]
 classifiers = [
     "Environment :: Web Environment",
@@ -43,15 +36,18 @@ classifiers = [
     "Intended Audience :: Developers",
     "Natural Language :: English",
 ]
-exclude = [
-    "tests",
+requires-python = ">=3.9,<4"
+dynamic = [
+    "dependencies",
 ]
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/MrThearMan/jwt-email-auth/issues"
+[tool.poetry]
+requires-poetry = ">=2.0.0"
+packages = [
+    { include = "jwt_email_auth" },
+]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4"
 Django = ">=4.2"
 djangorestframework = ">=3.12.0"
 django-ipware = ">=4.0.0"
@@ -68,20 +64,16 @@ coverage = "7.6.10"
 pytest-django = "4.9.0"
 tox = "4.23.2"
 tox-gh-actions = "3.2.0"
+uritemplate = "4.1.1"
+PyYAML = "6.0.2"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
-pymdown-extensions = "10.13"
+pymdown-extensions = "10.14"
 mkdocs-mermaid2-plugin = "1.2.1"
 
 [tool.poetry.group.lint.dependencies]
-mypy = "1.14.1"
 pre-commit = "4.0.1"
-django-stubs = "5.1.1"
-djangorestframework-stubs = "3.15.2"
-
-[tool.poetry.extras]
-openapi = ["uritemplate", "PyYAML"]
 
 [tool.ruff]
 fix = true
@@ -168,8 +160,7 @@ lint.extend-select = [
     "UP042",    # replace-str-enum
 ]
 lint.ignore = [
-    "ANN101",   # Missing type annotation for `self` in method
-    "ANN102",   # Missing type annotation for `cls` in method
+    "A005",     # Allow shadowning builtin modules
     "ANN401",   # Any-typing allowed
     "ARG002",   # Unused method argument
     "ARG003",   # Unused class method argument
@@ -260,15 +251,6 @@ banned-from = [
 [tool.ruff.lint.pylint]
 max-args = 7
 
-[tool.mypy]
-python_version = "3.13"
-warn_return_any = "True"
-warn_unused_configs = "True"
-plugins = [
-    "mypy_django_plugin.main",
-    "mypy_drf_plugin.main",
-]
-
 [tool.coverage.run]
 relative_files = true
 
@@ -285,9 +267,6 @@ exclude_lines = [
     "pragma: no cover",
     "pass",
 ]
-
-[tool.django-stubs]
-django_settings_module = "tests.project.settings"
 
 [tool.tox]
 legacy_tox_ini = """
