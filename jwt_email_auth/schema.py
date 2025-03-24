@@ -135,7 +135,7 @@ class JWTEmailAuthSchemaMixin:
                 schema = {"schema": ERROR_SCHEMA}
 
             data[str(status_code)] = {
-                "content": {content_type: schema for content_type in response_media_types},
+                "content": dict.fromkeys(response_media_types, schema),
                 "description": info,
             }
 
