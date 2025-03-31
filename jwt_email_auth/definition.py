@@ -145,7 +145,7 @@ class DefinitionMeta(type):
         return cls
 
     @iterable_cache(provider="values")
-    def __next__(cls, keys: Iterator[str]) -> str:
+    def __next__(cls, keys: Iterator[str]) -> str:  # noqa: PLE0302
         return next(keys)
 
     def keys(cls) -> KeysView[str]:

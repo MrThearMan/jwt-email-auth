@@ -130,12 +130,12 @@ class JWTEmailAuthSchemaMixin:
                 serializer_class = info
                 info = serializer_class.__doc__  # noqa: PLW2901
                 serializer = self.view.initialize_serializer(serializer_class=serializer_class)
-                schema = {"schema": self._get_reference(serializer)}
+                schema = {"schema": self.get_reference(serializer)}
             else:
                 schema = {"schema": ERROR_SCHEMA}
 
             data[str(status_code)] = {
-                "content": {content_type: schema for content_type in response_media_types},
+                "content": dict.fromkeys(response_media_types, schema),
                 "description": info,
             }
 

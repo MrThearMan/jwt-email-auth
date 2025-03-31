@@ -8,7 +8,7 @@ import random
 import re
 from functools import wraps
 from inspect import cleandoc
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 from warnings import warn
 
 from cryptography.exceptions import InvalidTag
@@ -26,6 +26,8 @@ from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, Va
 from .settings import auth_settings
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from rest_framework.request import Request
 

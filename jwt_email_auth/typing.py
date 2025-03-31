@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Literal, NamedTuple
+from collections.abc import Callable
+from typing import Any, ClassVar, Literal, NamedTuple
 
 from django.db.models import TextChoices
 
