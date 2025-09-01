@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import logging
 import uuid
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import jwt
 from django.utils.translation import gettext_lazy
@@ -170,7 +170,7 @@ class AccessToken:
         """Fetch the value of a claim from this token."""
         return self.payload.get(key, default)
 
-    def update(self, data: Optional[dict[str, Any]] = None, **kwargs: Any) -> None:
+    def update(self, data: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Update payload."""
         self.payload.update({} if data is None else data, **kwargs)
 
