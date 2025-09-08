@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Setup - JWT Email Authentication</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/docs.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Setup";
+        var mkdocs_page_input_path = "setup.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> JWT Email Authentication
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Setup</a>
+    <ul class="current">
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../usage/">Usage</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../rotation/">JWT Rotation</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">JWT Email Authentication</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Setup</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="setup">Setup</h1>
+<p>① Add authentication, login and refresh views to urlpatterns.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">django.urls</span><span class="w"> </span><span class="kn">import</span> <span class="n">path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth.views</span><span class="w"> </span><span class="kn">import</span> <span class="n">SendLoginCodeView</span><span class="p">,</span> <span class="n">LoginView</span><span class="p">,</span> <span class="n">RefreshTokenView</span>
+
+<span class="n">urlpatterns</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="o">...</span>
+    <span class="n">path</span><span class="p">(</span><span class="s2">&quot;authentication/&quot;</span><span class="p">,</span> <span class="n">SendLoginCodeView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;authentication&quot;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s2">&quot;login/&quot;</span><span class="p">,</span> <span class="n">LoginView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;login&quot;</span><span class="p">),</span>
+    <span class="n">path</span><span class="p">(</span><span class="s2">&quot;refresh/&quot;</span><span class="p">,</span> <span class="n">RefreshTokenView</span><span class="o">.</span><span class="n">as_view</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;refresh&quot;</span><span class="p">),</span>
+    <span class="o">...</span>
+<span class="p">]</span>
+</code></pre></div>
+<p>② Configure settings with the <code>JWT_EMAIL_AUTH</code> key. Here is a minimal config (some values are defaults):</p>
+<div class="highlight"><pre><span></span><code><span class="n">JWT_EMAIL_AUTH</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;SENDING_ON&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>  <span class="c1"># needs to be set explicitly!</span>
+    <span class="s2">&quot;ACCESS_TOKEN_LIFETIME&quot;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="s2">&quot;REFRESH_TOKEN_LIFETIME&quot;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">14</span><span class="p">),</span>
+    <span class="s2">&quot;LOGIN_CODE_LIFETIME&quot;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="s2">&quot;EXPECTED_CLAIMS&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;CACHE_PREFIX&quot;</span><span class="p">:</span> <span class="s2">&quot;PREFIX&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;LOGIN_ATTEMPTS&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s2">&quot;LOGIN_COOLDOWN&quot;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="s2">&quot;CODE_SEND_COOLDOWN&quot;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+    <span class="s2">&quot;LOGIN_VALIDATION_AND_DATA_CALLBACK&quot;</span><span class="p">:</span> <span class="s2">&quot;path.to.module.function&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Here are the rest of the settings and what they mean.</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SENDING_ON</code></td>
+<td>Whether emails<br>should be sent or not.<br>When off, login code is<br>logged instead<br>(for development).</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>SKIP_CODE_CHECKS</code></td>
+<td>When True, any<br>code will work in login.</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>SKIP_CODE_CHECKS_FOR</code></td>
+<td>List of emails for<br>which code checks and<br>email sending are off, even<br>if SKIP_CODE_CHECKS=False<br>and/or SENDING_ON=True.<br>Useful for creating review<br>accounts in an otherwise<br>closed system.</td>
+<td>list[str]</td>
+</tr>
+<tr>
+<td><code>ACCESS_TOKEN_LIFETIME</code></td>
+<td>How long an access<br>token is valid for.</td>
+<td>timedelta</td>
+</tr>
+<tr>
+<td><code>REFRESH_TOKEN_LIFETIME</code></td>
+<td>How long a refresh<br>token is valid for.</td>
+<td>timedelta</td>
+</tr>
+<tr>
+<td><code>LOGIN_CODE_LIFETIME</code></td>
+<td>How long a login<br>code is stored in cache.</td>
+<td>timedelta</td>
+</tr>
+<tr>
+<td><code>LOGIN_COOLDOWN</code></td>
+<td>After user has<br>exceeded defined number<br>of login attemprs,<br>this is the cooldown<br>until they can attempt<br>login again.</td>
+<td>timedelta</td>
+</tr>
+<tr>
+<td><code>CODE_SEND_COOLDOWN</code></td>
+<td>After a user has<br>sent a login code,<br>this is the cooldown<br>until they can send<br>one again.</td>
+<td>timedelta</td>
+</tr>
+<tr>
+<td><code>NOT_BEFORE_TIME</code></td>
+<td>How long after the<br>creation of the<br>JWT does it<br>become valid.</td>
+<td>timedelta</td>
+</tr>
+<tr>
+<td><code>ROTATE_REFRESH_TOKENS</code></td>
+<td>If True, return a<br>new refresh token<br>when requesting a new<br>access token from<br>RefreshTokenView. The old<br>refresh token will be invalid<br>after the new one is created.</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>LOGIN_ATTEMPTS</code></td>
+<td>Number of login<br>attempts until user<br>is banned.</td>
+<td>int</td>
+</tr>
+<tr>
+<td><code>EXPECTED_CLAIMS</code></td>
+<td>List of expected JWT<br>content.</td>
+<td>list[str]</td>
+</tr>
+<tr>
+<td><code>UPDATEABLE_CLAIMS</code></td>
+<td>Which expected claims<br>can be updated without<br>re-authentication using<br>the <code>update</code> view.</td>
+<td>list[str]</td>
+</tr>
+<tr>
+<td><code>LOGIN_SENDING_EMAIL</code></td>
+<td>Email sender.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>LOGIN_SUBJECT_LINE</code></td>
+<td>Email subject line.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>LOGIN_EMAIL_MESSAGE</code></td>
+<td>Message to send in<br>email. Must have<br>{code} and {valid}!</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>LOGIN_EMAIL_HTML_TEMPLATE</code></td>
+<td>Path to html_message<br>template. Context<br>must have {{ code }}<br>and {{ valid }}!</td>
+<td>Path</td>
+</tr>
+<tr>
+<td><code>CACHE_PREFIX</code></td>
+<td>Cache prefix.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>OPTIONS_SCHEMA_ACCESS</code></td>
+<td>When True (default),<br>OPTIONS requests can<br>be made to the endpoint<br>without token for schema<br>access.</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>CIPHER_KEY</code></td>
+<td>If set, JWT will be<br>encrypted with AES in<br>GCM-mode using this as<br>the secret key. Should be<br>either 16, 24, or 32 bytes,<br>encoded to base64.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>ISSUER</code></td>
+<td>Issuer of the JWT.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>AUDIENCE</code></td>
+<td>Intended recipient<br>of the JWT.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>LEEWAY</code></td>
+<td>A time margin in<br>seconds for the<br>expiration check.</td>
+<td>int</td>
+</tr>
+<tr>
+<td><code>ALGORITHM</code></td>
+<td>Algorithm to sign<br>and decrypt the<br>token with.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>HEADER_PREFIX</code></td>
+<td>Authorization scheme<br>used in Authorization header,<br>as in <code>HEADER_PREFIX token</code>.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>EXTRA_HEADERS</code></td>
+<td>Additional JWT header<br>fields.</td>
+<td>dict[str, str]</td>
+</tr>
+</tbody>
+</table>
+<p>These settings should be specified in "dot import notation" to a function, which will be imported as the value for the setting.</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+<th>Arguments</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SIGNING_KEY</code></td>
+<td>Function to load<br>JWT signing key.</td>
+<td></td>
+<td>?</td>
+</tr>
+<tr>
+<td><code>CODE_GENERATOR</code></td>
+<td>Function to generate<br>a login code.</td>
+<td></td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>SEND_LOGIN_CODE_CALLBACK</code></td>
+<td>Function that sends<br>the login email.</td>
+<td>str,<br>dict[str, Any],<br>Request</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>LOGIN_VALIDATION_AND_DATA_CALLBACK</code></td>
+<td>Function to use for<br>validating user and providing<br>login data.</td>
+<td>str</td>
+<td>dict[str, Any]</td>
+</tr>
+<tr>
+<td><code>LOGIN_BLOCKER_CACHE_KEY_CALLBACK</code></td>
+<td>Function to generate<br>cache key for storing user's<br>login attempts.</td>
+<td>Request</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>USER_BLOCKED_ADDITIONAL_HANDLER</code></td>
+<td>Function for additional<br>handling for blocked users.</td>
+<td>Request</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>USER_CHECK_CALLBACK</code></td>
+<td>Function to check if token<br>user still exists in<br>refresh view.</td>
+<td>RefreshToken</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<p><a href="https://github.com/un33k/django-ipware/blob/master/README.md#advanced-users">IP address spoofing</a> prevention settings:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PROXY_ORDER</code></td>
+<td>Indicate whether the<br>originating client is on<br>the right or left in the<br>X-Forwarded-For header</td>
+<td>"left-most"<br>"right-most"</td>
+</tr>
+<tr>
+<td><code>PROXY_COUNT</code></td>
+<td>Number of proxies between<br>the server and internet.</td>
+<td>int</td>
+</tr>
+<tr>
+<td><code>PROXY_TRUSTED_IPS</code></td>
+<td>Only these proxy IPs<br>are allowed connections</td>
+<td>List[str]</td>
+</tr>
+<tr>
+<td><code>REQUEST_HEADER_ORDER</code></td>
+<td>Meta precedence order.</td>
+<td>List[str]</td>
+</tr>
+</tbody>
+</table>
+<p>Settings when using cookies:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_TOKENS</code></td>
+<td>If True, can authenticate<br>with tokens in Authorization<br>header. Set this to False and<br><code>USE_COOKIES</code> to True to only<br>allow cookie authentication.</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>USE_COOKIES</code></td>
+<td>If True, can authenticate<br>with tokens in HttpOnly<br>headers. Cookies will be<br>checked before Authorization<br>headers if they are<br>enabled.</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>DEFAULT_LOGIN_METHOD</code></td>
+<td>Default login method<br>to use if none is given in<br>Prefer-headers. If not set,<br>cookie-based login will be<br>used if enabled,<br>else token-based.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ACCESS_TOKEN_KEY</code></td>
+<td>Cookie key to use<br>for the access token</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>REFRESH_TOKEN_KEY</code></td>
+<td>Cookie key to use<br>for the refresh token</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>SET_COOKIE_SECURE</code></td>
+<td>Indicates that the<br>cookie is sent to the server<br>only when a request is<br>made with the https: scheme<br>(except on localhost) and<br>therefore, is more resistant to<br>man-in-the-middle attacks.</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>SET_COOKIE_ACCESS_PATH</code></td>
+<td>Indicates the path<br>that must exist in the requested<br>URL for the browser<br>to send the access token cookie.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>SET_COOKIE_REFRESH_PATH</code></td>
+<td>Indicates the path<br>that must exist in the requested<br>URL for the browser<br>to send the refresh token cookie.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>SET_COOKIE_DOMAIN</code></td>
+<td>Defines the host to<br>which the cookie will be sent.<br>If None, this attribute<br>defaults to the host of the<br>current document URL, not<br>including subdomains.</td>
+<td>str</td>
+</tr>
+<tr>
+<td><code>SET_COOKIE_HTTPONLY</code></td>
+<td>If True, forbids JavaScript<br>from accessing the cookie.</td>
+<td>bool</td>
+</tr>
+<tr>
+<td><code>SET_COOKIE_SAMESITE</code></td>
+<td>Controls whether a cookie<br>is sent with cross-origin<br>requests, providing some<br>protection against cross-site<br>request forgery attacks (CSRF).</td>
+<td>"lax"<br>"strict"<br>"none"</td>
+</tr>
+</tbody>
+</table>
+<p>③ Add OpenSSH based <a href="https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/">ed25519</a> <code>SIGNING_KEY</code> (in PEM format) to environment variables.
+You can create one with, e.g., ssh-keygen using the command <code>ssh-keygen -t ed25519</code>.
+The linebreaks in PEM format should be replaced with | (pipe) characters.
+If you do not want to use environment variables, override the <code>SIGNING_KEY</code> setting.</p>
+<blockquote>
+<p>A default signing key is provided for reference in the settings-module,
+but this should be changed in production environments.</p>
+</blockquote>
+<p>④ Configure Django's <a href="https://docs.djangoproject.com/en/3.2/topics/email/#quick-example">email settings</a> (if using django's email sending):</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Not all of these may be required</span>
+<span class="n">EMAIL_HOST_USER</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_HOST_PASSWORD</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_HOST</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_PORT</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_USE_TLS</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_USE_SSL</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_BACKEND</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_SENDER</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">EMAIL_SUBJECT_PREFIX</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">DEFAULT_FROM_EMAIL</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">SERVER_EMAIL</span> <span class="o">=</span> <span class="o">...</span>
+</code></pre></div>
+<p>⑤ (Optional) Add default <code>authentication_classes</code> or <code>permission_classes</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">REST_FRAMEWORK</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="s2">&quot;DEFAULT_AUTHENTICATION_CLASSES&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;jwt_email_auth.authentication.JWTAuthentication&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;DEFAULT_PERMISSION_CLASSES&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;jwt_email_auth.permissions.HasValidJWT&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</code></pre></div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../usage/" class="btn btn-neutral float-right" title="Usage">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../usage/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

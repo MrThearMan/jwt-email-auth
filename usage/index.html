@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+
+<html class="writer-html5" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="../img/favicon.ico" rel="shortcut icon"/>
+<title>Usage - JWT Email Authentication</title>
+<link href="../css/theme.css" rel="stylesheet"/>
+<link href="../css/theme_extra.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
+<link href="../css/docs.css" rel="stylesheet"/>
+<script>
+        // Current page data
+        var mkdocs_page_name = "Usage";
+        var mkdocs_page_input_path = "usage.md";
+        var mkdocs_page_url = null;
+      </script>
+<!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/console.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+<script>hljs.highlightAll();</script>
+</head>
+<body class="wy-body-for-nav" role="document">
+<div class="wy-grid-for-nav">
+<nav class="wy-nav-side stickynav" data-toggle="wy-nav-shift">
+<div class="wy-side-scroll">
+<div class="wy-side-nav-search">
+<a class="icon icon-home" href=".."> JWT Email Authentication
+        </a><div role="search">
+<form action="../search.html" class="wy-form" id="rtd-search-form" method="get">
+<input aria-label="Search docs" name="q" placeholder="Search docs" title="Type search term here" type="text"/>
+</form>
+</div>
+</div>
+<div aria-label="Navigation menu" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../setup/">Setup</a>
+</li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal current" href="#">Usage</a>
+<ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="#backend">Backend</a>
+<ul>
+<li class="toctree-l3"><a class="reference internal" href="#authentication-and-permission-classes">Authentication and Permission classes</a>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#base-access-serializer">Base Access Serializer</a>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#frontend">Frontend</a>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#non-email-authentication">Non-email authentication</a>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../rotation/">JWT Rotation</a>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+<section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+<nav aria-label="Mobile navigation menu" class="wy-nav-top" role="navigation">
+<i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+<a href="..">JWT Email Authentication</a>
+</nav>
+<div class="wy-nav-content">
+<div class="rst-content"><div aria-label="breadcrumbs navigation" role="navigation">
+<ul class="wy-breadcrumbs">
+<li><a aria-label="Docs" class="icon icon-home" href=".."></a></li>
+<li class="breadcrumb-item active">Usage</li>
+<li class="wy-breadcrumbs-aside">
+</li>
+</ul>
+<hr/>
+</div>
+<div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+<div class="section" itemprop="articleBody">
+<h1 id="usage">Usage</h1>
+<h2 id="backend">Backend</h2>
+<ol>
+<li>Send a login code to the <em>authentication</em> endpoint (from <code>SendLoginCodeView</code> class).</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST [Authentication URI] <br/>Content-Type: application/json</td>
+<td>HTTP 204 NO CONTENT</td>
+</tr>
+<tr>
+<td>{<br/>  "email":"person@example.com"<br/>}</td>
+<td>...</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>POST the login code and email to <em>login</em> endpoint (from <code>LoginView</code> class).</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST [Login URI] <br/>Content-Type: application/json</td>
+<td>HTTP 200 OK</td>
+</tr>
+<tr>
+<td>{<br/>  "email":"person@example.com"<br/>  "code":"123222"<br/>}</td>
+<td>{<br/>  "access":"..."<br/>  "refresh":"..."<br/>}</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>If both <code>USE_TOKENS</code> and <code>USE_COOKIES</code> are enabled, you can select the wanted login method
+via the <code>Prefer</code> header´. Set it to <code>token</code> or <code>cookies</code> to select one or the other. If not set,
+the value will be determined from <code>DEFAULT_LOGIN_METHOD</code>, but if this is not set the default
+will be <code>cookies</code> if cookies are enabled, and <code>token</code> if not.</p>
+</blockquote>
+<ol>
+<li>Refresh access token from the <em>refresh token</em> endpoint (from <code>RefreshTokenView</code> class).</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Request</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST [Refresh Token URI] <br/>Content-Type: application/json</td>
+<td>HTTP 200 OK</td>
+</tr>
+<tr>
+<td>{<br/>  "token":"..."<br/>}</td>
+<td>{<br/>  "access":"..."<br/>  "refresh":"..."<br/>}</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>If <code>ROTATE_REFRESH_TOKENS</code> is in use, the given refresh token will be a new refresh token,
+and the old refresh token will no longer be valid. Otherwise, the token will be the same
+same token used on the endpoint.</p>
+</blockquote>
+<h3 id="authentication-and-permission-classes">Authentication and Permission classes</h3>
+<p>Add the <code>JWTAuthentication</code> or <code>HasValidJWT</code> to Rest framework's settings,
+or to the class's <code>authentication_classes</code> or <code>permission_classes</code></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.views</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIView</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth.authentication</span><span class="w"> </span><span class="kn">import</span> <span class="n">JWTAuthentication</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth.permissions</span><span class="w"> </span><span class="kn">import</span> <span class="n">HasValidJWT</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SomeView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+
+    <span class="n">authentication_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">JWTAuthentication</span><span class="p">]</span>
+    <span class="n">permission_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">HasValidJWT</span><span class="p">]</span>
+
+    <span class="o">...</span>
+</code></pre></div>
+<h3 id="base-access-serializer">Base Access Serializer</h3>
+<p>If you need to use claims from the token in you code, you can use the <code>BaseAccessSerializer</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework</span><span class="w"> </span><span class="kn">import</span> <span class="n">serializers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.views</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIView</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth.serializers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAccessSerializer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth.authentication</span><span class="w"> </span><span class="kn">import</span> <span class="n">JWTAuthentication</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth.permissions</span><span class="w"> </span><span class="kn">import</span> <span class="n">HasValidJWT</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SomeSerializer</span><span class="p">(</span><span class="n">BaseAccessSerializer</span><span class="p">):</span>
+
+    <span class="n">take_from_token</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"example"</span><span class="p">,</span> <span class="s2">"values"</span><span class="p">]</span>
+
+    <span class="n">some</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">CharField</span><span class="p">()</span>
+
+    <span class="o">...</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SomeView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+
+    <span class="n">authentication_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">JWTAuthentication</span><span class="p">]</span>
+    <span class="n">permission_classes</span> <span class="o">=</span> <span class="p">[</span><span class="n">HasValidJWT</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"some"</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span> <span class="s2">"data"</span><span class="p">:</span> <span class="o">...</span><span class="p">}</span>
+
+        <span class="c1"># Request is needed in serializer context to get the access token</span>
+        <span class="n">serializer</span> <span class="o">=</span> <span class="n">SomeSerializer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">"request"</span><span class="p">,</span> <span class="n">request</span><span class="p">})</span>
+        <span class="n">serializer</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="n">raise_exception</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">validated_data</span>
+        <span class="c1"># ...or this</span>
+        <span class="c1"># data = serializer.data</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># {"some": ..., "data": ..., "example": ..., "values": ...}</span>
+        <span class="o">...</span>
+</code></pre></div>
+<h2 id="frontend">Frontend</h2>
+<p>To implement authentication with this library in the frontend,
+you'll need a way to call the <code>SendLoginCodeView</code> and <code>LoginView</code>
+for authentication, and then implement a way to automatically
+call <code>RefreshTokenView</code> when your access token expires or is about
+to expire. You'll also need to implement views/logic for all the
+possible error responses from each of these views.</p>
+<blockquote>
+<p>SendLoginCodeView</p>
+<ul>
+<li>400: Input is incorrect</li>
+<li>412: User is blocked from login due to too many attempts</li>
+<li>503: Could not send login code</li>
+</ul>
+<p>LoginView</p>
+<ul>
+<li>400: Input is incorrect</li>
+<li>403: Given login code was incorrect</li>
+<li>404: No login code has been sent for this user, or the code has expired</li>
+<li>410: Login data was corrupted</li>
+<li>412: User has been blocked due to too many attempts</li>
+</ul>
+<p>RefreshTokenView</p>
+<ul>
+<li>400: Input is incorrect</li>
+<li>403: Refresh token expired, or otherwise invalid</li>
+<li>404: Refresh token user no longer exists (requires "user_check=True" in refresh view)
+</li>
+</ul>
+</blockquote>
+<p>When using the JWT in views using the <code>JWTAuthentication</code> and <code>HasValidJWT</code>
+authentication and permission classes, you need to always listen for 403
+responses, and try to call <code>RefreshTokenView</code> in case the access token has
+expired. In case <code>RefreshTokenView</code> also returns 403, this usually means
+that the refresh token has also expired, and the user should be asked
+to re-authorize.</p>
+<p>In case you are using <a href="https://mrthearman.github.io/jwt-email-auth/rotation/">JWT rotation</a>, when you call
+<code>RefreshTokenView</code>, the returned refresh token will also need to be saved,
+as the old one is invalidated. Using JWT rotation can save your users from
+having to reauthorize when their initial refresh token expires.</p>
+<div class="mermaid">flowchart TB
+    start__enter_email('Enter email')
+    user_blocked{Is user<br/>IP blocked?}
+    check_email[Check given email<br/>from third party]
+    fail__user_blocked[Error: User cannot<br/>send another<br/>login code yet]
+    email_found{User with<br/>email found}
+    send_login_code[Send login code<br/>to given email]
+    fail__email_not_found[Error: Did not<br/>find user]
+    start__enter_login_code['Enter login code']
+    fail__block_user[Error: Block user<br/>from loggin in<br/>for 5 minutes<br/>based on IP]
+    fail__re_enter_login_code[Error: Wrong<br/>login code]
+    resend_code[Resend code,<br/>invalidate previous one]
+    can_resend{Can resend<br/>code?}
+    fail__cannot_resend[Error: User cannot<br/>send another<br/>login code yet]
+    login_code_correct{Valid code?}
+    success__log_in(Log user in)
+    too_many_attemps{Too many<br/>attempts?}
+
+
+
+    start__enter_email --&gt; |User enters<br/>their email| user_blocked
+    user_blocked --&gt; |no| check_email
+    check_email --&gt; email_found
+    user_blocked --&gt; |yes| fail__user_blocked
+    fail__user_blocked --&gt; start__enter_email
+    email_found --&gt; |yes| send_login_code
+    email_found --&gt; |no| fail__email_not_found
+    fail__email_not_found --&gt; start__enter_email
+    send_login_code --&gt; start__enter_login_code
+    start__enter_login_code --&gt; |Try another<br/>email| start__enter_email
+    start__enter_login_code --&gt; |User enters<br/>login code| login_code_correct
+    start__enter_login_code --&gt; |Resend code| can_resend
+    can_resend --&gt; |no| fail__cannot_resend
+    can_resend --&gt; |yes| resend_code
+    resend_code --&gt; start__enter_login_code
+    fail__cannot_resend --&gt; start__enter_login_code
+    login_code_correct --&gt; |yes| success__log_in
+    login_code_correct --&gt; |no| too_many_attemps
+    too_many_attemps --&gt; |no| fail__re_enter_login_code
+    too_many_attemps --&gt; |yes| fail__block_user
+    fail__re_enter_login_code --&gt; start__enter_login_code
+    fail__block_user --&gt; start__enter_email
+
+</div>
+<p>A flowchart describing a possible implementation.</p>
+<h2 id="non-email-authentication">Non-email authentication</h2>
+<p>Even though "email" is in the name of the library, it can be used
+to authenticate via other means, e.g., SMS. The library tries
+not to refer to email specifically, so that all documentation is still
+relevant if the authentication method is something other than email.</p>
+<p>All you'll need to do is create new serializers for <code>SendLoginCodeView</code>
+and <code>LoginView</code> which replace the "email" field with something else.
+Then, you can implement <code>SEND_LOGIN_CODE_CALLBACK</code> using that field's
+value. Here is an example using phone number for SMS authentication:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># myapp/views.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework</span><span class="w"> </span><span class="kn">import</span> <span class="n">serializers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth.serializers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSendLoginCodeSerializer</span><span class="p">,</span> <span class="n">BaseLoginSerializer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jwt_email_auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">views</span> <span class="k">as</span> <span class="n">jwt_views</span>
+
+<span class="c1"># Should have one field of any type</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SendLoginCodeSerializer</span><span class="p">(</span><span class="n">BaseSendLoginCodeSerializer</span><span class="p">):</span>
+    <span class="n">phone</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">help_text</span><span class="o">=</span><span class="s2">"Phone number to send the code to."</span><span class="p">)</span>
+
+<span class="c1"># Should have one field of any type</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LoginSerializer</span><span class="p">(</span><span class="n">BaseLoginSerializer</span><span class="p">):</span>
+    <span class="n">phone</span> <span class="o">=</span> <span class="n">serializers</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">help_text</span><span class="o">=</span><span class="s2">"Phone number the code was sent to."</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SendLoginCodeView</span><span class="p">(</span><span class="n">jwt_views</span><span class="o">.</span><span class="n">SendLoginCodeView</span><span class="p">):</span>
+    <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">SendLoginCodeSerializer</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">LoginView</span><span class="p">(</span><span class="n">jwt_views</span><span class="o">.</span><span class="n">LoginView</span><span class="p">):</span>
+    <span class="n">serializer_class</span> <span class="o">=</span> <span class="n">LoginSerializer</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># myapp/utils.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.request</span><span class="w"> </span><span class="kn">import</span> <span class="n">Request</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">send_login_code_via_sms</span><span class="p">(</span>
+    <span class="n">phone</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">login_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="o">...</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># myproject/settings.py</span>
+<span class="n">JWT_EMAIL_AUTH</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="o">...</span>
+    <span class="s2">"SEND_LOGIN_CODE_CALLBACK"</span><span class="p">:</span> <span class="s2">"myapp.utils.send_login_code_via_sms"</span><span class="p">,</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div><footer>
+<div aria-label="Footer Navigation" class="rst-footer-buttons" role="navigation">
+<a class="btn btn-neutral float-left" href="../setup/" title="Setup"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+<a class="btn btn-neutral float-right" href="../rotation/" title="JWT Rotation">Next <span class="icon icon-circle-arrow-right"></span></a>
+</div>
+<hr/>
+<div role="contentinfo">
+<!-- Copyright etc -->
+</div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+</div>
+</div>
+</section>
+</div>
+<div aria-label="Versions" class="rst-versions" role="note">
+<span class="rst-current-version" data-toggle="rst-current-version">
+<span><a href="../setup/" style="color: #fcfcfc">« Previous</a></span>
+<span><a href="../rotation/" style="color: #fcfcfc">Next »</a></span>
+</span>
+</div>
+<script src="../js/jquery-3.6.0.min.js"></script>
+<script>var base_url = "..";</script>
+<script src="../js/theme_extra.js"></script>
+<script src="../js/theme.js"></script>
+<script src="../search/main.js"></script>
+<script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+<script type="module">import mermaid from "https://unpkg.com/mermaid@10.2.4/dist/mermaid.esm.min.mjs";
+mermaid.initialize({});</script></body>
+</html>
