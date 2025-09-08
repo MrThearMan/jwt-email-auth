@@ -744,7 +744,7 @@ def test_refresh_endpoint__expected_claims_found(settings, caplog):
     client = APIClient()
 
     settings.JWT_EMAIL_AUTH = {
-        "SEND_EMAILS": False,
+        "SENDING_ON": False,
         "EXPECTED_CLAIMS": ["foo", "bar"],
     }
 
@@ -1055,7 +1055,7 @@ def test_refresh_endpoint__use_cookies(caplog, settings):
 
 def test_refresh_endpoint__prefer_token(caplog, settings):
     settings.JWT_EMAIL_AUTH = {
-        "USE_TOKEN": True,
+        "USE_TOKENS": True,
         "USE_COOKIES": True,
     }
 

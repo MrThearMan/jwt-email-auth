@@ -26,17 +26,16 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
     "Intended Audience :: Developers",
     "Natural Language :: English",
 ]
-requires-python = ">=3.10,<4"
+requires-python = ">=3.11,<4"
 dynamic = [
     "dependencies",
 ]
@@ -48,7 +47,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-Django = ">=4.2"
+Django = ">=5.0"
 djangorestframework = ">=3.12.0"
 django-ipware = ">=4.0.0"
 django-settings-holder = ">=0.2.2"
@@ -59,21 +58,20 @@ uritemplate = { version = ">=4.1.1", optional = true }
 PyYAML = { version = ">=5.4.1", optional = true }
 
 [tool.poetry.group.test.dependencies]
-pytest = "8.3.5"
-coverage = "7.8.0"
-pytest-django = "4.10.0"
-tox = "4.25.0"
-tox-gh-actions = "3.3.0"
-uritemplate = "4.1.1"
+pytest = "8.4.2"
+coverage = "7.10.6"
+pytest-django = "4.11.1"
+nox = "2025.5.1"
+uritemplate = "4.2.0"
 PyYAML = "6.0.2"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
-pymdown-extensions = "10.14.3"
-mkdocs-mermaid2-plugin = "1.2.1"
+pymdown-extensions = "10.16.1"
+mkdocs-mermaid2-plugin = "1.2.2"
 
 [tool.poetry.group.lint.dependencies]
-pre-commit = "4.2.0"
+pre-commit = "4.3.0"
 
 [tool.ruff]
 fix = true
@@ -259,7 +257,6 @@ omit = [
     "tests/*",
     "docs/*",
     ".venv/*",
-    ".tox/*",
 ]
 exclude_lines = [
     "if TYPE_CHECKING:",
@@ -268,46 +265,6 @@ exclude_lines = [
     "pass",
 ]
 
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py{310, 311, 312, 313}-django{42, 50, 51}
-isolated_build = true
-
-[gh-actions]
-python =
-    3.10: py310
-    3.11: py311
-    3.12: py312
-    3.13: py313
-
-[testenv]
-allowlist_externals =
-    poetry
-setenv =
-    PYTHONPATH = {toxinidir}
-deps =
-    django42: Django>=4.2,<4.3
-    django50: Django>=5.0,<5.1
-    django51: Django>=5.1,<5.2
-
-    djangorestframework>=3.12.0
-    django-ipware>=4.0.0
-    django-settings-holder>=0.1.2
-    cryptography>=36.0.0
-    PyJWT>=2.3.0
-    cffi>=1.15.0
-    uritemplate>=4.1.1
-    PyYAML>=5.4.1
-
-    pytest
-    pytz
-    coverage
-    pytest-django
-commands =
-    coverage run -m pytest -vv -s --disable-warnings
-"""
-
 [build-system]
-requires = ["poetry-core>=1.9.0"]
+requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"

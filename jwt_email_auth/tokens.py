@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import logging
 import uuid
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import jwt
 from django.utils.translation import gettext_lazy
@@ -81,7 +81,7 @@ class AccessToken:
             except jwt.ExpiredSignatureError as error:
                 logger.info(error)
                 if rotate:
-                    from .rotation.models import RefreshTokenRotationLog
+                    from .rotation.models import RefreshTokenRotationLog  # noqa: PLC0415
 
                     RefreshTokenRotationLog.objects.remove_by_token_title(token=token)
 
@@ -103,7 +103,7 @@ class AccessToken:
             self.verify_payload()
 
         else:  # new token
-            now = datetime.datetime.now(tz=datetime.timezone.utc)
+            now = datetime.datetime.now(tz=datetime.UTC)
             self.payload = {"type": self.token_type, "exp": now + self.lifetime, "iat": now}
 
             if auth_settings.NOT_BEFORE_TIME is not None:
@@ -170,7 +170,7 @@ class AccessToken:
         """Fetch the value of a claim from this token."""
         return self.payload.get(key, default)
 
-    def update(self, data: Optional[dict[str, Any]] = None, **kwargs: Any) -> None:
+    def update(self, data: dict[str, Any] | None = None, **kwargs: Any) -> None:
         """Update payload."""
         self.payload.update({} if data is None else data, **kwargs)
 
@@ -228,7 +228,7 @@ class RefreshToken(AccessToken):
     def check_log(self) -> RefreshTokenRotationLog:
         """Check if token is in the rotation log."""
         # Import is here so that jwt rotation remains optional
-        from .rotation.models import RefreshTokenRotationLog
+        from .rotation.models import RefreshTokenRotationLog  # noqa: PLC0415
 
         try:
             log = RefreshTokenRotationLog.objects.get(id=int(self.payload["jti"]))
@@ -244,7 +244,7 @@ class RefreshToken(AccessToken):
         and set the "jti" and "sub" claims for this token.
         """
         # Import is here so that jwt rotation remains optional
-        from .rotation.models import RefreshTokenRotationLog
+        from .rotation.models import RefreshTokenRotationLog  # noqa: PLC0415
 
         if title is None:
             title = uuid.uuid4()

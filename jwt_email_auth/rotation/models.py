@@ -29,7 +29,7 @@ class RefreshTokenRotationLogManager(models.Manager):
 
     def remove_by_title(self, title: str) -> None:
         """Remove logs with the given title, plus all expired logs."""
-        cond = Q(title=title) | Q(expires_at__lte=datetime.datetime.now(tz=datetime.timezone.utc))
+        cond = Q(title=title) | Q(expires_at__lte=datetime.datetime.now(tz=datetime.UTC))
         self.filter(cond).delete()
 
     @transaction.atomic

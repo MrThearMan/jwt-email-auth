@@ -347,7 +347,7 @@ class LogoutView(BaseAuthView):
 
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Import is here so that jwt rotation remains optional
-        from .rotation.models import RefreshTokenRotationLog
+        from .rotation.models import RefreshTokenRotationLog  # noqa: PLC0415
 
         token = self.serializer_class(data=request.data)
         token.is_valid(raise_exception=True)

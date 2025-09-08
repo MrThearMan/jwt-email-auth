@@ -135,7 +135,7 @@ class AccessSerializerMixin(RequestFromContextMixin):
         for key in self.take_from_token:
             try:
                 data[key] = token[key]
-            except KeyError:  # noqa: PERF203
+            except KeyError:
                 missing.append(key)
         if missing:
             raise ValidationError(
