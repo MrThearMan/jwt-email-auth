@@ -63,7 +63,7 @@ coverage = "7.10.7"
 pytest-django = "4.11.1"
 nox = "2025.5.1"
 uritemplate = "4.2.0"
-PyYAML = "6.0.2"
+PyYAML = "6.0.3"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
