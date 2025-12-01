@@ -58,20 +58,20 @@ uritemplate = { version = ">=4.1.1", optional = true }
 PyYAML = { version = ">=5.4.1", optional = true }
 
 [tool.poetry.group.test.dependencies]
-pytest = "9.0.0"
-coverage = "7.11.3"
+pytest = "9.0.1"
+coverage = "7.12.0"
 pytest-django = "4.11.1"
-nox = "2025.10.16"
+nox = "2025.11.12"
 uritemplate = "4.2.0"
 PyYAML = "6.0.3"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "1.6.1"
-pymdown-extensions = "10.16.1"
+pymdown-extensions = "10.17.2"
 mkdocs-mermaid2-plugin = "1.2.3"
 
 [tool.poetry.group.lint.dependencies]
-pre-commit = "4.4.0"
+pre-commit = "4.5.0"
 
 [tool.ruff]
 fix = true
