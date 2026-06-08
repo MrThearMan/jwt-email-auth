@@ -49,7 +49,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-Django = ">=5.2.14"
+Django = ">=5.2.15"
 djangorestframework = ">=3.12.0"
 django-ipware = ">=4.0.0"
 django-settings-holder = ">=0.2.2"
