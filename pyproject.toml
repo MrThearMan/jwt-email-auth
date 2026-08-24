@@ -63,7 +63,7 @@ PyYAML = { version = ">=5.4.1", optional = true }
 pytest = "9.1.1"
 coverage = "7.15.4"
 pytest-django = "4.14.0"
-nox = "2026.8.10"
+nox = "2026.8.17"
 uritemplate = "4.2.0"
 PyYAML = "6.0.3"
 
