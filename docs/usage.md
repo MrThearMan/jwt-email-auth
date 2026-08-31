@@ -48,7 +48,6 @@ from jwt_email_auth.permissions import HasValidJWT
 
 
 class SomeView(APIView):
-
     authentication_classes = [JWTAuthentication]
     permission_classes = [HasValidJWT]
 
@@ -68,7 +67,6 @@ from jwt_email_auth.permissions import HasValidJWT
 
 
 class SomeSerializer(BaseAccessSerializer):
-
     take_from_token = ["example", "values"]
 
     some = serializers.CharField()
@@ -78,7 +76,6 @@ class SomeSerializer(BaseAccessSerializer):
 
 
 class SomeView(APIView):
-
     authentication_classes = [JWTAuthentication]
     permission_classes = [HasValidJWT]
 
@@ -209,16 +206,20 @@ from rest_framework import serializers
 from jwt_email_auth.serializers import BaseSendLoginCodeSerializer, BaseLoginSerializer
 from jwt_email_auth import views as jwt_views
 
+
 # Should have one field of any type
 class SendLoginCodeSerializer(BaseSendLoginCodeSerializer):
     phone = serializers.CharField(help_text="Phone number to send the code to.")
+
 
 # Should have one field of any type
 class LoginSerializer(BaseLoginSerializer):
     phone = serializers.CharField(help_text="Phone number the code was sent to.")
 
+
 class SendLoginCodeView(jwt_views.SendLoginCodeView):
     serializer_class = SendLoginCodeSerializer
+
 
 class LoginView(jwt_views.LoginView):
     serializer_class = LoginSerializer
@@ -229,12 +230,12 @@ class LoginView(jwt_views.LoginView):
 from typing import Any
 from rest_framework.request import Request
 
+
 def send_login_code_via_sms(
     phone: str,
     login_data: dict[str, Any],
     request: Request,
-) -> None:
-    ...
+) -> None: ...
 ```
 
 ```python
