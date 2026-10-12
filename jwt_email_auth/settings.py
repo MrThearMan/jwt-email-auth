@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import logging
 from inspect import cleandoc
 from typing import TYPE_CHECKING
@@ -35,24 +35,24 @@ class JWTEmailAuthSettings(NamedTuple):
     SKIP_CODE_CHECKS_FOR: list[str] = []
     #
     # How long an access token is valid for
-    ACCESS_TOKEN_LIFETIME: datetime.timedelta = datetime.timedelta(minutes=5)
+    ACCESS_TOKEN_LIFETIME: dt.timedelta = dt.timedelta(minutes=5)
     #
     # How long a refresh token is valid for
-    REFRESH_TOKEN_LIFETIME: datetime.timedelta = datetime.timedelta(days=14)
+    REFRESH_TOKEN_LIFETIME: dt.timedelta = dt.timedelta(days=14)
     #
     # How long a login code is stored in cache
-    LOGIN_CODE_LIFETIME: datetime.timedelta = datetime.timedelta(minutes=5)
+    LOGIN_CODE_LIFETIME: dt.timedelta = dt.timedelta(minutes=5)
     #
     # After user has exceeded defined number of login attempts,
     # this is the cooldown until they can attempt login again.
-    LOGIN_COOLDOWN: datetime.timedelta = datetime.timedelta(minutes=5)
+    LOGIN_COOLDOWN: dt.timedelta = dt.timedelta(minutes=5)
     #
     # After a user has sent a login code, this is the cooldown until
     # they can send one again.
-    CODE_SEND_COOLDOWN: datetime.timedelta = datetime.timedelta(minutes=1)
+    CODE_SEND_COOLDOWN: dt.timedelta = dt.timedelta(minutes=1)
     #
     # How long after the creation of the JWT does it become valid.
-    NOT_BEFORE_TIME: datetime.timedelta | None = None
+    NOT_BEFORE_TIME: dt.timedelta | None = None
     #
     # If True, return a new refresh token when requesting a new
     # access token from RefreshTokenView. The old refresh token will

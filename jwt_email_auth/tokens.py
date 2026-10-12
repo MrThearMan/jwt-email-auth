@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import logging
 import uuid
 from typing import TYPE_CHECKING, Union
@@ -103,7 +103,7 @@ class AccessToken:
             self.verify_payload()
 
         else:  # new token
-            now = datetime.datetime.now(tz=datetime.UTC)
+            now = dt.datetime.now(tz=dt.UTC)
             self.payload = {"type": self.token_type, "exp": now + self.lifetime, "iat": now}
 
             if auth_settings.NOT_BEFORE_TIME is not None:
