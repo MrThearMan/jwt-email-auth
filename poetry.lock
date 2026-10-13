@@ -586,14 +586,14 @@ files = [
 
 [[package]]
 name = "django"
-version = "5.2.17"
+version = "5.2.18"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "django-5.2.17-py3-none-any.whl", hash = "sha256:f04fb3b36ee119e1af4fa1d397d5fd6cf12700f49321e84d4f4c642c5b1973db"},
-    {file = "django-5.2.17.tar.gz", hash = "sha256:9d4d93be539a18ab80d058eb515900e10951e04c537c5a6b394fc49528d3251f"},
+    {file = "django-5.2.18-py3-none-any.whl", hash = "sha256:92ed81d500be6408ecd704d7bd1366c534f30427bffcc63c5fefb129561aec7c"},
+    {file = "django-5.2.18.tar.gz", hash = "sha256:461c5dd06d2ea16bd5ca37d3f46e4def1d6b0fe7588c6f4e2119517bb0af8b2d"},
 ]
 
 [package.dependencies]
@@ -642,14 +642,14 @@ Django = ">=4.2"
 
 [[package]]
 name = "djangorestframework"
-version = "3.18.1"
+version = "3.18.3"
 description = "Web APIs for Django, made easy."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "djangorestframework-3.18.1-py3-none-any.whl", hash = "sha256:f1409d698967aaf82d5d98d76b549c8fba8bd92ebd0d83d24454508f72168dc2"},
-    {file = "djangorestframework-3.18.1.tar.gz", hash = "sha256:605d79fa2ec2f02905492e5ea13d903c2d842d0b4c915a57f7bf02ab9f3c91dd"},
+    {file = "djangorestframework-3.18.3-py3-none-any.whl", hash = "sha256:8544bb674846731b1e3c9b309236ee1dc412905a0aa725be2ec193ca950a7d12"},
+    {file = "djangorestframework-3.18.3.tar.gz", hash = "sha256:446a9b352e7eff630421ab3f2328bd2401b109a9470afa4a31189994911ed030"},
 ]
 
 [package.dependencies]
@@ -1529,4 +1529,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "00b71b9536855b7474066921c3047dfbdbee307defaec74bfe1ae609fb5e7bc5"
+content-hash = "0cbc9a5f2b8a7a10bfab5b8b2544f5d08e6bd1fa567cefb7dea84f73814b9bdf"
